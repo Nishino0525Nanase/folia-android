@@ -127,7 +127,7 @@ function buildLatticeLineTokens(line: Line): MonetDisplayToken[] {
     // 与以前「整行一个 token」时 end = getLineRenderEndTime(line) 的行为一致。
     const renderEnd = getLineRenderEndTime(line);
     const tail = tokens[tokens.length - 1];
-    if (renderEnd > tail.endTime) {
+    if (tail.endTime === null || renderEnd > tail.endTime) {
         tokens[tokens.length - 1] = { ...tail, endTime: renderEnd };
     }
 

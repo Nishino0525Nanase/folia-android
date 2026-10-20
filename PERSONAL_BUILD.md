@@ -25,7 +25,7 @@
 npm ci --ignore-scripts
 FOLIA_BUILD_REPO=Nishino0525Nanase/folia-android npm run cap:sync:android
 cd android
-./gradlew assembleRelease
+bash ./gradlew assembleRelease
 ```
 
 发布签名配置使用 `android/keystore.properties.example`。签名密钥、密码和 `keystore.properties` 属于私密构建配置，不应提交到公开仓库或源码压缩包。没有签名配置时 release 产物为未签名包，不能直接安装。
