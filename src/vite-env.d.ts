@@ -18,6 +18,8 @@ declare global {
   const __GIT_BRANCH__: string;
   /** 构建来源仓库（owner/repo），拿不到时为 'unknown'。 */
   const __BUILD_REPO__: string;
+  /** Personal fork has no configured signed update feed. */
+  const __PERSONAL_FORK_BUILD__: boolean;
   /** 十六进制短 commit，拿不到时为 'dev'。 */
   const __BUILD_COMMIT__: string;
   /** 构建类别 official / self-hosted / unofficial（见 dev/build/buildIdentity.mjs）。 */

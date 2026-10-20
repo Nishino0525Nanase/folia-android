@@ -2,7 +2,7 @@
 // 云服务地址与开关。云缓存（AI 主题 / AI 导演的结果复用）和字体市场共用同一份配置：
 // 它们是同一个后端提供的两项能力，用户只需要填一次地址。
 //
-// 默认指向官方那个地址，自建的用户把地址换成自己的即可。
+// 个人构建默认关闭；用户显式开启后，可使用社区服务或改为自己的地址。
 
 /*
  * 换过一次键名，别再换回来。
@@ -14,20 +14,21 @@
  * 所以这里挂个 v2：读不到新键 = 第一次用这个版本 = 走默认值（开）。
  * 以后再改默认值，同理再升一位。
  */
+// 个人构建保留已发布的 v2 键名，仅将首次安装的默认值改为关闭。
 const STORAGE_KEY = 'foliaCloudSettings.v2';
 export const FOLIA_CLOUD_SETTINGS_CHANGED_EVENT = 'folia-ai-cloud-cache-settings-changed';
 
 export const DEFAULT_CLOUD_BASE_URL = 'https://apif.tangbot.xyz';
 
 export interface FoliaCloudSettings {
-    /** 云缓存开关。默认打开 —— 没填 Key 的人也能靠它拿到主题。 */
+    /** 云缓存开关。个人构建默认关闭，保留用户显式选择。 */
     enabled: boolean;
     /** 云服务地址（不含 /api）。 */
     baseUrl: string;
 }
 
 export const DEFAULT_FOLIA_CLOUD_SETTINGS: FoliaCloudSettings = {
-    enabled: true,
+    enabled: false,
     baseUrl: DEFAULT_CLOUD_BASE_URL,
 };
 
@@ -54,7 +55,7 @@ export const readFoliaCloudSettings = (): FoliaCloudSettings => {
         }
     }
     cachedSettings = {
-        enabled: parsed?.enabled === undefined ? true : parsed.enabled !== false,
+        enabled: parsed?.enabled === undefined ? DEFAULT_FOLIA_CLOUD_SETTINGS.enabled : parsed.enabled !== false,
         baseUrl: normalizeBaseUrl(parsed?.baseUrl) || DEFAULT_CLOUD_BASE_URL,
     };
     return { ...cachedSettings };

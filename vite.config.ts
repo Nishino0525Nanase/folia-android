@@ -339,6 +339,7 @@ export default async function viteConfig(_config: ConfigEnv): Promise<UserConfig
       '__COMMIT_HASH__': JSON.stringify(commitHash + commitSuffix),
       '__GIT_BRANCH__': JSON.stringify(gitBranch),
       '__BUILD_REPO__': JSON.stringify(buildRepo),
+      '__PERSONAL_FORK_BUILD__': 'true',
       '__BUILD_COMMIT__': JSON.stringify(buildCommit),
       '__BUILD_KIND__': JSON.stringify(buildKind.kind),
       '__BUILD_HOST__': JSON.stringify(buildKind.host ?? ''),

@@ -23,10 +23,11 @@ import {
 // 和清单里的 version 直接对齐。
 
 /** 版本清单地址。 */
-export const APP_UPDATE_MANIFEST_URL = 'https://cdn.tangbot.xyz/update.json';
+export const APP_UPDATE_ENABLED = typeof __PERSONAL_FORK_BUILD__ === 'undefined' || !__PERSONAL_FORK_BUILD__;
+export const APP_UPDATE_MANIFEST_URL = APP_UPDATE_ENABLED ? 'https://cdn.tangbot.xyz/update.json' : '';
 
 /** 打开发布页的兜底入口：清单里给了 page_url 就用清单的。 */
-export const APP_UPDATE_RELEASES_PAGE = `https://github.com/maimai993/folia-sonnet/releases`;
+export const APP_UPDATE_RELEASES_PAGE = `https://github.com/Nishino0525Nanase/folia-mobile/releases`;
 
 /**
  * 请求超时。检查更新是个后台动作，网络对不上时不该让用户对着转圈等，
@@ -295,6 +296,7 @@ const fetchUpdateManifest = async (signal?: AbortSignal): Promise<UpdateManifest
  */
 export const checkForAppUpdate = async (signal?: AbortSignal): Promise<AppUpdateCheckResult> => {
   const currentVersion = getCurrentAppVersion();
+  if (!APP_UPDATE_ENABLED) return { status: 'failed', currentVersion, message: 'manual-update' };
   try {
     const payload = await fetchUpdateManifest(signal);
 

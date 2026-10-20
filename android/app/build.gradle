@@ -44,7 +44,7 @@ android {
         }
     }
     defaultConfig {
-        applicationId "top.izuna.foliamajor"
+        applicationId "io.github.nishino0525nanase.folia"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode versionCodeOf(packageJson.version.toString())
