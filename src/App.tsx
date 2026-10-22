@@ -1,3 +1,4 @@
+import { canResolveSongTheme } from './services/runtimeConfig';
 import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { AnimatePresence, motion, useMotionValueEvent } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -1945,7 +1946,7 @@ export default function App() {
         lyrics,
         offset: effectiveLyricTimelineOffsetMs,
     });
-    const canGenerateAITheme = Boolean((lyrics?.lines.length ?? 0) > 0 || currentSong?.isPureMusic);
+    const canGenerateAITheme = canResolveSongTheme(currentSong, lyrics, themeGenerationSource);
     const generateCurrentSongTheme = useCallback(() => {
         void generateAITheme(lyrics, currentSong);
     }, [currentSong, generateAITheme, lyrics]);

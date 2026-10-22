@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { Library, Search, AudioLines, ListMusic, Ellipsis, Settings, FileText } from 'lucide-react';
+import { Library, Search, AudioLines, ListMusic, Ellipsis, Settings, FileText, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAppViewStore, openCommandPalette } from '../../../stores/useAppViewStore';
 import { useAppChromeStore } from '../../../stores/useAppChromeStore';
@@ -47,6 +47,10 @@ const MobileTouchNavigation: React.FC<MobileTouchNavigationProps> = ({ onHome, o
         },
         hideSearch: () => useSearchNavigationStore.getState().hideSearchOverlay(),
         closePanel: () => useAppViewStore.getState().setIsPanelOpen(false),
+        openControls: () => {
+            useAppViewStore.getState().setPanelTab('controls');
+            useAppViewStore.getState().setIsPanelOpen(true);
+        },
         openQueue: () => {
             useAppViewStore.getState().setPanelTab('queue');
             useAppViewStore.getState().setIsPanelOpen(true);
@@ -67,7 +71,8 @@ const MobileTouchNavigation: React.FC<MobileTouchNavigationProps> = ({ onHome, o
     const items = [
         { id: 'library', icon: Library, active: view === 'home' && !isSearchOpen },
         { id: 'search', icon: Search, active: isSearchOpen },
-        { id: 'lyrics', icon: AudioLines, active: view === 'player' && !(isPanelOpen && (panelTab === 'queue' || panelTab === 'onlineLyrics')) },
+        { id: 'lyrics', icon: AudioLines, active: view === 'player' && !isPanelOpen },
+        { id: 'controls', icon: SlidersHorizontal, active: view === 'player' && isPanelOpen && panelTab === 'controls' },
         { id: 'queue', icon: ListMusic, active: view === 'player' && isPanelOpen && panelTab === 'queue' },
         ...(hasOnlineSong ? [{ id: 'manualLyrics' as const, icon: FileText, active: view === 'player' && isPanelOpen && panelTab === 'onlineLyrics' }] : []),
         { id: 'more', icon: Ellipsis, active: false },

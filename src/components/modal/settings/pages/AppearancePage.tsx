@@ -79,6 +79,7 @@ const AiKeyField: React.FC<AiKeyFieldProps> = ({ value, onChange, saved, onClear
 const AppearancePage: React.FC = () => {
     const { t } = useTranslation();
     const { isElectron, themeControls, onOpenVisPlayground, onOpenThemePark, viewProps } = useSettingsPage();
+    const usesCloudOnlyThemes = themeControls.aiApiKeyStatus !== 'configured' && themeControls.cloudThemeEnabled;
     const { electronSettings, setElectronSettings, onSaveElectronSettings, electronSaveStatus, savedAiApiKeys, savedOpenAIKeyEndpoint, onClearAiApiKey } = viewProps.desktop.model;
     const { isDaylight, followSystemTheme, setDaylightPreference, setFollowSystemTheme } = useThemeSettingsStore(useShallow(state => ({
         isDaylight: state.isDaylight,
@@ -180,28 +181,31 @@ const AppearancePage: React.FC = () => {
                     <Row
                         sub
                         option={O.autoGenerate}
-                        note={t(themeControls.themeGenerationSource === 'cover' ? 'options.autoGenerateSongThemeCoverDesc' : 'options.autoGenerateSongThemeDesc')}
+                        note={t(themeControls.themeGenerationSource === 'cover' ? 'options.autoGenerateSongThemeCoverDesc' : usesCloudOnlyThemes ? 'options.autoUseCloudThemeDesc' : 'options.autoGenerateSongThemeDesc')}
                     >
                         <Toggle checked={themeControls.songThemeAutoGenerateEnabled} onChange={themeControls.onToggleSongThemeAutoGenerate} />
                     </Row>
                 </Reveal>
                 <Row
                     option={O.source}
-                    note={t(themeControls.themeGenerationSource === 'cover' ? 'options.themeGenerationSourceCoverDesc' : 'options.themeGenerationSourceAiDesc')}
+                    note={t(themeControls.themeGenerationSource === 'cover' ? 'options.themeGenerationSourceCoverDesc' : usesCloudOnlyThemes ? 'options.themeGenerationSourceCloudDesc' : 'options.themeGenerationSourceAiDesc')}
                 >
                     <Segmented
                         value={themeControls.themeGenerationSource}
                         options={[
-                            { value: 'ai', label: t('options.themeGenerationSourceAi'), disabled: themeControls.aiApiKeyStatus !== 'configured' },
+                            { value: 'ai', label: t(usesCloudOnlyThemes ? 'options.themeGenerationSourceCloud' : 'options.themeGenerationSourceAi'), disabled: themeControls.aiApiKeyStatus !== 'configured' && !themeControls.cloudThemeEnabled },
                             { value: 'cover', label: t('options.themeGenerationSourceCover') },
                         ]}
                         onChange={themeControls.onChangeThemeGenerationSource}
                     />
                 </Row>
                 <Reveal when={themeControls.aiApiKeyStatus === 'missing'}>
-                    <Row sub notice={t('options.themeGenerationSourceAiUnavailable')}>
+                    <Row sub notice={t(themeControls.cloudThemeEnabled ? 'options.themeGenerationSourceCloudDesc' : 'options.themeGenerationSourceAiUnavailable')}>
                         <Button onClick={() => openSettings('options', settingsAnchorSubview('electronSettings'), null, 'electronSettings')}>
                             {t('options.configureAiApiKey')}
+                        </Button>
+                        <Button onClick={() => openSettings('options', settingsAnchorSubview('cloudCache'), null, 'cloudCache')}>
+                            {t('options.openCloudThemeSettings')}
                         </Button>
                     </Row>
                 </Reveal>
@@ -212,7 +216,7 @@ const AppearancePage: React.FC = () => {
                 {!isElectron && (
                     <Row below={(
                         <SettingsAnchor anchorId="electronSettings" label={t('options.electronSettings')}>
-                            <AiProviderSettings settingsCardClass={settingsCardClassFor(isDaylight)} isDaylight={isDaylight} />
+                            <AiProviderSettings settingsCardClass={settingsCardClassFor(isDaylight)} isDaylight={isDaylight} onUseCloudThemes={() => themeControls.onChangeThemeGenerationSource('ai')} />
                         </SettingsAnchor>
                     )} />
                 )}

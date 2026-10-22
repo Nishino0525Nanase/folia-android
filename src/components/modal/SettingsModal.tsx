@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useSyncExternalStore, startTransition } from 'react';
 import { isAiConfigured, subscribeAiSettings } from '../../services/aiSettings';
+import { isFoliaCloudCacheEnabled, subscribeFoliaCloudSettings } from '../../services/foliaCloud';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { MotionValue } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -441,6 +442,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const [cacheDirectoryStatus, setCacheDirectoryStatus] = useState<'idle' | 'choosing'>('idle');
     const isElectronRuntime = typeof window !== 'undefined' && Boolean(window.electron);
     const localAiConfigured = useSyncExternalStore(subscribeAiSettings, isAiConfigured, () => false);
+    const cloudThemeEnabled = useSyncExternalStore(subscribeFoliaCloudSettings, isFoliaCloudCacheEnabled, () => false);
     const savedAiApiKey = savedElectronAiCredentials.AI_PROVIDER === 'openai'
         ? savedElectronAiCredentials.OPENAI_API_KEY
         : savedElectronAiCredentials.GEMINI_API_KEY;
@@ -1069,6 +1071,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             songThemeAutoGenerateEnabled,
             themeGenerationSource,
             aiApiKeyStatus,
+            cloudThemeEnabled,
             onApplyDefaultTheme,
             onApplyCustomTheme,
             onToggleCustomThemePreferred,

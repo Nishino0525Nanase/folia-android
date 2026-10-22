@@ -1,6 +1,7 @@
 import { DualTheme, Theme } from '../types';
 import { isCapacitorAndroid } from '../platform/runtime';
 import { isAiConfigured } from './aiSettings';
+import { isFoliaCloudCacheEnabled } from './foliaCloud';
 
 // Shared helpers for persisted theme preferences and applied theme selection.
 
@@ -40,9 +41,9 @@ export const isThemeGenerationSource = (value: unknown): value is ThemeGeneratio
     value === 'ai' || value === 'cover'
 );
 
-/** Android uses the selected provider's local key, independently of hosted web AI availability. */
+/** Cached cloud themes are readable without a model key; new generation still needs one. */
 export const resolveEffectiveThemeGenerationSource = (source: ThemeGenerationSource): ThemeGenerationSource => (
-    isCapacitorAndroid() && !isAiConfigured() ? 'cover' : source
+    isCapacitorAndroid() && !isAiConfigured() && !isFoliaCloudCacheEnabled() ? 'cover' : source
 );
 
 export const readStoredThemeGenerationSource = (): ThemeGenerationSource => {

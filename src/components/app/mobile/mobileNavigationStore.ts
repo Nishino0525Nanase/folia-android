@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-// Only the original player corner button opens this transient touch action sheet.
+// The panel's secondary More action opens this transient touch action sheet.
 export const useMobileNavigationStore = create<{
     isOpen: boolean;
     setIsOpen: (isOpen: boolean) => void;

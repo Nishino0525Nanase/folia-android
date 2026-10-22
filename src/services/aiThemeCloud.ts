@@ -2,6 +2,8 @@ import { fetchEntry, fingerprintLyricSource, pullAiCloudCache, pushAiCloudCache 
 import { getFromCache, saveToCache } from './db';
 import { sanitizeDualTheme } from './themeSanitizer';
 import type { DualTheme } from '../types';
+import { isFoliaCloudCacheEnabled } from './foliaCloud';
+import { matchStageResult, type StageRequest } from './aiStage';
 
 // src/services/aiThemeCloud.ts
 // AI 主题的两层存放：云端（AI 云缓存，kind='theme'）与「本机改过」那一份。
@@ -77,27 +79,37 @@ export const pushAiThemeToCloud = async (song: AiThemeSongRef, dualTheme: DualTh
  * `'stage'`（主题只是它的一半，在 `payload.theme` 上）。歌名清单按歌名分组，
  * 分不出来是哪种，所以两种都试。
  */
-export const pullCachedThemeByKey = async (key: string): Promise<DualTheme | null> => {
-    if (!/^[a-f0-9]{32}$/.test(key)) {
-        return null;
-    }
+export type CloudThemeRead = { status: 'hit'; theme: DualTheme } | { status: 'miss' | 'unavailable' };
 
-    const asTheme = await fetchEntry('theme', key);
+const readCachedThemeByKey = async (key: string): Promise<CloudThemeRead> => {
+    if (!isFoliaCloudCacheEnabled() || !/^[a-f0-9]{32}$/.test(key)) return { status: 'unavailable' };
+    let unavailable = false;
+    const onUnavailable = () => { unavailable = true; };
+
+    const asTheme = await fetchEntry('theme', key, onUnavailable);
     if (isDualThemeLike(asTheme)) {
-        return sanitizeDualTheme(asTheme);
+        return { status: 'hit', theme: sanitizeDualTheme(asTheme) };
     }
 
-    const stage = await fetchEntry('stage', key);
+    const stage = await fetchEntry('stage', key, onUnavailable);
     if (isDualThemeLike(stage)) {
-        return sanitizeDualTheme(stage);
+        return { status: 'hit', theme: sanitizeDualTheme(stage) };
     }
     const half = isRecord(stage) ? stage.theme : null;
-    return isDualThemeLike(half) ? sanitizeDualTheme(half) : null;
+    return isDualThemeLike(half) ? { status: 'hit', theme: sanitizeDualTheme(half) }
+        : { status: unavailable ? 'unavailable' : 'miss' };
+};
+
+export const pullCachedThemeByKey = async (key: string): Promise<DualTheme | null> => {
+    const result = await readCachedThemeByKey(key);
+    return result.status === 'hit' ? result.theme : null;
 };
 
 /** `payload` 长得像不像一份完整的主题（浅 + 深都要有东西）。 */
 const isDualThemeLike = (value: unknown): boolean => (
-    isRecord(value) && isRecord(value.light) && isRecord(value.dark)
+    isRecord(value) && [value.light, value.dark].every(theme => isRecord(theme)
+        && ['backgroundColor', 'primaryColor']
+            .every(key => typeof theme[key] === 'string' && String(theme[key]).trim().length > 0))
 );
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
@@ -113,8 +125,27 @@ export const pullAiThemeFromCloud = async (song: AiThemeSongRef): Promise<DualTh
     const result = await pullAiCloudCache('theme', aiThemeCloudKey(song), {
         songTitle: text(song?.title),
     });
-    if (result.status !== 'hit') {
+    if (result.status !== 'hit' || !isDualThemeLike(result.payload)) {
         return null;
     }
     return sanitizeDualTheme(result.payload);
+};
+
+/** Read existing themes only: local edits, an explicit catalogue key, then the shared cache formats. */
+export const readCloudOnlyTheme = async (request: StageRequest, knownKey?: string): Promise<CloudThemeRead> => {
+    if (!isFoliaCloudCacheEnabled()) return { status: 'unavailable' };
+    const song = { title: request.song?.title ?? request.songTitle, artist: request.song?.artist };
+    const local = await readLocalAiThemeOverride(song);
+    if (local) return { status: 'hit', theme: local };
+    if (knownKey) {
+        const known = await readCachedThemeByKey(knownKey);
+        if (known.status !== 'miss') return known;
+    }
+    const matched = await matchStageResult({ ...request, require: 'theme', force: false }, { backfill: false });
+    if (matched.status === 'hit' && isDualThemeLike(matched.value.theme)) return { status: 'hit', theme: sanitizeDualTheme(matched.value.theme) };
+    if (matched.status === 'unavailable') return { status: 'unavailable' };
+    const bySong = await pullAiCloudCache('theme', aiThemeCloudKey(song), { songTitle: text(song.title) });
+    return bySong.status === 'hit'
+        ? isDualThemeLike(bySong.payload) ? { status: 'hit', theme: sanitizeDualTheme(bySong.payload) } : { status: 'miss' }
+        : { status: bySong.status };
 };

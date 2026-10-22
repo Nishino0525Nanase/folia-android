@@ -17,12 +17,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { handlers } = vi.hoisted(() => ({
   handlers: {
+    enabled: true,
     fetch: null as null | ((url: string, init?: RequestInit) => Promise<Response>),
   },
 }));
 
 vi.mock('@/services/foliaCloud', () => ({
-  isFoliaCloudCacheEnabled: () => true,
+  isFoliaCloudCacheEnabled: () => handlers.enabled,
   resolveCloudApiUrl: (path: string) => `https://cloud.test/api/${path}`,
   DEFAULT_CLOUD_BASE_URL: 'https://cloud.test',
 }));
@@ -37,7 +38,7 @@ vi.mock('@/services/aiCompletion', () => ({
   describeAiTarget: () => null,
 }));
 
-const { highlightWordsPresent, pullAiCloudCache, withAiCloudCache } = await import('@/services/aiCloudCache');
+const { fetchEntry, highlightWordsPresent, pullAiCloudCache, withAiCloudCache } = await import('@/services/aiCloudCache');
 
 const KEY_A = 'a'.repeat(32);
 const KEY_B = 'b'.repeat(32);
@@ -73,6 +74,7 @@ const json = (body: unknown, ok = true) => ({ ok, status: ok ? 200 : 404, json: 
 
 beforeEach(() => {
   handlers.fetch = null;
+  handlers.enabled = true;
 });
 
 describe('highlightWordsPresent', () => {
@@ -346,5 +348,27 @@ describe('withAiCloudCache 把按内容捞到的那条回填', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(puts).toHaveLength(1);
     expect(JSON.parse(puts[0]).payload).toEqual(payload);
+  });
+});
+
+describe('cloud transport failures', () => {
+  it('honours disabled cloud consent for direct known-key reads', async () => {
+    handlers.enabled = false;
+    const fetch = vi.fn(); handlers.fetch = fetch;
+    expect(await fetchEntry('theme', '1'.repeat(32))).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it.each(['http', 'network', 'json'] as const)('reports %s failures as unavailable and permits the next request', async failure => {
+    const key = { http: '1234abcd'.repeat(4), network: '2234abcd'.repeat(4), json: '3234abcd'.repeat(4) }[failure];
+    let requests = 0;
+    handlers.fetch = async () => {
+      requests += 1;
+      if (failure === 'network') throw new Error('fixture offline');
+      if (failure === 'http') return { ok: false, status: 403 } as Response;
+      return { ok: true, status: 200, json: async () => { throw new Error('fixture invalid JSON'); } } as unknown as Response;
+    };
+    expect(await pullAiCloudCache('theme', key)).toEqual({ status: 'unavailable' });
+    expect(await pullAiCloudCache('theme', key)).toEqual({ status: 'unavailable' });
+    expect(requests).toBe(2);
   });
 });

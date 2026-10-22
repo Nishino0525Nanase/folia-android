@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type Dispatch, type SetStateAction } from 'react';
 import { isAiConfigured, subscribeAiSettings } from '../services/aiSettings';
+import { isCapacitorAndroid } from '../platform/runtime';
+import { getFoliaCloudSettingsVersion, isFoliaCloudCacheEnabled, subscribeFoliaCloudSettings } from '../services/foliaCloud';
 import { generateThemeFromLyrics, isMissingAiApiKeyError } from '../services/gemini';
 import { notifyStageResolved } from '../services/aiStage';
 import {
@@ -8,6 +10,7 @@ import {
     pullCachedThemeByKey,
     writeLocalAiThemeOverride,
     readLocalAiThemeOverride,
+    readCloudOnlyTheme,
 } from '../services/aiThemeCloud';
 import { saveToCache } from '../services/db';
 import { DualTheme, LyricData, SongResult, StatusMessage, Theme, ThemeMode } from '../types';
@@ -193,6 +196,7 @@ export function useThemeController({
     const [songThemeAutoGenerateEnabled, setSongThemeAutoGenerateEnabled] = useState(initialThemePreferenceState.songThemeAutoGenerateEnabled);
     const [preferredThemeGenerationSource, setThemeGenerationSource] = useState<ThemeGenerationSource>(() => readStoredThemeGenerationSource());
     useSyncExternalStore(subscribeAiSettings, isAiConfigured, () => false);
+    useSyncExternalStore(subscribeFoliaCloudSettings, isFoliaCloudCacheEnabled, () => false);
     const themeGenerationSource = resolveEffectiveThemeGenerationSource(preferredThemeGenerationSource);
     const [bgMode, setBgMode] = useState<ThemeMode>(() => (
         initialCustomTheme && initialThemePreferenceState.isCustomThemePreferred ? 'custom' : 'default'
@@ -736,14 +740,17 @@ export function useThemeController({
                 );
             }
 
-            setStatusMsg({ type: 'info', text: t('status.generatingTheme') });
+            const cloudOnly = isCapacitorAndroid() && !isAiConfigured();
+            if (!cloudOnly || source === 'manual') {
+                setStatusMsg({ type: 'info', text: t(cloudOnly ? 'status.readingCloudTheme' : 'status.generatingTheme') });
+            }
 
             const allText = lyrics?.lines.map(line => line.fullText).join('\n').trim() || '';
             const songTitle = currentSong?.name?.trim() || lyrics?.title?.trim() || '';
             const isPureMusic = Boolean(currentSong?.isPureMusic) || isPureMusicLyricText(allText);
             const promptText = (isPureMusic ? songTitle : allText) || allText;
 
-            if (!promptText) {
+            if (!cloudOnly && !promptText) {
                 if (source === 'manual') {
                     setStatusMsg({ type: 'error', text: t('status.themeGenerationFailed') });
                 }
@@ -758,33 +765,56 @@ export function useThemeController({
              * **完全不碰缓存**。上游合并把这里指到了 aiText，于是主题链路绕开云缓存：
              * 不拉、不推，命中提示也再没出现过 —— 那就是「云缓存失效」。
              */
-            const { theme: dualTheme, source: themeSource } = await generateThemeFromLyrics(promptText, {
-                isPureMusic,
-                songTitle: songTitle || undefined,
-                /*
-                 * 艺人信息只为了提示词更准，不参与缓存指纹（同一份歌词换个人唱
-                 * 也会是同一个答案，没必要多存一份）。
-                 */
-                artist: currentSong?.artists?.map(artist => artist.name).filter(Boolean).join('、') || undefined,
-                /*
-                 * 歌词行一起传进去：云缓存的指纹由「歌词正文 + 设置」算出，
-                 * 导演那条链路算的是同一个值，两边才会共用一条缓存。
-                 */
-                lines: lyrics?.lines ?? [],
-                trigger: source,
-                /*
-                 * 平台名只跟着上传走，服务端拿它去对应平台核对歌词；本地歌曲留空，
-                 * 服务端再按顺序逐个平台试。键仍然是那个 MD5。
-                 */
-                platform: resolveSongPlatform(currentSong),
-                /*
-                 * 手动点「生成 AI 主题」就是「我对现在这个不满意，再给一个」——
-                 * 所以不看缓存，直接重新问模型，生成完把云端那条**覆盖**掉。
-                 *
-                 * 自动触发（切歌）相反，必须走缓存：那正是云缓存要省掉的那次调用。
-                 */
-                force: options.force === true || source === 'manual',
-            });
+            let resolved: Awaited<ReturnType<typeof generateThemeFromLyrics>>;
+            if (cloudOnly) {
+                const cloudSettingsVersion = getFoliaCloudSettingsVersion();
+                const cached = await readCloudOnlyTheme({
+                    song: { title: songTitle, artist: currentSong?.artists?.map(artist => artist.name).filter(Boolean).join('、') ?? '', album: currentSong?.album?.name ?? null },
+                    lines: lyrics?.lines ?? [], isPureMusic, songTitle, platform: resolveSongPlatform(currentSong),
+                    require: 'theme',
+                }, currentSong?.aiCloudThemeKey);
+                if (cloudSettingsVersion !== getFoliaCloudSettingsVersion() || isAiConfigured() || !(options.shouldApply?.() ?? true)) {
+                    return { status: 'generated', applied: false };
+                }
+                if (cached.status !== 'hit') {
+                    const fallback = await applyCoverDerivedTheme(currentSong, () => options.shouldApply?.() ?? true, 'fallback', false);
+                    if (source === 'manual' && (options.shouldApply?.() ?? true)) {
+                        setStatusMsg({ type: 'info', text: t(cached.status === 'unavailable'
+                            ? 'status.cloudThemeUnavailableCover' : 'status.cloudThemeMissCover') });
+                    }
+                    return fallback;
+                }
+                resolved = { theme: cached.theme, source: 'cloud' };
+            } else {
+                resolved = await generateThemeFromLyrics(promptText, {
+                    isPureMusic,
+                    songTitle: songTitle || undefined,
+                    /*
+                     * 艺人信息只为了提示词更准，不参与缓存指纹（同一份歌词换个人唱
+                     * 也会是同一个答案，没必要多存一份）。
+                     */
+                    artist: currentSong?.artists?.map(artist => artist.name).filter(Boolean).join('、') || undefined,
+                    /*
+                     * 歌词行一起传进去：云缓存的指纹由「歌词正文 + 设置」算出，
+                     * 导演那条链路算的是同一个值，两边才会共用一条缓存。
+                     */
+                    lines: lyrics?.lines ?? [],
+                    trigger: source,
+                    /*
+                     * 平台名只跟着上传走，服务端拿它去对应平台核对歌词；本地歌曲留空，
+                     * 服务端再按顺序逐个平台试。键仍然是那个 MD5。
+                     */
+                    platform: resolveSongPlatform(currentSong),
+                    /*
+                     * 手动点「生成 AI 主题」就是「我对现在这个不满意，再给一个」——
+                     * 所以不看缓存，直接重新问模型，生成完把云端那条**覆盖**掉。
+                     *
+                     * 自动触发（切歌）相反，必须走缓存：那正是云缓存要省掉的那次调用。
+                     */
+                    force: options.force === true || source === 'manual',
+                });
+            }
+            const { theme: dualTheme, source: themeSource } = resolved;
             const normalizedDualTheme = applyStoredAnimationIntensityToDualTheme(sanitizeDualTheme(dualTheme));
             if (currentSong) {
                 await saveToCache(`dual_theme_${getPlaybackSongKey(currentSong)}`, normalizedDualTheme);

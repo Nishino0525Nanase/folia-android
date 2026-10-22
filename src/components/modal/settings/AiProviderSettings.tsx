@@ -16,7 +16,8 @@ import {
     updateFoliaCloudSettings,
 } from '../../../services/foliaCloud';
 import { createAiFetch } from '../../../services/aiNativeFetch';
-import { Toggle } from './kit';
+import { Button, Toggle } from './kit';
+import { SettingsAnchor } from './navigation/SettingsAnchorContext';
 import {
     getDirectorStateVersion,
     readDirectorSettings,
@@ -37,6 +38,7 @@ import {
 type AiProviderSettingsProps = {
     settingsCardClass: string;
     isDaylight: boolean;
+    onUseCloudThemes?: () => void;
 };
 
 type TestState = 'idle' | 'running' | 'done';
@@ -67,7 +69,7 @@ const providerLabelOf = (provider: AiProviderId, t: (key: string) => string): st
             : 'Google Gemini'
 );
 
-const AiProviderSettings: React.FC<AiProviderSettingsProps> = ({ settingsCardClass, isDaylight }) => {
+const AiProviderSettings: React.FC<AiProviderSettingsProps> = ({ settingsCardClass, isDaylight, onUseCloudThemes }) => {
     const { t } = useTranslation();
     const [settings, setSettings] = useState(() => readAiSettings());
     const [testState, setTestState] = useState<TestState>('idle');
@@ -185,7 +187,7 @@ const AiProviderSettings: React.FC<AiProviderSettingsProps> = ({ settingsCardCla
     };
 
     return (
-        <div className={`rounded-xl border overflow-hidden ${settingsCardClass}`}>
+        <div className={`rounded-xl border overflow-hidden max-[767px]:[&_input]:min-h-[44px] max-[767px]:[&_input]:text-[16px] max-[767px]:[&_button:not([role=switch])]:min-h-[44px] ${settingsCardClass}`}>
             <div className={`flex flex-wrap items-center justify-between gap-4 p-4 border-b ${rowDividerClass}`}>
                 <div className="space-y-1 text-left min-w-0">
                     <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
@@ -422,78 +424,87 @@ const AiProviderSettings: React.FC<AiProviderSettingsProps> = ({ settingsCardCla
                 </div>
             </div>
 
-            {/* 云缓存：紧挨着 AI 歌词配置下面，默认打开；没填 Key 也能拉。
+            {/* 云缓存：紧挨着 AI 歌词配置下面，默认关闭；用户启用后，没填 Key 也能拉。
                 不再单独套一张带边框的卡 —— 外层已经是 kit 的 Group 卡片，这里再套一层
                 就是三层边框。改成组内的一行，用一条发丝线和上面分开。 */}
-            <div className="p-4">
-                <div className={`flex flex-wrap items-center justify-between gap-4 pb-4 border-b ${rowDividerClass}`}>
-                    <div className="space-y-1 text-left min-w-0">
-                        <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                            <Cloud size={15} className="opacity-70" aria-hidden="true" />
-                            {t('options.cloudCache')}
+            <SettingsAnchor anchorId="cloudCache" label={t('options.cloudCache')}>
+                <div className="p-4">
+                    <div className={`flex flex-wrap items-center justify-between gap-4 pb-4 border-b ${rowDividerClass}`}>
+                        <div className="space-y-1 text-left min-w-0">
+                            <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                                <Cloud size={15} className="opacity-70" aria-hidden="true" />
+                                {t('options.cloudCache')}
+                            </div>
+                            <div className="text-xs opacity-50 max-w-[420px]" style={{ color: 'var(--text-secondary)' }}>
+                                {t('options.cloudCacheDesc')}
+                            </div>
                         </div>
-                        <div className="text-xs opacity-50 max-w-[420px]" style={{ color: 'var(--text-secondary)' }}>
-                            {t('options.cloudCacheDesc')}
-                        </div>
-                    </div>
-                    {/* 开关统一用 kit 那一颗：这一颗的样子本来就是照它定的。 */}
-                    <Toggle
-                        checked={cloudCache.enabled}
-                        onChange={() => updateFoliaCloudSettings({ enabled: !cloudCache.enabled })}
-                        label={t('options.cloudCache')}
-                    />
-                </div>
-
-                <div className="pt-4 space-y-3">
-                    <label className="block space-y-1 text-left">
-                        <span className="text-xs opacity-60" style={{ color: 'var(--text-secondary)' }}>
-                            {t('options.cloudCacheBaseUrl')}
-                        </span>
-                        <input
-                            type="text"
-                            autoComplete="off"
-                            spellCheck={false}
-                            value={cloudCache.baseUrl}
-                            onChange={(event) => updateFoliaCloudSettings({ baseUrl: event.target.value })}
-                            placeholder="https://apif.tangbot.xyz"
-                            className={fieldClass}
-                            style={{ color: 'var(--text-primary)' }}
+                        {/* 开关统一用 kit 那一颗：这一颗的样子本来就是照它定的。 */}
+                        <Toggle
+                            checked={cloudCache.enabled}
+                            onChange={() => updateFoliaCloudSettings({ enabled: !cloudCache.enabled })}
+                            label={t('options.cloudCache')}
                         />
-                        <span className="block text-[10px] opacity-45" style={{ color: 'var(--text-secondary)' }}>
-                            {t('options.cloudCacheBaseUrlDesc')}
-                        </span>
-                    </label>
-
-                    <div className="flex flex-wrap items-center gap-3 text-left">
-                        <button
-                            type="button"
-                            onClick={() => void runCacheProbe()}
-                            disabled={cacheProbe.state === 'running'}
-                            className={ghostButtonClass}
-                            style={{ color: 'var(--text-primary)' }}
-                        >
-                            {cacheProbe.state === 'running'
-                                ? <Loader2 size={13} className="animate-spin" />
-                                : <Cloud size={13} />}
-                            {cacheProbe.state === 'running'
-                                ? t('options.aiTestRunning')
-                                : t('options.cloudCacheProbe')}
-                        </button>
-                        {cacheProbe.state === 'done' && (
-                            <span className="inline-flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-                                {cacheProbe.ok
-                                    ? <Check size={12} className="text-green-400" />
-                                    : <X size={12} className="text-red-400" />}
-                                {cacheProbe.text}
-                            </span>
-                        )}
                     </div>
 
-                    <div className="text-[10px] opacity-45 text-left" style={{ color: 'var(--text-secondary)' }}>
-                        {t('options.cloudCachePrivacy')}
+                    <div className="pt-4 space-y-3">
+                        {cloudCache.enabled && onUseCloudThemes && (
+                            <div className="[&_button]:min-h-[44px]">
+                                <Button onClick={onUseCloudThemes}>
+                                    {t('options.useCloudThemes')}
+                                </Button>
+                            </div>
+                        )}
+                        <label className="block space-y-1 text-left">
+                            <span className="text-xs opacity-60" style={{ color: 'var(--text-secondary)' }}>
+                                {t('options.cloudCacheBaseUrl')}
+                            </span>
+                            <input
+                                type="text"
+                                autoComplete="off"
+                                spellCheck={false}
+                                value={cloudCache.baseUrl}
+                                onChange={(event) => updateFoliaCloudSettings({ baseUrl: event.target.value })}
+                                placeholder="https://apif.tangbot.xyz"
+                                className={fieldClass}
+                                style={{ color: 'var(--text-primary)' }}
+                            />
+                            <span className="block text-[10px] opacity-45" style={{ color: 'var(--text-secondary)' }}>
+                                {t('options.cloudCacheBaseUrlDesc')}
+                            </span>
+                        </label>
+
+                        <div className="flex flex-wrap items-center gap-3 text-left">
+                            <button
+                                type="button"
+                                onClick={() => void runCacheProbe()}
+                                disabled={cacheProbe.state === 'running'}
+                                className={ghostButtonClass}
+                                style={{ color: 'var(--text-primary)' }}
+                            >
+                                {cacheProbe.state === 'running'
+                                    ? <Loader2 size={13} className="animate-spin" />
+                                    : <Cloud size={13} />}
+                                {cacheProbe.state === 'running'
+                                    ? t('options.aiTestRunning')
+                                    : t('options.cloudCacheProbe')}
+                            </button>
+                            {cacheProbe.state === 'done' && (
+                                <span className="inline-flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                                    {cacheProbe.ok
+                                        ? <Check size={12} className="text-green-400" />
+                                        : <X size={12} className="text-red-400" />}
+                                    {cacheProbe.text}
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="text-[10px] opacity-45 text-left" style={{ color: 'var(--text-secondary)' }}>
+                            {t('options.cloudCachePrivacy')}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </SettingsAnchor>
         </div>
     );
 };

@@ -57,7 +57,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> => (
 );
 
 const isThemeShaped = (value: unknown): boolean => (
-    isRecord(value) && typeof value.backgroundColor === 'string' && typeof value.primaryColor === 'string'
+    isRecord(value) && ['backgroundColor', 'primaryColor']
+        .every(key => typeof value[key] === 'string' && String(value[key]).trim().length > 0)
 );
 
 export interface StageDecision {
@@ -497,10 +498,13 @@ const resolveStage = async (ctx: StageContext): Promise<StageResult> => {
  *
  * 返回 `null` = 云端没有（或者那条缺了这次要的那一半）。
  */
-export const matchStage = async (request: StageRequest): Promise<StageResult | null> => {
-    if (!isFoliaCloudCacheEnabled()) return null;
+export type StageMatchResult = { status: 'hit'; value: StageResult } | { status: 'miss' | 'unavailable' };
+
+/** Preserve request-scoped read failures for the manual cloud action; never call a model. */
+export const matchStageResult = async (request: StageRequest, options: { backfill?: boolean } = {}): Promise<StageMatchResult> => {
+    if (!isFoliaCloudCacheEnabled()) return { status: 'unavailable' };
     /* 「重新判断」就是要一份跟缓存里不一样的答案 —— 只问缓存的这条路无话可说。 */
-    if (request.force === true) return null;
+    if (request.force === true) return { status: 'miss' };
 
     const ctx = buildStageContext(request);
     const pulled = await pullAiCloudCache(STAGE_CACHE_KIND, ctx.fingerprint, {
@@ -508,17 +512,17 @@ export const matchStage = async (request: StageRequest): Promise<StageResult | n
         /* 纯音乐那半的「歌词」其实是歌名，别拿它去判高亮词。 */
         lyricText: ctx.isPureMusic ? '' : ctx.lyricSource,
     });
-    if (pulled.status !== 'hit') return null;
+    if (pulled.status !== 'hit') return { status: pulled.status };
 
     /* 缓存里的东西照样当不可信输入：形状不对、缺了要的那一半，都跟没命中一样。 */
     const parts = normalizeStagePayload(pulled.payload, ctx.blockedModes);
-    if (!parts || !hasRequired(parts, ctx.requirement)) return null;
+    if (!parts || !hasRequired(parts, ctx.requirement)) return { status: 'miss' };
 
     /*
      * 按内容捞到的那条**回填**到自己这个键上 —— 与 `withAiCloudCache` 里同一条纪律：
      * 同一份歌词下次还是同一个键，不回填就得再走一遍「搜歌名 + 逐条判」。
      */
-    if (pulled.matched === 'words') {
+    if (pulled.matched === 'words' && options.backfill !== false) {
         void pushAiCloudCache(STAGE_CACHE_KIND, ctx.fingerprint, parts, {
             songTitle: ctx.songTitle,
             platform: ctx.platform,
@@ -527,7 +531,12 @@ export const matchStage = async (request: StageRequest): Promise<StageResult | n
         }).catch(() => false);
     }
 
-    return { ...parts, source: 'cloud' };
+    return { status: 'hit', value: { ...parts, source: 'cloud' } };
+};
+
+export const matchStage = async (request: StageRequest): Promise<StageResult | null> => {
+    const matched = await matchStageResult(request);
+    return matched.status === 'hit' ? matched.value : null;
 };
 
 /**

@@ -1,10 +1,10 @@
 import React from 'react';
-import { AudioLines, Ellipsis, Navigation, Search } from 'lucide-react';
+import { AudioLines, Ellipsis, Search, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 // Touch instructions follow the original page controls and the on-demand player menu.
 const GUIDE_ITEMS = [
-    { id: 'navigation', icon: Navigation },
+    { id: 'navigation', icon: SlidersHorizontal },
     { id: 'playback', icon: AudioLines },
     { id: 'search', icon: Search },
     { id: 'more', icon: Ellipsis },

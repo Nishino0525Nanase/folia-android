@@ -13,6 +13,7 @@ const setup = () => {
         readSearch: () => request,
         hideSearch: record('hide-search'),
         closePanel: record('close-panel'),
+        openControls: record('open-controls'),
         openQueue: record('open-queue'),
         openManualLyrics: record('open-manual-lyrics'),
         revealPlayer: record('reveal-player'),
@@ -23,6 +24,12 @@ const setup = () => {
 };
 
 describe('mobile touch navigation', () => {
+    it('returns from More to the original controls after revealing the player', () => {
+        const { actions, events } = setup();
+        actions.controls();
+        expect(events).toEqual(['hide-search', 'reveal-player', 'player', 'open-controls']);
+    });
+
     it('opens the queue after entering the player and makes hidden controls reachable', () => {
         const { actions, events } = setup();
         actions.queue();

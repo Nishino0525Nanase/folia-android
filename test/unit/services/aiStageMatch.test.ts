@@ -156,3 +156,10 @@ describe('matchStage', () => {
     expect(matchedKey).toBe(generatedFingerprint);
   });
 });
+
+it('rejects empty base colours instead of turning a malformed stage hit into a default theme', async () => {
+  handlers.fetch = async url => url.includes('/ai-cache/stage/')
+    ? json({ hit: true, entry: { payload: { theme: { light: { backgroundColor: '', primaryColor: '' }, dark: { backgroundColor: '', primaryColor: '' } } } } })
+    : json({ candidates: [] });
+  expect(await matchStage({ ...baseRequest([{ fullText: 'Malformed theme fixture' }]) })).toBeNull();
+});

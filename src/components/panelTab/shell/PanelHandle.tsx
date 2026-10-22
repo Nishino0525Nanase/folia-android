@@ -8,7 +8,6 @@ import { usePlayerOverlayObstacle } from '../../../hooks/usePlayerOverlayLayout'
 import { useMobileTouchLayout } from '../../../hooks/useMobileTouchLayout';
 import { useSupportsFinePointer } from '../../../hooks/useSupportsFinePointer';
 import { PANEL_BOTTOM_LIFT_PX } from './panelBottomBaseline';
-import { openMobileNavigation } from '../../app/mobile/mobileNavigationStore';
 import { useTranslation } from 'react-i18next';
 
 // src/components/panelTab/shell/PanelHandle.tsx
@@ -319,8 +318,7 @@ const PanelHandle: React.FC<PanelHandleProps> = ({
             return;
         }
 
-        if (isMobileTouch) openMobileNavigation();
-        else onToggle();
+        onToggle();
     };
 
     React.useEffect(() => () => {
@@ -417,7 +415,7 @@ const PanelHandle: React.FC<PanelHandleProps> = ({
                         <button
                             ref={toggleButtonRef}
                             type="button"
-                            aria-label={isMobileTouch ? t('mobileTouch.more') : isOpen ? t('ui.panelCollapse') : t('ui.panelExpand')}
+                            aria-label={isOpen ? t('ui.panelCollapse') : isMobileTouch ? t('mobileTouch.controls') : t('ui.panelExpand')}
                             onPointerDown={handleToggleButtonPointerDown}
                             onPointerMove={handleToggleButtonPointerMove}
                             onPointerUp={clearToggleButtonGesture}
@@ -425,9 +423,9 @@ const PanelHandle: React.FC<PanelHandleProps> = ({
                             onClick={handleToggleButtonClick}
                             style={{ touchAction: canSlideOpenCommandPalette ? 'none' : undefined }}
                             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg backdrop-blur-md transform
-                                border-none absolute right-0 top-0 z-10 ${isOpen && !isMobileTouch ? 'bg-white text-black' : (isDaylight ? 'bg-white/70 text-zinc-900' : 'bg-black/40 text-white')}`}
+                                border-none absolute right-0 top-0 z-10 ${isOpen ? 'bg-white text-black' : (isDaylight ? 'bg-white/70 text-zinc-900' : 'bg-black/40 text-white')}`}
                         >
-                            {isOpen && !isMobileTouch ? <X size={20} /> : <Settings2 size={20} />}
+                            {isOpen ? <X size={20} /> : <Settings2 size={20} />}
                         </button>
                     </div>
                 </motion.div>

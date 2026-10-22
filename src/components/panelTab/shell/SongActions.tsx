@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crosshair, Home as HomeIcon, Settings, Star } from 'lucide-react';
+import { Crosshair, Ellipsis, Home as HomeIcon, Settings, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePlayingFromCollection } from '../../app/playing-song-locator/usePlayingFromCollection';
 import { openAddToPlaylist, useAddToPlaylistStore } from '../../../stores/useAddToPlaylistStore';
@@ -17,9 +17,12 @@ type SongActionsProps = {
     onLocatePlayingSong: () => void;
     onNavigateHome: () => void;
     onOpenSettings?: () => void;
+    onOpenMore?: () => void;
+    /** Keep secondary navigation visible when the mobile controls header is folded. */
+    moreOnly?: boolean;
 };
 
-const SongActions: React.FC<SongActionsProps> = ({ like, onLocatePlayingSong, onNavigateHome, onOpenSettings }) => {
+const SongActions: React.FC<SongActionsProps> = ({ like, onLocatePlayingSong, onNavigateHome, onOpenSettings, onOpenMore, moreOnly }) => {
     const { t } = useTranslation();
     // Answered by AddToPlaylistHost, which owns the picker now: the same question is asked by a
     // command that can fire with this panel closed, so it cannot be derived from panel props.
@@ -27,6 +30,13 @@ const SongActions: React.FC<SongActionsProps> = ({ like, onLocatePlayingSong, on
     // The collection the queue was started from, for as long as the queue is still of its songs.
     const playingFrom = usePlayingFromCollection();
     const playingFromLabel = playingFrom ? t('ui.playingFrom', { name: playingFrom.name }) : '';
+
+    const moreButton = onOpenMore ? (
+        <PanelIconButton label={t('mobileTouch.more')} onClick={onOpenMore} style={{ minWidth: 44, minHeight: 44 }}>
+            <Ellipsis size={20} />
+        </PanelIconButton>
+    ) : null;
+    if (moreOnly) return moreButton;
 
     return (
         <div className="mt-3.5 flex items-center gap-1.5">
@@ -67,6 +77,7 @@ const SongActions: React.FC<SongActionsProps> = ({ like, onLocatePlayingSong, on
             <PanelIconButton size="s" filled label={t('ui.options')} onClick={onOpenSettings}>
                 <Settings size={15} />
             </PanelIconButton>
+            {moreButton}
         </div>
     );
 };

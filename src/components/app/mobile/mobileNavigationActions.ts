@@ -8,6 +8,7 @@ export type MobileNavigationActionsDeps = {
     readSearch: () => { query: string; sourceTab: SearchSource; returnView: 'home' | 'player' };
     hideSearch: () => void;
     closePanel: () => void;
+    openControls: () => void;
     openQueue: () => void;
     openManualLyrics: () => void;
     revealPlayer: () => void;
@@ -31,6 +32,12 @@ export const createMobileNavigationActions = (deps: MobileNavigationActionsDeps)
         deps.closePanel();
         deps.revealPlayer();
         deps.navigatePlayer();
+    },
+    controls: () => {
+        deps.hideSearch();
+        deps.revealPlayer();
+        deps.navigatePlayer();
+        deps.openControls();
     },
     queue: () => {
         deps.hideSearch();

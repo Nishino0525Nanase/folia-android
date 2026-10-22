@@ -10,10 +10,10 @@ import { md5 } from '../utils/md5';
 // 谁先生成谁上传，后面的人直接取答案，不再烧一次模型调用。
 //
 // 两条纪律：
-//  1. **拉取不需要 Key。** 开关默认打开正是为了没填 Key 的人：他本来一个
+//  1. **拉取不需要 Key。** 开关由用户显式启用；没填 Key 的人本来一个
 //     主题都生成不出来，能命中别人的结果就是白赚。
 //  2. **缓存永不阻塞功能。** 拉失败、推失败、返回的 JSON 不认识 —— 全部
-//     静默退回「照常生成」，缓存只是加速器，不是依赖。
+//     交回调用方回退；有密钥时可照常生成，无密钥时使用封面配色。
 
 /** 提示词一改，缓存就换一批：老答案的格式未必还能用。 */
 const CACHE_SCHEMA = 'v1';
@@ -253,19 +253,25 @@ export const highlightWordsPresent = (words: readonly string[], lyricText: strin
  * 只有「按已知键直接取一条」这种用法要它 —— 其余一律走 `pullAiCloudCache`，
  * 那条路还会按歌名兜底一层。
  */
-export const fetchEntry = async (kind: AiCloudCacheKind, key: string): Promise<unknown> => {
+export const fetchEntry = async (kind: AiCloudCacheKind, key: string, onUnavailable?: () => void): Promise<unknown> => {
+    if (!isFoliaCloudCacheEnabled()) return null;
     try {
         const response = await createAiFetch()(resolveAiCloudCacheUrl(kind, key), {
             method: 'GET',
             headers: { Accept: 'application/json' },
             signal: withTimeout(),
         });
-        if (!response.ok) return null;
-        const data = await response.json().catch(() => null) as { hit?: unknown; entry?: unknown } | null;
+        if (!response.ok) {
+            if (response.status !== 404) onUnavailable?.();
+            return null;
+        }
+        const data = await response.json() as { hit?: unknown; entry?: unknown } | null;
+        if (!isPlainObject(data) || typeof data.hit !== 'boolean') { onUnavailable?.(); return null; }
         const entry = data?.entry;
         if (data?.hit !== true || !isPlainObject(entry) || !('payload' in entry)) return null;
         return entry.payload;
     } catch {
+        onUnavailable?.();
         return null;
     }
 };
@@ -273,6 +279,7 @@ export const fetchEntry = async (kind: AiCloudCacheKind, key: string): Promise<u
 const fetchResolveCandidates = async (
     kind: AiCloudCacheKind,
     songTitle: string,
+    onUnavailable?: () => void,
 ): Promise<ResolveCandidate[]> => {
     try {
         const response = await createAiFetch()(resolveAiCloudResolveUrl(), {
@@ -281,9 +288,13 @@ const fetchResolveCandidates = async (
             body: JSON.stringify({ kind, songTitle }),
             signal: withTimeout(),
         });
-        if (!response.ok) return [];
-        const data = await response.json().catch(() => null) as { candidates?: unknown } | null;
-        const list = Array.isArray(data?.candidates) ? data?.candidates : [];
+        if (!response.ok) {
+            if (response.status !== 404) onUnavailable?.();
+            return [];
+        }
+        const data = await response.json() as { candidates?: unknown } | null;
+        if (!Array.isArray(data?.candidates)) { onUnavailable?.(); return []; }
+        const list = data.candidates;
         const out: ResolveCandidate[] = [];
         list.forEach((entry: unknown) => {
             if (!isPlainObject(entry)) return;
@@ -296,6 +307,7 @@ const fetchResolveCandidates = async (
         });
         return out;
     } catch {
+        onUnavailable?.();
         return [];
     }
 };
@@ -390,13 +402,14 @@ export const pullAiCloudCache = async (
         native = null;
     }
     if (native) {
-        /* 原生真发了请求、服务端说没有：那就是没命中，不必再用网页那条再问一遍。 */
-        if (!native.ok) return { status: 'miss' };
-        /* 原生回的是响应体原文：解析不出来就跟没命中一样，别让一条脏响应炸了整条链路。 */
+        /* 原生已经发过请求，不再通过网页重复请求。 */
+        // The bridge exposes no HTTP status: a refusal is unavailable, not a proven cache miss.
+        if (!native.ok) return { status: 'unavailable' };
+        /* 原生返回响应体原文；无法解析表示本次不可用，不能当作确切未命中。 */
         try {
             data = JSON.parse(native.body) as { hit?: unknown; entry?: unknown };
         } catch {
-            data = null;
+            return { status: 'unavailable' };
         }
     }
 
@@ -408,13 +421,15 @@ export const pullAiCloudCache = async (
                 signal: withTimeout(),
             });
             /* 没命中不再当场返回 —— 下面还有一次按歌名捞的机会。 */
-            if (response.ok) {
-                data = await response.json().catch(() => null) as { hit?: unknown; entry?: unknown } | null;
-            }
+            if (response.status === 404) data = { hit: false };
+            else if (!response.ok) return { status: 'unavailable' };
+            else data = await response.json() as { hit?: unknown; entry?: unknown } | null;
         } catch {
-            data = null;
+            return { status: 'unavailable' };
         }
     }
+
+    if (!isPlainObject(data) || typeof data.hit !== 'boolean') return { status: 'unavailable' };
 
     const entry = data?.entry;
     if (data?.hit === true && isPlainObject(entry) && 'payload' in entry) {
@@ -434,8 +449,11 @@ export const pullAiCloudCache = async (
         return { status: 'miss' };
     }
 
-    const candidates = await fetchResolveCandidates(kind, songTitle);
+    let unavailable = false;
+    const onUnavailable = () => { unavailable = true; };
+    const candidates = await fetchResolveCandidates(kind, songTitle, onUnavailable);
     if (candidates.length === 0) {
+        if (unavailable) return { status: 'unavailable' };
         rememberMiss(kind, key);
         return { status: 'miss' };
     }
@@ -477,7 +495,7 @@ export const pullAiCloudCache = async (
         : pickRelaxedCandidates(candidates);
 
     const payloads = await Promise.all(
-        batch.map((candidate) => fetchEntry(kind, candidate.key)),
+        batch.map((candidate) => fetchEntry(kind, candidate.key, onUnavailable)),
     );
     /*
      * 取**顺序最靠前**的那个成功的：合规那一批服务端已经按「歌名完全相等优先、更新时间
@@ -493,6 +511,7 @@ export const pullAiCloudCache = async (
         };
     }
 
+    if (unavailable) return { status: 'unavailable' };
     rememberMiss(kind, key);
     return { status: 'miss' };
 };

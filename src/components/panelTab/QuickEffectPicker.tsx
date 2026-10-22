@@ -1,4 +1,5 @@
 import React from 'react';
+import { useMobileTouchLayout } from '../../hooks/useMobileTouchLayout';
 import { ChevronRight } from 'lucide-react';
 import { PictureGrid, Popover, type PictureState } from '../modal/settings/kit';
 
@@ -26,21 +27,25 @@ type QuickEffectPickerProps<Value extends string> = {
 
 const QuickEffectPicker = <Value extends string>({
     anchorRef, open, onClose, value, options, picture, onChange, label, moreLabel, onOpenMore,
-}: QuickEffectPickerProps<Value>) => (
-    <Popover anchorRef={anchorRef} open={open} onClose={onClose} fill aria-label={label} className="flex flex-col rounded-[14px] pb-1 pt-2">
-        <PictureGrid value={value} options={options} picture={picture} columns={3} onChange={onChange} label={label} maxHeight={300} />
-        <button
-            type="button"
-            onClick={() => {
-                onClose();
-                onOpenMore();
-            }}
-            className="st-t-fast mx-3 mt-2 flex h-9 shrink-0 items-center justify-between border-t border-[var(--st-line)] px-1 text-[13px] text-[color:var(--st-t2)] transition-colors hover:text-[color:var(--st-t1)]"
-        >
-            <span>{moreLabel}</span>
-            <ChevronRight size={14} />
-        </button>
-    </Popover>
-);
+}: QuickEffectPickerProps<Value>) => {
+    const isMobileTouch = useMobileTouchLayout();
+    return (
+        <Popover anchorRef={anchorRef} open={open} onClose={onClose} fill aria-label={label} className="flex flex-col rounded-[14px] pb-1 pt-2">
+            <PictureGrid value={value} options={options} picture={picture} columns={3} onChange={onChange} label={label} maxHeight={300} />
+            <button
+                type="button"
+                onClick={() => {
+                    onClose();
+                    onOpenMore();
+                }}
+                className="st-t-fast mx-3 mt-2 flex h-9 shrink-0 items-center justify-between border-t border-[var(--st-line)] px-1 text-[13px] text-[color:var(--st-t2)] transition-colors hover:text-[color:var(--st-t1)]"
+                style={isMobileTouch ? { minHeight: 44 } : undefined}
+            >
+                <span>{moreLabel}</span>
+                <ChevronRight size={14} />
+            </button>
+        </Popover>
+    );
+};
 
 export default QuickEffectPicker;

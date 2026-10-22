@@ -30,6 +30,9 @@ import { useIsWideShortViewport } from './panelTab/shell/panelViewport';
 import { FOLIUM_PANEL_TAB_PREFIX, FoliumPanelTabBody, useFoliumPanelTabs } from '../mods/folium/registries/playerPanelTabs';
 import { countRender } from '../dev/renderCount';
 import { useAppViewStore } from '../stores/useAppViewStore';
+import { useMobileTouchLayout } from '../hooks/useMobileTouchLayout';
+import { createMobilePanelActions } from './app/mobile/mobilePanelActions';
+import { closeMobileNavigation, openMobileNavigation } from './app/mobile/mobileNavigationStore';
 
 // src/components/UnifiedPanel.tsx
 // The playing page's panel: which tabs there are for the playing song, and what each one is given.
@@ -154,6 +157,7 @@ const UnifiedPanel: React.FC<UnifiedPanelProps> = ({
     const { t } = useTranslation();
     // Read here and not handed down from App.tsx: a change of tab renders the panel, not the app.
     const currentTab = useAppViewStore(state => state.panelTab);
+    const isMobileTouch = useMobileTouchLayout();
     const {
         isOpen,
         onTabChange,
@@ -290,6 +294,16 @@ const UnifiedPanel: React.FC<UnifiedPanelProps> = ({
     // Theme Helper
     // const isDaylight = theme.name === 'Daylight Default'; // Deprecated
     const isCover = currentTab === 'cover';
+    const showFoldedMobileActions = isMobileTouch && currentTab === 'controls';
+    const mobilePanelActions = React.useMemo(() => createMobilePanelActions({
+        isMobileTouch,
+        readPanelOpen: () => useAppViewStore.getState().isPanelOpen,
+        setPanelOpen: isPanelOpen => useAppViewStore.getState().setIsPanelOpen(isPanelOpen),
+        selectControls: () => onTabChange('controls'),
+        togglePanel: onToggle,
+        closeNavigation: closeMobileNavigation,
+        openNavigation: openMobileNavigation,
+    }), [isMobileTouch, onTabChange, onToggle]);
     const like: SongLike = { isLiked, onLike, disabled: likeDisabled, disabledReason: likeDisabledReason };
     const handleNavigateHome = () => {
         onToggle();
@@ -315,54 +329,68 @@ const UnifiedPanel: React.FC<UnifiedPanelProps> = ({
             theme={theme}
             isDaylight={isDaylight}
             header={(
-                <SongHeader
-                    isBig={isCover}
-                    currentSong={currentSong}
-                    coverUrl={coverUrl}
-                    like={like}
-                    onShowCover={() => onTabChange('cover')}
-                >
-                    <SongCredits
-                        currentSong={currentSong}
-                        onAlbumSelect={(song, album) => {
-                            onAlbumSelect(song, album);
-                            onToggle();
-                        }}
-                        onSelectArtist={(song, artist) => {
-                            onSelectArtist(song, artist);
-                            onToggle();
-                        }}
-                        onOpenCurrentLocalAlbum={() => {
-                            onOpenCurrentLocalAlbum();
-                            onToggle();
-                        }}
-                        onOpenCurrentLocalArtist={(entityId) => {
-                            onOpenCurrentLocalArtist(entityId);
-                            onToggle();
-                        }}
-                        onOpenCurrentNavidromeAlbum={() => {
-                            onOpenCurrentNavidromeAlbum();
-                            onToggle();
-                        }}
-                        onOpenCurrentNavidromeArtist={() => {
-                            onOpenCurrentNavidromeArtist();
-                            onToggle();
-                        }}
-                        onCopySongInfoSuccess={onCopySongInfoSuccess}
-                    />
-                    <SongActions
-                        like={like}
-                        onLocatePlayingSong={handleLocatePlayingSong}
-                        onNavigateHome={handleNavigateHome}
-                        onOpenSettings={onOpenSettings ? handleOpenSettings : undefined}
-                    />
-                </SongHeader>
+                <div className={`shrink-0${showFoldedMobileActions ? ' flex items-center gap-1.5' : ''}`}>
+                    <div className={showFoldedMobileActions ? 'min-w-0 flex-1' : undefined}>
+                        <SongHeader
+                            isBig={isCover}
+                            currentSong={currentSong}
+                            coverUrl={coverUrl}
+                            like={like}
+                            onShowCover={() => onTabChange('cover')}
+                        >
+                            <SongCredits
+                                currentSong={currentSong}
+                                onAlbumSelect={(song, album) => {
+                                    onAlbumSelect(song, album);
+                                    onToggle();
+                                }}
+                                onSelectArtist={(song, artist) => {
+                                    onSelectArtist(song, artist);
+                                    onToggle();
+                                }}
+                                onOpenCurrentLocalAlbum={() => {
+                                    onOpenCurrentLocalAlbum();
+                                    onToggle();
+                                }}
+                                onOpenCurrentLocalArtist={(entityId) => {
+                                    onOpenCurrentLocalArtist(entityId);
+                                    onToggle();
+                                }}
+                                onOpenCurrentNavidromeAlbum={() => {
+                                    onOpenCurrentNavidromeAlbum();
+                                    onToggle();
+                                }}
+                                onOpenCurrentNavidromeArtist={() => {
+                                    onOpenCurrentNavidromeArtist();
+                                    onToggle();
+                                }}
+                                onCopySongInfoSuccess={onCopySongInfoSuccess}
+                            />
+                            <SongActions
+                                like={like}
+                                onLocatePlayingSong={handleLocatePlayingSong}
+                                onNavigateHome={handleNavigateHome}
+                                onOpenSettings={onOpenSettings ? handleOpenSettings : undefined}
+                                onOpenMore={isMobileTouch ? mobilePanelActions.more : undefined}
+                            />
+                        </SongHeader>
+                    </div>
+                    {showFoldedMobileActions && (
+                        <SongActions
+                            like={like}
+                            onLocatePlayingSong={handleLocatePlayingSong}
+                            onNavigateHome={handleNavigateHome}
+                            onOpenMore={mobilePanelActions.more}
+                            moreOnly
+                        />
+                    )}
+                </div>
             )}
             dock={<TabDock tabs={tabs} currentTab={currentTab} onTabChange={onTabChange} vertical={isWideShort} />}
             handle={(
                 <PanelHandle
                     isOpen={isOpen}
-                    onToggle={onToggle}
+                    onToggle={mobilePanelActions.toggle}
                     theme={theme}
                     isDaylight={isDaylight}
                     showOpenPanelCloseButton={showOpenPanelCloseButton}

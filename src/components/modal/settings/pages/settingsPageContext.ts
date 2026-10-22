@@ -50,8 +50,9 @@ export type SettingsPageContextValue = {
         songThemeAutoSwitchEnabled: boolean;
         songThemeAutoGenerateEnabled: boolean;
         themeGenerationSource: ThemeGenerationSource;
-        /** Whether the AI provider has a saved key; without one the AI source cannot be chosen. */
+        /** Whether the selected model provider has a saved key for new generation. */
         aiApiKeyStatus: 'loading' | 'configured' | 'missing';
+        cloudThemeEnabled?: boolean;
         onApplyDefaultTheme: () => void;
         onApplyCustomTheme: () => void;
         onToggleCustomThemePreferred: (enabled: boolean) => void;

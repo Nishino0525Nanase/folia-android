@@ -4,6 +4,7 @@ import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import QuickEffectPicker from '../QuickEffectPicker';
 import type { PictureState } from '../../modal/settings/kit';
 import { kitTransition, useKitReducedMotion } from '../../modal/settings/kit/motion';
+import { useMobileTouchLayout } from '../../../hooks/useMobileTouchLayout';
 
 // src/components/panelTab/controls/ModeStepperRow.tsx
 // 「‹ 字形 说明/当前模式⌄ 主参数 ›」一行，其余参数放在下面一行、靠右和右端箭头对齐。箭头直接换到相邻模式，
@@ -55,6 +56,7 @@ const ModeStepperRow = <Value extends string>({
 }: ModeStepperRowProps<Value>) => {
     const canStep = options.length > 1;
     const reduced = useKitReducedMotion();
+    const isMobileTouch = useMobileTouchLayout();
     const triggerRef = useRef<HTMLButtonElement>(null);
     // 0 表示不是箭头触发的（从小图里选或外部改），此时只淡入不滑动。
     const [stepDirection, setStepDirection] = useState<-1 | 0 | 1>(0);
@@ -77,6 +79,7 @@ const ModeStepperRow = <Value extends string>({
             disabled={!canStep}
             whileTap={canStep && !reduced ? { scale: 0.82, x: direction * 2 } : undefined}
             transition={kitTransition('fast', reduced)}
+            style={isMobileTouch ? { minWidth: 44, minHeight: 44 } : undefined}
             className="st-t-fast flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[color:var(--st-t3)] transition-colors hover:bg-[var(--st-fill)] hover:text-[color:var(--st-t1)] disabled:cursor-not-allowed disabled:opacity-40"
             aria-label={`${caption} ${direction === -1 ? '−' : '+'}`}
         >
