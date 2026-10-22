@@ -161,7 +161,8 @@ export const SlideActionButton: React.FC<SlideActionButtonProps> = ({
     };
 
     return (
-        <div className={`relative w-12 h-12 transition-all duration-300 transform ${motionClass}`}>
+        <div className={`relative w-12 h-12 transition-all duration-300 transform ${motionClass}`}
+            style={supportsHover ? undefined : { width: 48, height: 48 }}>
             <div
                 style={{ width: '96px', transition: 'opacity 200ms ease-out' }}
                 className={`absolute right-0 top-0 h-12 rounded-full border pointer-events-none z-0 ${showGuideLine || isDragging ? 'opacity-100' : 'opacity-0'} ${isDaylight ? 'border-black/10 bg-black/5' : 'border-white/10 bg-white/5'}`}
@@ -217,7 +218,7 @@ export const SlideActionButton: React.FC<SlideActionButtonProps> = ({
                     }
                     onActivate();
                 }}
-                style={{ touchAction: 'none' }}
+                style={{ touchAction: 'none', ...(supportsHover ? {} : { width: 48, height: 48 }) }}
                 className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg backdrop-blur-md transform border-none absolute right-0 top-0 z-10 disabled:opacity-40 disabled:cursor-default ${isDaylight ? 'bg-white/70 text-zinc-900' : 'bg-black/40 text-white'}`}
                 title={title}
                 aria-label={title}

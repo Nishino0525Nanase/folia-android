@@ -6,6 +6,8 @@ import { useSettingsModalStore } from '../../stores/useSettingsModalStore';
 import { useThemeSettingsStore } from '../../stores/useThemeSettingsStore';
 import { openCurrentPagePonder } from '../../services/ponder/pagePonderTarget';
 import type { Theme } from '../../types';
+import { useMobileTouchLayout } from '../../hooks/useMobileTouchLayout';
+import { MobileTouchGuide } from '../app/mobile/MobileTouchGuide';
 
 // src/components/modal/UserGuideModal.tsx
 // 版本后的旧帮助轮播已由 Ponder 取代。这个门只教入口；真正的页面说明在 Ponder 里完成。
@@ -15,7 +17,13 @@ export const UserGuideModal: React.FC<{ theme?: Theme | null }> = ({ theme }) =>
     const isOpen = useSettingsModalStore(state => state.isUserGuideModalOpen);
     const isDaylight = useThemeSettingsStore(state => state.isDaylight);
     const supportsFinePointer = useSupportsFinePointer();
+    const isMobileTouch = useMobileTouchLayout();
     const accent = theme?.accentColor || (isDaylight ? '#18181b' : '#f4f4f5');
+    const completeTouchGuide = () => {
+        const modal = useSettingsModalStore.getState();
+        if (typeof __APP_VERSION__ !== 'undefined') modal.setLastSeenGuideVersion(__APP_VERSION__);
+        modal.setIsUserGuideModalOpen(false);
+    };
 
     return (
         <AnimatePresence>
@@ -35,7 +43,7 @@ export const UserGuideModal: React.FC<{ theme?: Theme | null }> = ({ theme }) =>
                         initial={{ scale: 0.96, opacity: 0, y: 16 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.96, opacity: 0 }}
-                        className={`w-full max-w-md rounded-[2rem] border p-8 text-center shadow-2xl ${
+                        className={`max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-[2rem] border p-6 text-center shadow-2xl sm:p-8 ${
                             isDaylight ? 'border-zinc-200 bg-white text-zinc-900' : 'border-zinc-800 bg-[#18181b] text-zinc-50'
                         }`}
                     >
@@ -43,13 +51,13 @@ export const UserGuideModal: React.FC<{ theme?: Theme | null }> = ({ theme }) =>
                             <Lightbulb size={26} aria-hidden="true" />
                         </span>
                         <h2 id="ponder-onboarding-title" className="text-2xl font-bold">
-                            {t('ponder.onboarding.title')}
+                            {t(isMobileTouch ? 'help.mobileGuide.title' : 'ponder.onboarding.title')}
                         </h2>
-                        <p className="mx-auto mt-3 max-w-sm text-sm leading-6 opacity-65">
+                        {isMobileTouch ? <MobileTouchGuide /> : <p className="mx-auto mt-3 max-w-sm text-sm leading-6 opacity-65">
                             {t(supportsFinePointer ? 'ponder.onboarding.description' : 'ponder.onboarding.touchDescription')}
-                        </p>
+                        </p>}
 
-                        {supportsFinePointer && (
+                        {!isMobileTouch && supportsFinePointer && (
                             <div className="mt-7 flex items-center justify-center gap-2" aria-label={t('ponder.onboarding.shortcut')}>
                                 <kbd className="rounded-lg border px-3 py-2 font-mono text-sm">Ctrl</kbd>
                                 <span className="opacity-40">+</span>
@@ -61,15 +69,15 @@ export const UserGuideModal: React.FC<{ theme?: Theme | null }> = ({ theme }) =>
                         <button
                             type="button"
                             data-testid="ponder-onboarding-open-button"
-                            onClick={openCurrentPagePonder}
-                            className={`${supportsFinePointer ? 'mt-4' : 'mt-7'} inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-transform active:scale-95`}
+                            onClick={isMobileTouch ? completeTouchGuide : openCurrentPagePonder}
+                            className={`${!isMobileTouch && supportsFinePointer ? 'mt-4' : 'mt-7'} inline-flex min-h-12 items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-transform active:scale-95`}
                             style={{ borderColor: accent, color: accent }}
                         >
                             <Lightbulb size={17} aria-hidden="true" />
-                            {t('ponder.openPage')}
+                            {t(isMobileTouch ? 'help.mobileGuide.start' : 'ponder.openPage')}
                         </button>
 
-                        <p className="mt-6 text-xs opacity-45">{t('ponder.onboarding.required')}</p>
+                        <p className="mt-6 text-xs opacity-45">{t(isMobileTouch ? 'help.mobileGuide.revisit' : 'ponder.onboarding.required')}</p>
                     </motion.div>
                 </motion.div>
             )}

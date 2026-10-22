@@ -31,6 +31,7 @@ export const useBravaisHomeAccount = (account: LibraryAccountController, online:
     const opensOn = guest ? null : activeProviderId;
     const onOpen = useCallback((pressed: Element | null) => openLoginWindow(opensOn, pressed), [opensOn]);
     return useMemo<BravaisHomeAccount>(() => ({
+        accountView: online.accountView,
         providerId: online.providerId,
         providerLabel: online.providerLabel,
         detail,
@@ -40,5 +41,5 @@ export const useBravaisHomeAccount = (account: LibraryAccountController, online:
         connectLabel: t('libraryBravaisHome.connect'),
         toggleLabel: t('home.switchOnlineProvider'),
         onOpen,
-    }), [avatarUrl, detail, guest, nickname, onOpen, online.providerId, online.providerLabel, t]);
+    }), [avatarUrl, detail, guest, nickname, onOpen, online.accountView, online.providerId, online.providerLabel, t]);
 };

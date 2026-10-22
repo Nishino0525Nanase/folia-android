@@ -768,7 +768,8 @@ export async function handleQQSongUrl(mid, mediaMid, qualityPreference, cookieHe
   if (songmid && !mediaIds.includes(songmid)) mediaIds.push(songmid);
   const fileCandidates = mediaIds.flatMap((mediaId) =>
     qualityCandidatesFrom(requestedQuality, QQ_QUALITY_CANDIDATE_TEMPLATES)
-      .map((item) => ({ ...item, mediaId, filename: item.prefix + mediaId + item.ext })),
+      // Playback filenames carry both catalogue and media IDs; the catalogue ID is also the media fallback.
+      .map((item) => ({ ...item, mediaId, filename: item.prefix + songmid + mediaId + item.ext })),
   );
   const filenames = fileCandidates.map((item) => item.filename);
   const param = {

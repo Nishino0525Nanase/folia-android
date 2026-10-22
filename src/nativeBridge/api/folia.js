@@ -15,6 +15,7 @@ import {
   handleSongLike,
   handleSongLikeCheck,
   handleSongUrl,
+  handleAnonymousRegister,
   handleLyric,
 } from './netease.js';
 import {
@@ -1453,9 +1454,7 @@ export async function handleFoliaApiRequest(input) {
   const path = url.pathname;
   const params = url.searchParams;
 
-  if (path === '/register/anonimous') {
-    return { code: 200, cookie: '', anonymous: true };
-  }
+  if (path === '/register/anonimous') return await handleAnonymousRegister(cookie);
   if (path === '/login/status') return await handleLoginStatus(cookie);
   if (path === '/user/account') return await handleUserAccount(cookie);
   if (path === '/logout') return { code: 200 };

@@ -308,7 +308,7 @@ const Visualizer: React.FC<VisualizerProps> = (props) => {
         >
             {/* Main Container */}
             <motion.div
-                className="relative z-10 w-full h-[70vh] flex items-center justify-center p-8 pointer-events-none will-change-transform"
+                className="relative z-10 w-full h-[70vh] flex items-center justify-center p-4 pointer-events-none will-change-transform md:p-8"
                 animate={lyricContainerFloat?.animate}
                 transition={lyricContainerFloat?.transition}
             >

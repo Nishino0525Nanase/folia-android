@@ -182,7 +182,7 @@ export const EntityEditorWorkspace = ({
     };
 
     return (
-        <motion.div className={`grid gap-6 p-8 ${splitMode ? 'lg:h-[calc(80dvh-7rem)] lg:max-h-[42rem] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:grid-rows-[minmax(0,1fr)_auto] lg:overflow-hidden' : ''}`}>
+        <motion.div className={`grid gap-6 p-4 md:p-8 ${splitMode ? 'lg:h-[calc(80dvh-7rem)] lg:max-h-[42rem] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:grid-rows-[minmax(0,1fr)_auto] lg:overflow-hidden' : ''}`}>
             <motion.section className={`min-w-0 ${splitMode ? 'lg:min-h-0 lg:overflow-y-auto lg:pr-2 custom-scrollbar' : ''}`}>
                 <div className="mb-4">
                     <label className="mb-1.5 block text-[12px] font-bold uppercase tracking-wider text-blue-500">
@@ -225,7 +225,7 @@ export const EntityEditorWorkspace = ({
                             type="button"
                             onClick={() => addArtistSplitTarget()}
                             disabled={!normalizedInput}
-                            className="shrink-0 rounded-full bg-blue-500 p-2 text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-blue-500 text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-40 md:h-auto md:w-auto md:p-2"
                             aria-label={t('localMusic.addArtistSplitTarget')}
                             title={t('localMusic.addArtistSplitTarget')}
                         >
@@ -244,7 +244,7 @@ export const EntityEditorWorkspace = ({
                                 key={suggestion.name}
                                 type="button"
                                 onClick={() => chooseSuggestedName(suggestion.name)}
-                                className={`max-w-full truncate rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${resultTheme}`}
+                                className={`min-h-11 max-w-full truncate rounded-full border px-4 py-1.5 text-xs font-medium transition-colors md:min-h-0 ${resultTheme}`}
                             >
                                 {suggestion.name} <span className="ml-1 opacity-40 text-[10px]">· {suggestion.count}</span>
                             </motion.button>
@@ -308,7 +308,7 @@ export const EntityEditorWorkspace = ({
                 </motion.section>
             )}
 
-            <motion.footer className={`-mx-8 -mb-8 mt-2 flex flex-wrap items-center justify-end gap-3 border-t px-8 py-5 ${borderTheme} ${splitMode ? 'lg:col-span-2' : ''}`}>
+            <motion.footer className={`-mx-4 -mb-4 mt-2 flex flex-wrap items-center justify-end gap-3 border-t px-4 py-5 md:-mx-8 md:-mb-8 md:px-8 ${borderTheme} ${splitMode ? 'lg:col-span-2' : ''}`}>
                 <button
                     type="button"
                     onClick={() => {

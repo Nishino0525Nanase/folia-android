@@ -2211,9 +2211,7 @@ export const GridView: React.FC<GridViewProps> = ({
                 placeholder={t('localMusic.enterPlaylistName')}
                 confirmLabel={t('localMusic.createPlaylist')}
                 onClose={() => setIsCreatePlaylistOpen(false)}
-                onConfirm={(name) => {
-                    void handleCreateNavidromePlaylist(name);
-                }}
+                onConfirm={handleCreateNavidromePlaylist}
                 isDaylight={isDaylight}
             />
             <ConfirmDialog

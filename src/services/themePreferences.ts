@@ -1,4 +1,6 @@
 import { DualTheme, Theme } from '../types';
+import { isCapacitorAndroid } from '../platform/runtime';
+import { isAiConfigured } from './aiSettings';
 
 // Shared helpers for persisted theme preferences and applied theme selection.
 
@@ -38,13 +40,18 @@ export const isThemeGenerationSource = (value: unknown): value is ThemeGeneratio
     value === 'ai' || value === 'cover'
 );
 
+/** Android uses the selected provider's local key, independently of hosted web AI availability. */
+export const resolveEffectiveThemeGenerationSource = (source: ThemeGenerationSource): ThemeGenerationSource => (
+    isCapacitorAndroid() && !isAiConfigured() ? 'cover' : source
+);
+
 export const readStoredThemeGenerationSource = (): ThemeGenerationSource => {
     if (!isBrowser()) {
         return 'ai';
     }
 
     const storedValue = window.localStorage.getItem(THEME_GENERATION_SOURCE_KEY);
-    return isThemeGenerationSource(storedValue) ? storedValue : 'ai';
+    return resolveEffectiveThemeGenerationSource(isThemeGenerationSource(storedValue) ? storedValue : 'ai');
 };
 
 export const saveStoredThemeGenerationSource = (value: ThemeGenerationSource) => {

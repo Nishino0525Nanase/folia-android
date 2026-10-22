@@ -12,6 +12,7 @@ import { kitMotionTokens, useKitReducedMotion } from '../modal/settings/kit/moti
 import { openLoginWindow, useLoginWindowStore } from './loginWindowStore';
 import { AccountPicture, PlatformMark } from './PlatformMark';
 import { pillProvider, pillSeenNext, rowStatus, type PillSeen } from './platformRows';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 // src/components/login/SwitcherPill.tsx
 // 主页右下角的切换器：正在用的账号的头像，角上是平台的记号（没有人登录时只有记号；登录失效时记号上
@@ -29,6 +30,7 @@ type SwitcherPillProps = {
 
 const SwitcherPill: React.FC<SwitcherPillProps> = ({ account, onBackToPlayer }) => {
     const { t } = useTranslation();
+    const isPhoneTouch = useMediaQuery('(max-width: 767px) and (pointer: coarse)');
     const { providers, activeProviderId } = useLibraryAccountProviders(account);
     const { isDaylight, theme } = useSettingsKitTheme();
     const reduced = useKitReducedMotion();
@@ -120,6 +122,7 @@ const SwitcherPill: React.FC<SwitcherPillProps> = ({ account, onBackToPlayer }) 
                         onClick={event => openLoginWindow(provider.providerId, event.currentTarget.querySelector('[data-login-pill]'))}
                         aria-label={t('home.switchOnlineProvider')}
                         className="st-t-fast flex h-10 min-w-10 items-center rounded-full transition-colors hover:bg-[var(--st-fill)]"
+                        style={isPhoneTouch ? { minWidth: 44, minHeight: 44 } : undefined}
                     >
                         {/* 登录窗口从这里出来，登录成功后头像飞回这里（done/LoginDone.tsx 按这个属性找它，属性的值是这里画的平台）。 */}
                         <span data-login-pill={provider.providerId} className="inline-flex" style={landing && status === 'signed-in' ? { opacity: 0 } : undefined}>
@@ -133,12 +136,13 @@ const SwitcherPill: React.FC<SwitcherPillProps> = ({ account, onBackToPlayer }) 
                     </button>
                 </Tooltip>
                 <span className="mx-1.5 hidden h-6 w-px bg-[var(--st-line2)] md:block" aria-hidden="true" />
-                <Tooltip text={t('home.backToPlayer')} className="hidden md:inline-flex">
+                <Tooltip text={t('home.backToPlayer')} className={isPhoneTouch ? 'inline-flex' : 'hidden md:inline-flex'}>
                     <button
                         type="button"
                         onClick={onBackToPlayer}
                         aria-label={t('home.backToPlayer')}
                         className="st-t-fast flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[var(--st-fill)]"
+                        style={isPhoneTouch ? { width: 44, height: 44 } : undefined}
                     >
                         <ChevronRight size={21} />
                     </button>

@@ -312,9 +312,9 @@ const SheetFrame: React.FC<SheetFrameProps> = ({
             // （styles/androidPhoneFit.css、hooks/useStartupUpdatePrompt.ts）。
             data-folia-themed-overlay={isPresent ? 'true' : undefined}
             inert={!isPresent}
-            className={`fixed inset-0 z-[200] flex justify-center p-4 ${restHeight ? 'items-start' : 'items-center'}`}
+            className={`fixed inset-0 z-[200] flex justify-center p-4 max-md:bottom-auto max-md:h-[100dvh] max-md:p-3 max-md:pb-[max(12px,var(--folia-safe-area-bottom,env(safe-area-inset-bottom,0px)))] max-md:pt-[max(12px,var(--folia-safe-area-top,env(safe-area-inset-top,0px)))] ${restHeight ? 'items-start' : 'items-center'}`}
             style={restHeight
-                ? { ...overlayLayer(), ...overlayTokens(isDaylight, theme), paddingTop: `max(16px, calc(50vh - ${restHeight / 2}px))` }
+                ? { ...overlayLayer(), ...overlayTokens(isDaylight, theme), paddingTop: `max(16px, var(--folia-safe-area-top, env(safe-area-inset-top, 0px)), calc(50dvh - ${restHeight / 2}px))` }
                 : { ...overlayLayer(), ...overlayTokens(isDaylight, theme) }}
             onMouseDown={(event) => {
                 isMouseDownOnOverlayRef.current = event.target === event.currentTarget;
@@ -358,7 +358,7 @@ const SheetFrame: React.FC<SheetFrameProps> = ({
                     {underlay && <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">{underlay}</div>}
                     {overlay && <div aria-hidden className="pointer-events-none absolute inset-0 z-10">{overlay}</div>}
                     {withAside(aside, <>
-                    <header className={`flex shrink-0 items-start gap-3 pl-6 pr-4 pt-4 ${body === 'panes' ? 'border-b border-[var(--st-line)] pb-3' : ''}`}>
+                    <header className={`flex shrink-0 items-start gap-3 pl-4 pr-3 pt-3 md:pl-6 md:pr-4 md:pt-4 ${body === 'panes' ? 'border-b border-[var(--st-line)] pb-3' : ''}`}>
                         <div className={`st-t-fast min-w-0 flex-1 transition-opacity ${quiet ? 'opacity-0' : ''}`}>
                             <h2 id={titleId} className={`text-base font-semibold leading-8 ${titleLead ? 'flex items-center gap-2.5' : ''}`}>
                                 {titleLead}
@@ -378,14 +378,14 @@ const SheetFrame: React.FC<SheetFrameProps> = ({
                                 aria-label={t('ui.close')}
                                 // Not `disabled`: the dimmed X still takes the pointer and the keyboard, so its tip can show.
                                 aria-disabled={closeDisabled || undefined}
-                                className={`st-t-fast grid h-8 w-8 place-items-center rounded-lg text-[color:var(--st-t2)] transition-[background-color,color,opacity] ${closeDisabled ? 'cursor-not-allowed opacity-40' : 'hover:bg-[var(--st-fill)] hover:text-[color:var(--st-t1)]'}`}
+                                className={`st-t-fast grid h-11 w-11 place-items-center rounded-lg text-[color:var(--st-t2)] transition-[background-color,color,opacity] md:h-8 md:w-8 ${closeDisabled ? 'cursor-not-allowed opacity-40' : 'hover:bg-[var(--st-fill)] hover:text-[color:var(--st-t1)]'}`}
                             >
                                 <X size={16} />
                             </button>
                         </Tooltip>
                     </header>
 
-                    <div className={`min-h-0 flex-1 ${BODY_CLASS[body]} ${body === 'panes' ? '' : `px-6 ${size === 's' ? 'pb-4 pt-1' : 'pb-5 pt-3'}`}`}>
+                    <div className={`min-h-0 flex-1 ${BODY_CLASS[body]} ${body === 'panes' ? '' : `px-4 md:px-6 ${size === 's' ? 'pb-4 pt-1' : 'pb-5 pt-3'}`}`}>
                         {children}
                     </div>
 
@@ -419,7 +419,7 @@ export const Sheet: React.FC<SheetProps> = ({ isOpen, ...frame }) => {
     );
 };
 
-const BUTTON_CLASS = 'st-t-fast inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[13px] transition-[background-color,color,opacity,scale] enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40';
+const BUTTON_CLASS = 'st-t-fast inline-flex min-h-11 max-w-full shrink-0 items-center justify-center gap-1.5 whitespace-normal rounded-lg px-3 py-2 text-[13px] transition-[background-color,color,opacity,scale] enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:min-h-0 md:whitespace-nowrap md:py-0';
 
 const BUTTON_VARIANT_CLASS = {
     fill: 'bg-[var(--st-fill)] text-[color:var(--st-t1)] enabled:hover:bg-[var(--st-fill2)]',

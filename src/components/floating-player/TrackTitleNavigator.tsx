@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTrackTitlePreview, type TrackNavSide } from '../../hooks/useTrackTitlePreview';
 import { usePlayerChromeSettingsStore } from '../../stores/usePlayerChromeSettingsStore';
+import { useMobileTouchLayout } from '../../hooks/useMobileTouchLayout';
 // src/components/floating-player/TrackTitleNavigator.tsx
 
 const PREVIEW_OPACITY = 0.55;
@@ -58,13 +59,14 @@ const TrackTitleNavigator: React.FC<TrackTitleNavigatorProps> = ({
         beginSwitch,
     } = useTrackTitlePreview({ title, trackKey, prevTitle, nextTitle, disabled });
     const alwaysShowArrows = usePlayerChromeSettingsStore(state => state.alwaysShowTrackSwitchButtons);
+    const isMobileTouch = useMobileTouchLayout();
 
     const isPreview = previewTitle !== null;
     const zoneClass = 'absolute inset-y-0 flex items-center';
     const arrowClass = [
         'pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full',
         'transition-opacity duration-200 hover:opacity-100!',
-        alwaysShowArrows ? 'opacity-70' : 'opacity-0 group-hover/title:opacity-70',
+        alwaysShowArrows || isMobileTouch ? 'opacity-70' : 'opacity-0 group-hover/title:opacity-70',
         isDaylight ? 'hover:bg-black/10' : 'hover:bg-white/15',
     ].join(' ');
     const textClass = 'w-full truncate text-center text-sm font-bold';
@@ -99,7 +101,7 @@ const TrackTitleNavigator: React.FC<TrackTitleNavigatorProps> = ({
     };
 
     return (
-        <div data-folia-track-title="true" className="group/title relative min-w-0 select-none px-1">
+        <div data-folia-track-title="true" className="folia-touch-player-title group/title relative min-w-0 select-none px-1">
             {/* 感应区比箭头宽，指针「靠近」箭头即可预览；区内非箭头处的点击不拦截 */}
             <div
                 data-folia-track-title-zone="prev"

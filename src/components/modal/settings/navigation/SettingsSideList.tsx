@@ -61,7 +61,7 @@ export const SettingsSideList: React.FC<SettingsSideListProps> = ({
                     if (!isWide && hasDragged()) return;
                     onSelect();
                 }}
-                className={`flex h-8 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-2.5 text-left text-[13px] transition-colors md:w-full ${isActive ? 'bg-[var(--st-fill2)] text-[color:var(--st-t1)]' : 'text-[color:var(--st-t2)] hover:bg-[var(--st-fill)]'}`}
+                className={`flex h-11 shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-3 text-left text-[13px] transition-colors md:h-8 md:w-full md:px-2.5 ${isActive ? 'bg-[var(--st-fill2)] text-[color:var(--st-t1)]' : 'text-[color:var(--st-t2)] hover:bg-[var(--st-fill)]'}`}
             >
                 <Icon size={16} className={`hidden shrink-0 md:block ${isActive ? '' : 'opacity-70'}`} />
                 <span className="truncate">{label}</span>
@@ -71,7 +71,7 @@ export const SettingsSideList: React.FC<SettingsSideListProps> = ({
 
     return (
         <aside className="flex min-h-0 shrink-0 flex-col border-b border-[var(--st-line)] bg-[var(--st-side)] px-3 pb-2 pt-3 md:border-b-0 md:border-r md:px-2.5 md:pb-2.5 md:pt-3.5">
-            <label className="flex h-8 shrink-0 items-center gap-2 rounded-lg border border-transparent bg-[var(--st-fill)] px-2.5 text-[color:var(--st-t3)] transition-colors focus-within:border-[var(--st-line2)]">
+            <label className="flex h-11 shrink-0 items-center gap-2 rounded-lg border border-transparent bg-[var(--st-fill)] px-2.5 text-[color:var(--st-t3)] transition-colors focus-within:border-[var(--st-line2)] md:h-8">
                 <Search size={14} className="shrink-0" />
                 <input
                     type="search"
@@ -80,14 +80,14 @@ export const SettingsSideList: React.FC<SettingsSideListProps> = ({
                     onKeyDown={handleSearchKeyDown}
                     placeholder={t('options.settingsSearchPlaceholder')}
                     aria-label={t('options.settingsSearchPlaceholder')}
-                    className="min-w-0 flex-1 bg-transparent text-[13px] text-[color:var(--st-t1)] outline-none placeholder:text-[color:var(--st-t3)] [&::-webkit-search-cancel-button]:hidden"
+                    className="min-w-0 flex-1 bg-transparent text-base text-[color:var(--st-t1)] outline-none placeholder:text-[color:var(--st-t3)] md:text-[13px] [&::-webkit-search-cancel-button]:hidden"
                 />
                 {query && (
                     <button
                         type="button"
                         onClick={() => onQueryChange('')}
                         aria-label={t('options.settingsSearchClear')}
-                        className="shrink-0 transition-colors hover:text-[color:var(--st-t1)]"
+                        className="-mr-2 grid h-11 w-11 shrink-0 place-items-center transition-colors hover:text-[color:var(--st-t1)] md:mr-0 md:h-auto md:w-auto"
                     >
                         <X size={14} />
                     </button>
@@ -96,7 +96,7 @@ export const SettingsSideList: React.FC<SettingsSideListProps> = ({
             <nav
                 ref={stripRef}
                 {...(isWide ? {} : handlers)}
-                className={`mt-2 flex min-h-0 gap-1 overflow-x-auto [scrollbar-width:none] md:mt-1 md:flex-1 md:flex-col md:gap-0 md:overflow-y-auto md:overflow-x-hidden ${isDragging ? 'cursor-grabbing select-none' : ''}`}
+                className={`mt-2 flex min-h-0 touch-pan-x gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] md:mt-1 md:flex-1 md:touch-pan-y md:flex-col md:gap-0 md:overflow-y-auto md:overflow-x-hidden ${isDragging ? 'cursor-grabbing select-none' : ''}`}
             >
                 {groups.map(group => (
                     <div key={group.id} className="contents md:flex md:flex-col md:gap-px">

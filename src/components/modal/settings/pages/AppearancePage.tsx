@@ -10,6 +10,7 @@ import { useVisualizerSettingsStore } from '../../../../stores/useVisualizerSett
 import { openAIEndpointOf } from '../../../../utils/openAIEndpoint';
 import { Button, FoldedGroup, Group, NumberField, Reveal, Row, Segmented, TextField, Toggle, Value, parseNumberText, type SettingsOptionDef } from '../kit';
 import { settingsAnchorSubview } from '../../../../utils/settingsAnchorModel';
+import { SettingsAnchor } from '../navigation/SettingsAnchorContext';
 import { isCapacitorAndroid } from '../../../../platform/runtime';
 import { settingsCardClassFor } from '../settingsCardClasses';
 import AndroidForceLandscapeSetting from '../AndroidForceLandscapeSetting';
@@ -209,7 +210,11 @@ const AppearancePage: React.FC = () => {
                     AI 主题生成因此才有第三条路（services/aiThemeClient.ts）。桌面端继续走主进程设置。
                 */}
                 {!isElectron && (
-                    <Row below={<AiProviderSettings settingsCardClass={settingsCardClassFor(isDaylight)} isDaylight={isDaylight} />} />
+                    <Row below={(
+                        <SettingsAnchor anchorId="electronSettings" label={t('options.electronSettings')}>
+                            <AiProviderSettings settingsCardClass={settingsCardClassFor(isDaylight)} isDaylight={isDaylight} />
+                        </SettingsAnchor>
+                    )} />
                 )}
                 <Row option={O.preferCustom} hint={t('options.preferCustomThemeDesc')}>
                     <Toggle

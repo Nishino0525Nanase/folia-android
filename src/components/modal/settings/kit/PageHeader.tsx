@@ -34,7 +34,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, contents, activeI
                     type="button"
                     onClick={onClose}
                     aria-label={closeLabel}
-                    className="st-t-fast grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[color:var(--st-t2)] transition-colors hover:bg-[var(--st-fill)] hover:text-[color:var(--st-t1)]"
+                    className="st-page-close st-t-fast grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[color:var(--st-t2)] transition-colors hover:bg-[var(--st-fill)] hover:text-[color:var(--st-t1)]"
                 >
                     <X size={16} />
                 </button>

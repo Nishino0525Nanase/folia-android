@@ -35,7 +35,7 @@ const SongRow = ({ index, style, ariaAttributes, songs, selectedSongIds, onToggl
                     type="button"
                     disabled={disabled || automaticMatchDisabled}
                     onClick={() => onToggle(song.id)}
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-not-allowed"
+                    className="flex min-w-0 flex-1 self-stretch items-center gap-3 text-left disabled:cursor-not-allowed"
                 >
                     <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border ${selected ? 'border-blue-500 bg-blue-500 text-white' : automaticMatchDisabled ? 'border-amber-500/35 bg-amber-500/10' : 'border-current/20'}`}>
                         {selected && <Check size={12} strokeWidth={3} />}
@@ -57,7 +57,7 @@ const SongRow = ({ index, style, ariaAttributes, songs, selectedSongIds, onToggl
                         type="button"
                         disabled={disabled}
                         onClick={() => onManualMatch(song)}
-                        className="shrink-0 rounded-lg p-2 opacity-55 transition hover:bg-blue-500/10 hover:opacity-100 disabled:opacity-25"
+                        className="grid h-11 w-11 shrink-0 place-items-center rounded-lg opacity-70 transition hover:bg-blue-500/10 hover:opacity-100 disabled:opacity-25 md:h-auto md:w-auto md:p-2 md:opacity-55"
                         aria-label={manualMatchLabel}
                     >
                         <WandSparkles size={15} />
@@ -81,7 +81,7 @@ export const FolderSongPicker = (props: FolderSongPickerProps) => {
                     value={query}
                     onChange={event => setQuery(event.target.value)}
                     placeholder={t('localMusic.searchEntitySongs')}
-                    className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                    className="min-w-0 flex-1 bg-transparent text-base outline-none md:text-sm"
                 />
             </label>
             <div className="mt-2 h-72 overflow-hidden">

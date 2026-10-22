@@ -3,6 +3,7 @@ import { List, useListRef } from 'react-window';
 import type { UnifiedSong } from '../../../types';
 import type { MediaId } from '../../../types/onlineMusic';
 import SearchResultRow from './SearchResultRow';
+import { useMobileTouchLayout } from '../../../hooks/useMobileTouchLayout';
 
 // src/components/app/search/SearchResultsList.tsx
 
@@ -18,6 +19,7 @@ type SearchResultsListProps = {
 };
 
 type RowProps = Omit<SearchResultsListProps, 'scrollTop' | 'onScrollTopChange'> & {
+    isTouchLayout: boolean;
     /** 每行的稳定身份（见 buildRowKeys）：react-window 认它不认下标，行挪位置时组件不会被顶掉。 */
     rowKeys: string[];
     /** 这一轮**新出现**的那些行的身份：只有它们播入场动画。 */
@@ -74,12 +76,20 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
     tracks,
     scrollTop,
     onScrollTopChange,
-    ...rowProps
+    isDaylight,
+    onPlayTrack,
+    onAddTrackToQueue,
+    onOpenArtist,
+    onOpenAlbum,
 }) => {
+    // One media-query subscription for the list instead of one per mounted result row.
+    const isTouchLayout = useMobileTouchLayout();
     const listRef = useListRef(null);
     const latestScrollTopRef = useRef(scrollTop);
     const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const stableRowProps = useMemo(() => ({ tracks, ...rowProps }), [rowProps, tracks]);
+    const stableRowProps = useMemo(() => ({
+        tracks, isDaylight, onPlayTrack, onAddTrackToQueue, onOpenArtist, onOpenAlbum, isTouchLayout,
+    }), [tracks, isDaylight, onPlayTrack, onAddTrackToQueue, onOpenArtist, onOpenAlbum, isTouchLayout]);
     const rowKeys = useMemo(() => buildRowKeys(tracks), [tracks]);
 
     /*
@@ -127,7 +137,7 @@ const SearchResultsList: React.FC<SearchResultsListProps> = ({
         <List
             listRef={listRef}
             rowCount={tracks.length}
-            rowHeight={76}
+            rowHeight={isTouchLayout ? 88 : 76}
             rowComponent={Row as any}
             rowProps={{ ...stableRowProps, rowKeys, enterKeys } as any}
             rowKey={rowKey}

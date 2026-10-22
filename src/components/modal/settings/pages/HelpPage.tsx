@@ -12,6 +12,7 @@ import { isCapacitorAndroid } from '../../../../platform/runtime';
 import AndroidUpdatePanel from '../AndroidUpdatePanel';
 import { FoundUpdateRow } from './FoundUpdateRow';
 import { iconLabel } from './iconLabel';
+import { useMobileTouchLayout } from '../../../../hooks/useMobileTouchLayout';
 
 // src/components/modal/settings/pages/HelpPage.tsx
 // The 帮助 page, reached from the foot of the side list: two entry cards (the release notes, the
@@ -34,6 +35,7 @@ const VERSION_INFO = (__DOCKER_STACK_VERSION__
 
 const SHORTCUTS: SettingsGroupDef = { id: 'helpShortcuts', titleKey: 'help.keyboardShortcuts' };
 const PLAYER_KEYS: SettingsGroupDef = { id: 'helpPlayerControls', titleKey: 'help.playerControls' };
+const TOUCH_GUIDE: SettingsGroupDef = { id: 'helpTouchGuide', titleKey: 'help.mobileGuide.title' };
 const SUPPORT: SettingsGroupDef = { id: 'helpSupport', titleKey: 'aiHelp.title' };
 const ABOUT: SettingsGroupDef = { id: 'helpAbout', titleKey: 'help.version' };
 
@@ -100,6 +102,7 @@ type HelpPageProps = {
 
 const HelpPage: React.FC<HelpPageProps> = ({ onOpenReleaseNotes, onOpenAiHelp, onProjectLabelClick }) => {
     const { t } = useTranslation();
+    const isMobileTouch = useMobileTouchLayout();
 
     return (
         <>
@@ -111,18 +114,24 @@ const HelpPage: React.FC<HelpPageProps> = ({ onOpenReleaseNotes, onOpenAiHelp, o
                     line={t('help.releaseNotesDescription')}
                     onClick={onOpenReleaseNotes}
                 />
-                <Tile
+                {!isMobileTouch && <Tile
                     testId="help-page-ponder"
                     icon={Lightbulb}
                     title={t('help.ponder')}
                     line={t('help.ponderDescription')}
                     onClick={openPonderNavigation}
-                />
+                />}
             </div>
 
             {/* Each group is the first in a cell of its own, so the two headings stand level; the
                 cells then sit as far under the cards above as any group does. */}
-            <div className={`${COLUMNS_CLASS} mt-2 gap-y-2`}>
+            {isMobileTouch ? (
+                <Group def={TOUCH_GUIDE}>
+                    {(['navigation', 'playback', 'search', 'more'] as const).map(item => (
+                        <Row key={item} label={t(`help.mobileGuide.${item}`)} hint={t(`help.mobileGuide.${item}Hint`)} />
+                    ))}
+                </Group>
+            ) : <div className={`${COLUMNS_CLASS} mt-2 gap-y-2`}>
                 <div>
                     <Group def={SHORTCUTS}>
                         {HELP_TAB_PRIMARY_SHORTCUTS.map(shortcut => (
@@ -142,7 +151,7 @@ const HelpPage: React.FC<HelpPageProps> = ({ onOpenReleaseNotes, onOpenAiHelp, o
                         ))}
                     </Group>
                 </div>
-            </div>
+            </div>}
 
             <Group def={SUPPORT} bare>
                 <Row label={iconLabel(CircleHelp, t('aiHelp.openButton'))} onClick={onOpenAiHelp} />
@@ -153,6 +162,12 @@ const HelpPage: React.FC<HelpPageProps> = ({ onOpenReleaseNotes, onOpenAiHelp, o
             </Group>
 
             <Group def={ABOUT} bare>
+                {isMobileTouch && <Row label={t('help.mobileGuide.android')}>
+                    <Button variant="quiet" onClick={() => openOutsideLink('https://folia-elvis.blushbox8.chatgpt.site/download')}>
+                        {t('help.mobileGuide.download')}
+                        <ExternalLink size={12} />
+                    </Button>
+                </Row>}
                 <Row label={t('help.version')}>
                     {/* One piece of the row: a version too long for its line breaks inside itself and keeps the button beside it. */}
                     <span className="flex min-w-0 items-center gap-2">

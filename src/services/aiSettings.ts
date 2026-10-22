@@ -111,6 +111,17 @@ export const isAiConfigured = (settings: AiSettings = readAiSettings()): boolean
     return Boolean(settings.geminiApiKey.trim());
 };
 
+/** Keep native theme controls in sync with the same saved credentials used by requests. */
+export const subscribeAiSettings = (listener: () => void): (() => void) => {
+    if (typeof window === 'undefined') return () => {};
+    window.addEventListener(AI_SETTINGS_CHANGED_EVENT, listener);
+    window.addEventListener('storage', listener);
+    return () => {
+        window.removeEventListener(AI_SETTINGS_CHANGED_EVENT, listener);
+        window.removeEventListener('storage', listener);
+    };
+};
+
 /** 实际要打的那个 chat/completions 地址：DeepSeek 的地址是写死的。 */
 export const resolveAiChatCompletionsUrl = (settings: AiSettings = readAiSettings()): string => (
     settings.provider === 'deepseek'

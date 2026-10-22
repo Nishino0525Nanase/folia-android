@@ -71,7 +71,7 @@ export const LocalLibraryEntityPanel = ({
   return (
     <div
       data-folia-keyboard-window="true"
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-3 backdrop-blur-xl md:p-6"
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-3 backdrop-blur-xl max-md:bottom-auto max-md:h-[100dvh] max-md:pb-[max(12px,var(--folia-safe-area-bottom,env(safe-area-inset-bottom,0px)))] max-md:pt-[max(12px,var(--folia-safe-area-top,env(safe-area-inset-top,0px)))] md:p-6"
       onMouseDown={event => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -86,9 +86,9 @@ export const LocalLibraryEntityPanel = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="local-library-entity-title"
-        className={`${panelTheme} flex max-h-[80vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-md`}
+        className={`${panelTheme} flex max-h-[80vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-md max-md:max-h-full`}
       >
-        <header className={`flex shrink-0 items-center justify-between gap-5 border-b px-8 py-6 ${borderTheme}`}>
+        <header className={`flex shrink-0 items-center justify-between gap-3 border-b px-4 py-4 md:gap-5 md:px-8 md:py-6 ${borderTheme}`}>
           <div className="min-w-0">
             <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] opacity-50">
               <span>{entity.kind === 'artist' ? t('localMusic.artistLabel') : t('localMusic.albumLabel')}</span>
@@ -100,7 +100,7 @@ export const LocalLibraryEntityPanel = ({
           <button
             type="button"
             onClick={onClose}
-            className={`shrink-0 rounded-full p-2.5 transition-colors ${closeButtonTheme}`}
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-full transition-colors md:h-auto md:w-auto md:p-2.5 ${closeButtonTheme}`}
             aria-label={t('localMusic.cancel')}
           >
             <X size={22} />
@@ -113,7 +113,7 @@ export const LocalLibraryEntityPanel = ({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden px-8"
+              className="overflow-hidden px-4 md:px-8"
             >
               <div
                 className={`mt-6 flex shrink-0 items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-sm backdrop-blur-md ${
@@ -130,7 +130,7 @@ export const LocalLibraryEntityPanel = ({
           )}
         </AnimatePresence>
 
-        <main className="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
+        <main className="min-h-0 flex-1 overflow-y-auto custom-scrollbar max-md:overscroll-contain">
           <EntityEditorWorkspace
             entity={entity}
             sameKindEntities={sameKindEntities}

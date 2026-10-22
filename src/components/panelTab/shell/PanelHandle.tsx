@@ -5,7 +5,11 @@ import { Settings2, X, Command } from 'lucide-react';
 import type { Theme } from '../../../types';
 import { usePlayerBottomBarBottomPx } from '../../../hooks/usePlayerBottomBarBottomPx';
 import { usePlayerOverlayObstacle } from '../../../hooks/usePlayerOverlayLayout';
+import { useMobileTouchLayout } from '../../../hooks/useMobileTouchLayout';
+import { useSupportsFinePointer } from '../../../hooks/useSupportsFinePointer';
 import { PANEL_BOTTOM_LIFT_PX } from './panelBottomBaseline';
+import { openMobileNavigation } from '../../app/mobile/mobileNavigationStore';
+import { useTranslation } from 'react-i18next';
 
 // src/components/panelTab/shell/PanelHandle.tsx
 // The round button at the bottom right of the playing page that opens the panel and, white, closes
@@ -38,6 +42,7 @@ const PanelHandle: React.FC<PanelHandleProps> = ({
     onOpenCommandPalette,
     isCommandPaletteOpen,
 }) => {
+    const { t } = useTranslation();
     const [showGuideLine, setShowGuideLine] = React.useState(false);
     const [isDragging, setIsDragging] = React.useState(false);
     const guideHideTimeoutRef = React.useRef<number | null>(null);
@@ -47,15 +52,16 @@ const PanelHandle: React.FC<PanelHandleProps> = ({
     const handleBottom = useTransform(bottomBarBottomPx, bottom => bottom + PANEL_BOTTOM_LIFT_PX);
     // The button is in the way of a mod's player layout, as the open panel above it is.
     const { ref: layoutRef, invalidate: invalidateLayout } = usePlayerOverlayObstacle('panel-toggle', 'panel');
-    const supportsHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const supportsHover = useSupportsFinePointer();
+    const isMobileTouch = useMobileTouchLayout();
     const commandSlideRef = React.useRef<{ startX: number; startY: number; triggered: boolean; } | null>(null);
     const suppressToggleClickRef = React.useRef(false);
     const toggleButtonRef = React.useRef<HTMLButtonElement | null>(null);
     const trackEndIconRef = React.useRef<HTMLDivElement | null>(null);
     const trackFillRef = React.useRef<HTMLDivElement | null>(null);
-    const canSlideOpenCommandPalette = !isOpen && Boolean(onOpenCommandPalette);
+    const canSlideOpenCommandPalette = !isMobileTouch && !isOpen && Boolean(onOpenCommandPalette);
     const isGuideLineVisible = canSlideOpenCommandPalette && (showGuideLine || isPanelGuideHotspotActive);
-    const toggleButtonMotionClass = (isOpen || isGuideLineVisible || isDragging)
+    const toggleButtonMotionClass = (isMobileTouch || isOpen || isGuideLineVisible || isDragging)
         ? 'translate-x-0 opacity-100'
         : supportsHover
             ? 'translate-x-1/2 opacity-60 group-hover:translate-x-0 group-hover:opacity-100 md:translate-x-0 md:opacity-100 md:hover:scale-105'
@@ -313,7 +319,8 @@ const PanelHandle: React.FC<PanelHandleProps> = ({
             return;
         }
 
-        onToggle();
+        if (isMobileTouch) openMobileNavigation();
+        else onToggle();
     };
 
     React.useEffect(() => () => {
@@ -324,7 +331,7 @@ const PanelHandle: React.FC<PanelHandleProps> = ({
 
     return (
         <AnimatePresence>
-            {!hideToggleButton && (!isOpen || showOpenPanelCloseButton) && !isCommandPaletteOpen && (
+            {!hideToggleButton && (isMobileTouch || !isOpen || showOpenPanelCloseButton) && !isCommandPaletteOpen && (
                 <motion.div
                     initial={{ opacity: 0, x: 20, y: 12, scale: 0.92 }}
                     animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
@@ -410,6 +417,7 @@ const PanelHandle: React.FC<PanelHandleProps> = ({
                         <button
                             ref={toggleButtonRef}
                             type="button"
+                            aria-label={isMobileTouch ? t('mobileTouch.more') : isOpen ? t('ui.panelCollapse') : t('ui.panelExpand')}
                             onPointerDown={handleToggleButtonPointerDown}
                             onPointerMove={handleToggleButtonPointerMove}
                             onPointerUp={clearToggleButtonGesture}
@@ -417,9 +425,9 @@ const PanelHandle: React.FC<PanelHandleProps> = ({
                             onClick={handleToggleButtonClick}
                             style={{ touchAction: canSlideOpenCommandPalette ? 'none' : undefined }}
                             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg backdrop-blur-md transform
-                                border-none absolute right-0 top-0 z-10 ${isOpen ? 'bg-white text-black' : (isDaylight ? 'bg-white/70 text-zinc-900' : 'bg-black/40 text-white')}`}
+                                border-none absolute right-0 top-0 z-10 ${isOpen && !isMobileTouch ? 'bg-white text-black' : (isDaylight ? 'bg-white/70 text-zinc-900' : 'bg-black/40 text-white')}`}
                         >
-                            {isOpen ? <X size={20} /> : <Settings2 size={20} />}
+                            {isOpen && !isMobileTouch ? <X size={20} /> : <Settings2 size={20} />}
                         </button>
                     </div>
                 </motion.div>

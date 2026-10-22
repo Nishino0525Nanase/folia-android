@@ -198,7 +198,7 @@ const NowPlayingToast: React.FC<NowPlayingToastProps> = ({
                     // 底边落在胶囊顶边之上（见 PLAYER_BOTTOM_BAR_TOAST_BOTTOM_PX），
                     // 由共享 MotionValue 直接驱动 bottom，跟右下角面板开关、侧边面板同一套抬升。
                     style={{ bottom: bottomBarBottomPx }}
-                    className="pointer-events-none fixed left-6 z-40"
+                    className="folia-touch-now-playing pointer-events-none fixed left-6 z-40"
                 >
                     {/* 描边排在卡片前面：卡片自己是 relative，绘制顺序上压在描边上头，所以
                         描边内侧那一半被卡片背景盖住，露在外面的是外侧 + 辉光。

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { WallSlot } from '../../../components/wall/wallSlots';
 import { BRAVAIS_BLOCK_SHAPE, collectShapeSlots } from './bravaisWallShape';
 import { FLIP_MAX_TILES } from '../../../components/wall/flipPlan';
-import { useDevicePixelRatio } from '../../../hooks/useMediaQuery';
+import { useDevicePixelRatio, useMediaQuery } from '../../../hooks/useMediaQuery';
 import { useReducedMotionFor } from '../../../hooks/useReducedMotionFor';
 import { useLatticeSettingsStore } from '../../../stores/useLatticeSettingsStore';
 import { useLibraryWallLookStore } from '../../../stores/useLibraryWallLookStore';
@@ -17,6 +17,9 @@ import { resolveCurrentLayer, useBravaisStageStore } from './bravaisStageStore';
 import BravaisSeam from './BravaisSeam';
 import BravaisStageChrome from './BravaisStageChrome';
 import BravaisWall from './BravaisWall';
+import BravaisHomeEmptyState from './BravaisHomeEmptyState';
+import { shouldShowBravaisHomeEmptyState } from './bravaisHomeEmptyState';
+import { useSearchNavigationStore } from '../../../stores/useSearchNavigationStore';
 import { useBravaisCamera } from './useBravaisCamera';
 import { useBravaisChromeActions } from './useBravaisChromeActions';
 import { useBravaisDisplay } from './useBravaisDisplay';
@@ -111,6 +114,8 @@ const BravaisStage: React.FC<LibrarySuiteStageProps> = ({
     onOpenLattice,
 }) => {
     const { t } = useTranslation();
+    const isPhoneTouch = useMediaQuery('(max-width: 767px) and (pointer: coarse)');
+    const isGlobalSearchOpen = useSearchNavigationStore(state => state.isSearchOpen);
     // 交接会话：缝的开口、veil、颗粒与暗角、磁贴藏不藏都按它（纯计算）；排动画的 hook 在下面（要等显示）。
     const handoffSession = useWallHandoffStore(state => state.session);
     const handoff = resolveBravaisWallHandoffState(handoffSession);
@@ -324,6 +329,16 @@ const BravaisStage: React.FC<LibrarySuiteStageProps> = ({
     useBravaisReflowDriver({ reflow: focus.reflow, enabled: !reducedMotion, fieldRef, platesRef, getShape });
 
     const active = isInteractive && owned && Boolean(layer?.isInteractive) && handoff.role === null;
+    const showHomeWelcome = shouldShowBravaisHomeEmptyState({
+        phoneTouch: isPhoneTouch, active, owned, home: layer?.surface === 'home', depth: navigation.depth,
+        itemCount: layer?.items.length ?? 0, loading: Boolean(layer?.wall?.loading),
+        accountView: layer?.seam.home?.account?.accountView ?? (layer?.seam.home?.account?.guest ? 'guest' : undefined),
+        local: layer?.key === 'home:local',
+        searchOpen: isSearchOpen || isGlobalSearchOpen, filterOpen: isFilterOpen, hasQuery: Boolean(layer?.seam.filter?.query.trim()),
+        panelOpen: panelFor === layer?.key, settling,
+        busy: Boolean(layer?.seam.home?.scan || layer?.seam.home?.manage || layer?.home?.batch
+            || layer?.home?.panel?.form || layer?.seam.home?.tools.some(tool => tool.busy)),
+    });
     useBravaisKeyboard(active, interactions.handleAction);
     // B7 列表面板：打开是一次导航（写 history，面包屑多「列表」），打开时等级拉回 full；单击一行定位到离缝最近的一份并
     // 聚焦（歌曲直接展开聚焦卡），双击播放。
@@ -518,6 +533,7 @@ const BravaisStage: React.FC<LibrarySuiteStageProps> = ({
             data-library-stage="bravais"
             data-bravais-layer={display?.layer.key}
             data-bravais-active={active || undefined}
+            data-bravais-home-welcome={showHomeWelcome || undefined}
             data-bravais-settling={settling || undefined}
             data-wall-handoff={handoff.role ?? undefined}
             data-wall-handoff-phase={handoff.phase ?? undefined}
@@ -592,6 +608,7 @@ const BravaisStage: React.FC<LibrarySuiteStageProps> = ({
                 locatePlaying={locatePlaying}
                 onOpenLattice={onOpenLattice}
             />
+            {showHomeWelcome && layer && <BravaisHomeEmptyState key={layer.key} layer={layer} />}
         </section>
     );
 };

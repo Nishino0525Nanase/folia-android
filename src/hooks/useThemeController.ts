@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type Dispatch, type SetStateAction } from 'react';
+import { isAiConfigured, subscribeAiSettings } from '../services/aiSettings';
 import { generateThemeFromLyrics, isMissingAiApiKeyError } from '../services/gemini';
 import { notifyStageResolved } from '../services/aiStage';
 import {
@@ -23,6 +24,7 @@ import {
     resolveCustomThemePreferenceChange,
     resolveSongThemeAutoGenerateChange,
     resolveSongThemeAutoSwitchChange,
+    resolveEffectiveThemeGenerationSource,
     saveStoredAnimationIntensity,
     saveStoredLastAppliedThemePointer,
     saveStoredThemeAutoGenerateEnabled,
@@ -189,7 +191,9 @@ export function useThemeController({
     const [isCustomThemePreferred, setIsCustomThemePreferred] = useState(initialThemePreferenceState.isCustomThemePreferred);
     const [songThemeAutoSwitchEnabled, setSongThemeAutoSwitchEnabled] = useState(initialThemePreferenceState.songThemeAutoSwitchEnabled);
     const [songThemeAutoGenerateEnabled, setSongThemeAutoGenerateEnabled] = useState(initialThemePreferenceState.songThemeAutoGenerateEnabled);
-    const [themeGenerationSource, setThemeGenerationSource] = useState<ThemeGenerationSource>(() => readStoredThemeGenerationSource());
+    const [preferredThemeGenerationSource, setThemeGenerationSource] = useState<ThemeGenerationSource>(() => readStoredThemeGenerationSource());
+    useSyncExternalStore(subscribeAiSettings, isAiConfigured, () => false);
+    const themeGenerationSource = resolveEffectiveThemeGenerationSource(preferredThemeGenerationSource);
     const [bgMode, setBgMode] = useState<ThemeMode>(() => (
         initialCustomTheme && initialThemePreferenceState.isCustomThemePreferred ? 'custom' : 'default'
     ));
@@ -282,8 +286,8 @@ export function useThemeController({
     }, [songThemeAutoGenerateEnabled]);
 
     useEffect(() => {
-        saveStoredThemeGenerationSource(themeGenerationSource);
-    }, [themeGenerationSource]);
+        saveStoredThemeGenerationSource(preferredThemeGenerationSource);
+    }, [preferredThemeGenerationSource]);
 
     useEffect(() => {
         const pointer = bgMode === 'custom' && customTheme
@@ -528,10 +532,11 @@ export function useThemeController({
     };
 
     const handleThemeGenerationSourceChange = (source: ThemeGenerationSource) => {
-        setThemeGenerationSource(source);
+        const effectiveSource = resolveEffectiveThemeGenerationSource(source);
+        setThemeGenerationSource(effectiveSource);
         setStatusMsg({
             type: 'info',
-            text: t(source === 'cover' ? 'notifications.themeSourceCover' : 'notifications.themeSourceAi'),
+            text: t(effectiveSource === 'cover' ? 'notifications.themeSourceCover' : 'notifications.themeSourceAi'),
         });
     };
 
@@ -670,6 +675,7 @@ export function useThemeController({
         currentSong: SongResult | null,
         shouldApply: () => boolean,
         origin: 'chosen' | 'fallback',
+        announce = true,
     ): Promise<GenerateAIThemeResult> => {
         const coverColors = coverUrl ? await extractColors(coverUrl, 5) : [];
         const coverTheme = applyStoredAnimationIntensityToDualTheme(buildBuiltinDualTheme({ coverColors }));
@@ -686,7 +692,7 @@ export function useThemeController({
 
         applyDualTheme(coverTheme);
         const customPreferred = bgMode === 'custom' && customTheme;
-        setStatusMsg(origin === 'fallback'
+        if (announce) setStatusMsg(origin === 'fallback'
             ? {
                 type: 'info',
                 text: customPreferred
@@ -718,17 +724,19 @@ export function useThemeController({
 
         themeGenerationSongKeysRef.current.add(songKey);
         beginThemeGeneration();
-        setStatusMsg({ type: 'info', text: t('status.generatingTheme') });
         try {
             // The cover source never touches the model, so it also never needs a lyric prompt:
             // an instrumental with no title still gets a theme from its artwork.
-            if (themeGenerationSource === 'cover') {
+            if (resolveEffectiveThemeGenerationSource(themeGenerationSource) === 'cover') {
                 return await applyCoverDerivedTheme(
                     currentSong,
                     () => options.shouldApply?.() ?? true,
                     'chosen',
+                    source !== 'auto',
                 );
             }
+
+            setStatusMsg({ type: 'info', text: t('status.generatingTheme') });
 
             const allText = lyrics?.lines.map(line => line.fullText).join('\n').trim() || '';
             const songTitle = currentSong?.name?.trim() || lyrics?.title?.trim() || '';
@@ -810,6 +818,7 @@ export function useThemeController({
                     currentSong,
                     () => options.shouldApply?.() ?? true,
                     'fallback',
+                    source !== 'auto',
                 );
             }
 

@@ -139,9 +139,9 @@ export const LocalSongMetadataMatchDialog = ({ song, assignment, isDaylight, onC
     const panelTheme = isDaylight ? 'border-black/10 bg-white text-zinc-900' : 'border-white/10 bg-zinc-950 text-white';
 
     return (
-        <div data-folia-keyboard-window="true" className="fixed inset-0 z-[140] flex items-center justify-center bg-black/65 p-4 backdrop-blur-xl">
-            <div role="dialog" aria-modal="true" className={`${panelTheme} flex max-h-[82vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border shadow-2xl`}>
-                <header className="flex items-center justify-between border-b border-current/10 px-5 py-4">
+        <div data-folia-keyboard-window="true" className="fixed inset-0 z-[140] flex items-center justify-center bg-black/65 p-4 backdrop-blur-xl max-md:bottom-auto max-md:h-[100dvh] max-md:p-3 max-md:pb-[max(12px,var(--folia-safe-area-bottom,env(safe-area-inset-bottom,0px)))] max-md:pt-[max(12px,var(--folia-safe-area-top,env(safe-area-inset-top,0px)))]">
+            <div role="dialog" aria-modal="true" className={`${panelTheme} flex max-h-[82vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border shadow-2xl max-md:max-h-full`}>
+                <header className="flex shrink-0 items-center justify-between gap-2 border-b border-current/10 px-4 py-3 md:px-5 md:py-4">
                     <div className="min-w-0">
                         <h3 className="truncate text-lg font-bold">{t('localMusic.manualMetadataMatch')}</h3>
                         <p className="mt-1 truncate text-xs opacity-60">{song.title || song.importedMetadata.title}</p>
@@ -163,12 +163,12 @@ export const LocalSongMetadataMatchDialog = ({ song, assignment, isDaylight, onC
                             )}
                         </div>
                     </div>
-                    <button type="button" onClick={onClose} className="rounded-full p-2 hover:bg-current/10"><X size={19} /></button>
+                    <button type="button" onClick={onClose} aria-label={t('ui.close')} className="grid h-11 w-11 shrink-0 place-items-center rounded-full hover:bg-current/10 md:h-auto md:w-auto md:p-2"><X size={19} /></button>
                 </header>
-                <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
+                <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 max-md:overflow-y-auto max-md:overscroll-contain md:p-5">
                     <div className="flex gap-2">
                         {(['netease', 'qq', 'kugou'] as const).map(item => (
-                            <button key={item} type="button" onClick={() => { setSource(item); setResults([]); setSelected(null); }} className={`rounded-full px-4 py-2 text-xs font-bold ${source === item ? 'bg-blue-500 text-white' : 'bg-current/10'}`}>
+                            <button key={item} type="button" onClick={() => { setSource(item); setResults([]); setSelected(null); }} className={`min-h-11 rounded-full px-4 py-2 text-xs font-bold md:min-h-0 ${source === item ? 'bg-blue-500 text-white' : 'bg-current/10'}`}>
                                 {item === 'netease'
                                     ? t('localMusic.neteaseSource')
                                     : item === 'qq'
@@ -180,13 +180,13 @@ export const LocalSongMetadataMatchDialog = ({ song, assignment, isDaylight, onC
                     <form onSubmit={event => { event.preventDefault(); void search(); }} className="flex gap-2">
                         <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-current/10 px-3">
                             <Search size={15} className="opacity-45" />
-                            <input value={query} onChange={event => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none" />
+                            <input value={query} onChange={event => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent py-3 text-base outline-none md:text-sm" />
                         </label>
                         <button type="submit" disabled={searching || !query.trim()} className="rounded-xl bg-blue-500 px-4 text-sm font-bold text-white disabled:opacity-40">
                             {searching ? <Loader2 size={16} className="animate-spin" /> : t('localMusic.search')}
                         </button>
                     </form>
-                    <div className="min-h-48 flex-1 space-y-2 overflow-y-auto custom-scrollbar">
+                    <div className="min-h-32 flex-1 space-y-2 overflow-y-auto custom-scrollbar max-md:max-h-[35dvh] max-md:shrink-0 md:min-h-48">
                         {results.map(candidate => (
                             <button key={`${candidate.source}:${candidate.songId}`} type="button" onClick={() => { setSelected(candidate); if (!candidate.coverUrl) setUseOnlineCover(false); }} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left ${selected === candidate ? 'border-blue-500 bg-blue-500/10' : 'border-current/10 hover:bg-current/5'}`}>
                                 <span className="min-w-0 flex-1">
@@ -203,7 +203,7 @@ export const LocalSongMetadataMatchDialog = ({ song, assignment, isDaylight, onC
                         {!searching && results.length === 0 && <div className="flex h-48 items-center justify-center text-sm opacity-40">{t('localMusic.enterMetadataSearch')}</div>}
                     </div>
                     {selected && (
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid shrink-0 gap-3 sm:grid-cols-2">
                             <div className="rounded-xl border border-current/10 p-3">
                                 <div className="mb-2 text-[11px] font-bold uppercase tracking-wider opacity-45">{t('localMusic.currentSongInfo')}</div>
                                 <div className="flex gap-3">
@@ -246,7 +246,7 @@ export const LocalSongMetadataMatchDialog = ({ song, assignment, isDaylight, onC
                             </button>
                         </div>
                     )}
-                    <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
                         <div className="flex flex-wrap items-center gap-3">
                             <button type="button" disabled={busy} onClick={() => void useLocalInfo()} className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm font-bold text-amber-500 disabled:opacity-35">
                                 {restoringLocalInfo && <Loader2 size={15} className="animate-spin" />}{t('localMusic.dontUseOnlineMetadata')}

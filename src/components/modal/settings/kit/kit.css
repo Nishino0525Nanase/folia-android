@@ -182,3 +182,37 @@
         0 0 0 2px var(--st-swatch-gap, var(--st-card)),
         0 0 0 3.5px var(--st-t1);
 }
+
+/* Phone touch controls retain the kit's colours, icons and switch geometry. Only the action boxes
+   grow; the switch and row's small information icon get an invisible hit area around themselves. */
+@media (max-width: 767px) and (pointer: coarse) {
+    .st-window .st-action {
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+
+    .st-window .st-action[data-icon-only],
+    .st-window .st-page-close {
+        min-width: 44px;
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+
+    .st-window .st-touch-toggle,
+    .st-window .st-row button[aria-expanded][aria-label]:not([aria-haspopup]) {
+        position: relative;
+        touch-action: manipulation;
+    }
+
+    .st-window .st-touch-toggle::after,
+    .st-window .st-row button[aria-expanded][aria-label]:not([aria-haspopup])::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 44px;
+        height: 44px;
+        transform: translate(-50%, -50%);
+    }
+
+}

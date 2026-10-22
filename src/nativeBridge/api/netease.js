@@ -1,5 +1,5 @@
 import { weapiRequest, UA } from './weapi.js';
-import { eapiRequest } from './eapi.js';
+import { eapiRequest, xeapiRequest } from './eapi.js';
 import { getNeteaseCookie, hasNeteaseLogin, parseCookieString, saveProviderCookie, setBrowserCookies, getNeteaseMusicU } from './cookies.js';
 import { handleQQSongComments } from './qq.js';
 
@@ -316,12 +316,18 @@ function pickUserIdFromPayload(body) {
   return info.loggedIn ? info.userId : '';
 }
 
-async function api(path, data, cookie) {
+async function api(path, data, cookie, request = eapiRequest) {
   const cookies = parseCookieString(cookie);
   const payload = Object.assign({}, data, { csrf_token: cookies.__csrf || '' });
-  const result = await eapiRequest(path, payload, cookie);
+  const result = await request(path, payload, cookie);
   const body = result.body || {};
   const code = Number(body.code);
+  if (result.registrationFailed) {
+    const error = new Error(`Anonymous registration was refused (code ${code || 'unknown'})`);
+    error.registrationFailed = true;
+    error.upstreamCode = code;
+    throw error;
+  }
   if (code && code !== 200 && code !== 0 && !body.result && !body.playlist && !body.playlists && !body.songs && !body.profile && !body.account && !body.unikey && !body.data && !body.comments && !body.hotComments && !body.recommend && !body.dailySongs) {
     throw new Error(body.msg || body.message || `Netease API ${path} failed (${code})`);
   }
@@ -530,6 +536,13 @@ export async function handleSearch(keywords, limit, cookie, offset) {
   return mapped;
 }
 
+// Explicit guest registration returns the cookie pairs already persisted by the native adapter.
+export async function handleAnonymousRegister(cookie) {
+  const raw = await xeapiRequest('/api/register/anonimous', {}, cookie);
+  const body = raw.body || {};
+  return { ...body, cookie: cookieHeaderFromSetCookieList(raw.setCookies), anonymous: true };
+}
+
 export async function handleSongUrl(id, cookie, qualityPreference) {
   cookie = await ensureNeteaseCookieHeader(cookie);
   const loginInfo = await getLoginInfo(cookie);
@@ -547,11 +560,13 @@ export async function handleSongUrl(id, cookie, qualityPreference) {
     try {
       let d = null;
       try {
-        const v1 = await api('/api/song/enhance/player/url/v1', { ids: `[${songId}]`, level: q.level, encodeType: 'flac' }, cookie);
+        const v1 = await api('/api/song/enhance/player/url/v1', { ids: `[${songId}]`, level: q.level, encodeType: 'flac' }, cookie, xeapiRequest);
         d = v1.data && v1.data[0];
       } catch (err) {
+        // Preserve a transport refusal instead of treating it as a different audio-quality request.
+        if (err?.registrationFailed || (Number.isInteger(err?.status) && typeof err?.stage === 'string')) throw err;
         lastError = err;
-        const legacy = await api('/api/song/enhance/player/url', { ids: `[${songId}]`, br: q.br }, cookie);
+        const legacy = await api('/api/song/enhance/player/url', { ids: `[${songId}]`, br: q.br }, cookie, xeapiRequest);
         d = legacy.data && legacy.data[0];
       }
       if (d) lastData = d;
@@ -593,6 +608,7 @@ export async function handleSongUrl(id, cookie, qualityPreference) {
         };
       }
     } catch (err) {
+      if (err?.registrationFailed || (Number.isInteger(err?.status) && typeof err?.stage === 'string')) throw err;
       lastError = err;
     }
   }

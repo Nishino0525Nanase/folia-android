@@ -1,6 +1,7 @@
 import CryptoJS from '../vendor/crypto-es.mjs';
-import { parseCookieString, getNeteaseMusicU } from './cookies.js';
+import { parseCookieString, getNeteaseCookie, getNeteaseMusicU, saveProviderCookie, setBrowserCookies } from './cookies.js';
 import { readRawSetCookies } from './setCookieHeaders.js';
+import { createNeteaseXeapi } from '../../../shared/neteaseXeapi.mjs';
 
 const EAPI_KEY = 'e82ckenh8dichen8';
 const EAPI_BASE = 'https://interface.music.163.com';
@@ -167,6 +168,64 @@ function formatEapiCookieHeader(header) {
 
 export async function buildEapiCookieHeader(cookieHeader) {
   return formatEapiCookieHeader(await buildEapiHeader(await resolveEapiCookieMap(cookieHeader)));
+}
+
+/** Same device-bound anonymous username as the installed API's register_anonimous module. */
+function anonymousUsername(deviceId) {
+  const id = String(deviceId);
+  const key = '3go8&$8*3*3h0k(2)2';
+  let xored = '';
+  for (let index = 0; index < id.length; index += 1) {
+    xored += String.fromCharCode(id.charCodeAt(index) ^ key.charCodeAt(index % key.length));
+  }
+  const digest = CryptoJS.enc.Base64.stringify(CryptoJS.MD5(CryptoJS.enc.Utf8.parse(xored)));
+  return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(`${id} ${digest}`));
+}
+
+/** XEAPI only for the explicitly selected routes; each operation owns its key and cookie closure. */
+export async function xeapiRequest(path, data, cookieHeader) {
+  const uri = path.startsWith('/api/') ? path : `/api/${path.replace(/^\//, '')}`;
+  const parsedCookies = await resolveEapiCookieMap(cookieHeader);
+  // Quality fallback requests may still carry the caller's original empty cookie string.
+  if (!parsedCookies.MUSIC_U && !parsedCookies.MUSIC_A) {
+    const storedCookies = parseCookieString(await getNeteaseCookie());
+    if (storedCookies.MUSIC_A) parsedCookies.MUSIC_A = storedCookies.MUSIC_A;
+  }
+  const header = await buildEapiHeader(parsedCookies);
+  const cookies = { ...header };
+  const incomingMusicU = cookies.MUSIC_U;
+  const setCookies = [];
+  const request = createNeteaseXeapi({
+    cryptoJs: CryptoJS,
+    fetch: (input, init) => fetch(input, init),
+    deviceId: String(header.deviceId),
+    getCookies: () => formatEapiCookieHeader(cookies),
+    mergeCookies: async (cookie) => {
+      // Anonymous registration must not replace an existing signed-in account.
+      const pair = String(cookie || '').split(';', 1)[0];
+      const values = parseCookieString(pair);
+      for (const [name, value] of Object.entries(values)) {
+        if (name === 'MUSIC_U' && incomingMusicU) continue;
+        const received = `${name}=${value}`;
+        if (!setCookies.includes(received)) setCookies.push(received);
+        if (cookies[name] === value) continue;
+        cookies[name] = value;
+        await setBrowserCookies('https://music.163.com/', received);
+        await saveProviderCookie('netease', received);
+        await rememberEapiNmtid([received]);
+      }
+    },
+  });
+  if ((uri === '/api/song/enhance/player/url' || uri === '/api/song/enhance/player/url/v1')
+    && !cookies.MUSIC_U && !cookies.MUSIC_A) {
+    const registered = await request('/api/register/anonimous', { username: anonymousUsername(header.deviceId) });
+    if (Number(registered?.code) !== 200) return { status: 200, body: registered, setCookies, registrationFailed: true };
+  }
+  const payload = uri === '/api/register/anonimous'
+    ? { ...data, username: anonymousUsername(header.deviceId) }
+    : data || {};
+  const body = await request(uri, payload);
+  return { status: 200, body, setCookies };
 }
 
 export async function eapiRequest(path, data, cookieHeader) {

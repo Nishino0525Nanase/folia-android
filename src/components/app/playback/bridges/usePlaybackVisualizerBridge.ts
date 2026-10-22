@@ -19,8 +19,11 @@ import { getTransitionHandoffProgress } from '../../../../services/automix/trans
 import { tickBeatFx } from '../../../../services/beatFx/beatFxLive';
 import { useBeatFxTrack } from '../../../../hooks/useBeatFxTrack';
 import { readIncomingLyricClock } from './incomingLyricClock';
+import { createPlaybackVisualizerFrameLoop } from './playbackVisualizerFrameLoop';
 
 // src/components/app/playback/bridges/usePlaybackVisualizerBridge.ts
+
+const EMPTY_SPECTRUM = new Uint8Array(0);
 
 type UsePlaybackVisualizerBridgeParams = {
 
@@ -201,7 +204,7 @@ export function usePlaybackVisualizerBridge({
             audioBands.mid.set(breath);
             audioBands.vocal.set(breath);
             audioBands.treble.set(breath);
-            audioBands.spectrum?.set(new Uint8Array(0));
+            audioBands.spectrum?.set(EMPTY_SPECTRUM);
         } else if (tapped) {
             audioBands.spectrum?.set(tapped.spectrum);
             audioPower.set(process((tapped.bass + tapped.lowMid) / 2, 3));
@@ -358,7 +361,13 @@ export function usePlaybackVisualizerBridge({
             }
         }
 
-        animationFrameRef.current = requestAnimationFrame(updateLoop);
+        // Synthetic Stage/NowPlaying/PlayerCap clocks also need continuous lyric timing, even
+        // though they have no playing HTMLAudioElement. Only a genuinely idle picture slows down.
+        return hasAudibleSignal || (playerState === PlayerState.PLAYING && (
+            isNowPlayingStageActive
+            || isPlayerCapStageActive
+            || (activePlaybackContext === 'stage' && stageActiveEntryKind === 'lyrics' && Boolean(stageLyricsSession && lyrics))
+        ));
     }, [
         activePlaybackContext,
         analyserRef,
@@ -390,11 +399,19 @@ export function usePlaybackVisualizerBridge({
     ]);
 
     useEffect(() => {
-        animationFrameRef.current = requestAnimationFrame(updateLoop);
+        const loop = createPlaybackVisualizerFrameLoop({
+            update: updateLoop,
+            isHidden: () => document.visibilityState === 'hidden',
+            requestFrame: callback => requestAnimationFrame(callback),
+            cancelFrame: handle => cancelAnimationFrame(handle),
+            delay: (callback, milliseconds) => window.setTimeout(callback, milliseconds),
+            cancelDelay: handle => window.clearTimeout(handle),
+            onFrameHandle: handle => { animationFrameRef.current = handle; },
+        });
+        document.addEventListener('visibilitychange', loop.wake);
         return () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
+            document.removeEventListener('visibilitychange', loop.wake);
+            loop.dispose();
         };
     }, [animationFrameRef, updateLoop]);
 }

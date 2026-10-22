@@ -13,6 +13,7 @@ import { queueIndexOfKey } from '../../utils/playbackNeighbors';
 import { EmptyState } from './shell/EmptyState';
 import { PanelIconButton } from './shell/PanelIconButton';
 import { useIsWideShortViewport } from './shell/panelViewport';
+import { useMobileTouchLayout } from '../../hooks/useMobileTouchLayout';
 
 // src/components/panelTab/QueueTab.tsx
 // The panel's queue tab: a line with the number of songs and the queue's own buttons, then the
@@ -52,6 +53,7 @@ interface QueueTabProps {
 }
 
 type QueueRowProps = {
+    isTouchLayout: boolean;
     playQueue: SongResult[];
     currentSongKey: string | null;
     /** 一排摆几首：矮而宽时是 2（见文件头注释），平时是 1。 */
@@ -79,6 +81,7 @@ const QueueCell = ({
     onMoveSongToEnd,
     onRemoveSong,
     labels,
+    isTouchLayout,
 }: {
     song: SongResult;
     songIndex: number;
@@ -89,6 +92,7 @@ const QueueCell = ({
     onMoveSongToEnd: QueueTabProps['onMoveSongToEnd'];
     onRemoveSong: QueueTabProps['onRemoveSong'];
     labels: QueueRowProps['labels'];
+    isTouchLayout: boolean;
 }) => {
     const isActive = currentSongKey === getPlaybackSongKey(song);
     const isUnavailable = isSongUnavailable(song);
@@ -111,8 +115,8 @@ const QueueCell = ({
                 </div>
                 <div className="truncate text-xs leading-[17px] text-[color:var(--st-t3)]">{getSongArtistLabel(song)}</div>
             </div>
-            {/* No width until the pointer or the keyboard is on the row, so a long name has the whole row. Tab changes the panel's tab, so the keyboard does not walk into a row: the actions are the pointer's, as before. */}
-            <div className="st-t-fast flex w-0 shrink-0 items-center gap-0.5 overflow-hidden opacity-0 transition-opacity group-focus-within:ml-2 group-focus-within:w-auto group-focus-within:opacity-100 group-hover:ml-2 group-hover:w-auto group-hover:opacity-100">
+            {/* Touch actions stay visible; a phone has no hover state to reveal them. */}
+            <div className={`st-t-fast flex shrink-0 items-center gap-0.5 overflow-hidden transition-opacity ${isTouchLayout ? 'ml-1 w-auto opacity-100' : 'w-0 opacity-0 group-focus-within:ml-2 group-focus-within:w-auto group-focus-within:opacity-100 group-hover:ml-2 group-hover:w-auto group-hover:opacity-100'}`}>
                 {[
                     { label: labels.playNext, icon: ListPlus, action: onMoveSongToNext },
                     { label: labels.moveToEnd, icon: ListEnd, action: onMoveSongToEnd },
@@ -121,6 +125,7 @@ const QueueCell = ({
                     <PanelIconButton
                         key={label}
                         size="s"
+                        className={isTouchLayout ? '[&_button]:min-h-[44px] [&_button]:min-w-[44px]' : undefined}
                         label={label}
                         onClick={(event) => {
                             event.stopPropagation();
@@ -151,6 +156,7 @@ const QueueRow = ({
     onMoveSongToEnd,
     onRemoveSong,
     labels,
+    isTouchLayout,
 }: RowComponentProps<QueueRowProps>): React.ReactElement => {
     const cells = Array.from({ length: columns }, (_, cell) => {
         const songIndex = index * columns + cell;
@@ -168,6 +174,7 @@ const QueueRow = ({
                 onMoveSongToEnd={onMoveSongToEnd}
                 onRemoveSong={onRemoveSong}
                 labels={labels}
+                isTouchLayout={isTouchLayout}
             />
         );
     });
@@ -198,6 +205,7 @@ const QueueTab: React.FC<QueueTabProps> = ({
     isDaylight = false,
 }) => {
     const { t } = useTranslation();
+    const isTouchLayout = useMobileTouchLayout();
     const reduced = useKitReducedMotion();
     const currentSongKey = currentSong ? getPlaybackSongKey(currentSong) : null;
     // 矮而宽时一排两首（见文件头注释）；列数变了显示行数跟着变，高度和滚动都按显示行算。
@@ -206,7 +214,8 @@ const QueueTab: React.FC<QueueTabProps> = ({
     // As tall as its rows up to the most it shows; never under two rows, so in a very low window
     // the tab scrolls instead.
     const rowsPx = Math.min(rowCount * ROW_PX, LIST_MAX_PX);
-    const listHeight = `clamp(${Math.min(rowsPx, 2 * ROW_PX)}px, calc(var(--pn-tab-room, 100vh) - ${HEAD_PX}px), ${rowsPx}px)`;
+    const headerPx = isTouchLayout ? 48 : HEAD_PX;
+    const listHeight = `clamp(${Math.min(rowsPx, 2 * ROW_PX)}px, calc(var(--pn-tab-room, 100vh) - ${headerPx}px), ${rowsPx}px)`;
 
     const listRef = useListRef(null);
     const isInitialMountRef = React.useRef(true);
@@ -215,6 +224,7 @@ const QueueTab: React.FC<QueueTabProps> = ({
     const [isSaveDialogOpen, setIsSaveDialogOpen] = React.useState(false);
     const [hasMoreBelow, setHasMoreBelow] = React.useState(false);
     const rowProps = React.useMemo<QueueRowProps>(() => ({
+        isTouchLayout,
         playQueue,
         columns,
         currentSongKey,
@@ -229,6 +239,7 @@ const QueueTab: React.FC<QueueTabProps> = ({
             remove: t('queue.remove'),
         },
     }), [
+        isTouchLayout,
         columns,
         currentSongKey,
         onMoveSongToEnd,
@@ -303,23 +314,25 @@ const QueueTab: React.FC<QueueTabProps> = ({
     return (
         <>
             <div className="select-none">
-                <div className="flex items-center gap-0.5 pb-1 pl-1" style={{ height: HEAD_PX }}>
+                <div className="flex items-center gap-0.5 pb-1 pl-1" style={{ minHeight: headerPx }}>
                     <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-5 text-[color:var(--st-t2)]">
                         {t('queue.title')}
                         <span className="ml-1.5 font-normal text-[color:var(--st-t3)]">{playQueue.length}</span>
                     </span>
                     {canSaveLocalPlaylist && (
-                        <Button variant="quiet" onClick={handleSavePlaylist}>
-                            {t('localMusic.saveQueueAsPlaylist')}
-                        </Button>
+                        <span className={isTouchLayout ? '[&_button]:min-h-11' : undefined}>
+                            <Button variant="quiet" onClick={handleSavePlaylist}>
+                                {t('localMusic.saveQueueAsPlaylist')}
+                            </Button>
+                        </span>
                     )}
                     {onOpenLattice && (
-                        <PanelIconButton size="s" label={t('home.lattice')} onClick={onOpenLattice}>
+                        <PanelIconButton size="s" label={t('home.lattice')} onClick={onOpenLattice} className={isTouchLayout ? '[&_button]:min-h-11 [&_button]:min-w-11' : undefined}>
                             <PanelsTopLeft size={15} />
                         </PanelIconButton>
                     )}
                     {onShuffle && (
-                        <PanelIconButton size="s" label={t('queue.shuffle')} onClick={onShuffle}>
+                        <PanelIconButton size="s" label={t('queue.shuffle')} onClick={onShuffle} className={isTouchLayout ? '[&_button]:min-h-11 [&_button]:min-w-11' : undefined}>
                             <Shuffle size={15} />
                         </PanelIconButton>
                     )}

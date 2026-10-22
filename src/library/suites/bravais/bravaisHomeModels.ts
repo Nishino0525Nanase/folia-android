@@ -1,6 +1,7 @@
 import type { LibraryDirectoryVisibilityMode } from '../../core/directory/directory.contract';
 import type { BravaisSeamForm, BravaisSeamMenuItem, BravaisSeamNotice } from './bravaisSeamModels';
 import type { LibraryHomeSpecialKind } from '../../core/home/homeSpecialCards';
+import type { OnlineProviderAccountView } from '../../core/account/onlineProviderAccountView';
 
 // src/library/suites/bravais/bravaisHomeModels.ts
 // B9 首页挂在层描述上的扩展类型（设计稿 §10.5、§5「面板」的目录树）：首页窄缝里的二级切换、工具按钮（搜索、目录、
@@ -94,6 +95,7 @@ export type BravaisHomeSearch = {
  * 入口打开共用的登录窗口：换平台、登录、退出都在窗口里。
  */
 export type BravaisHomeAccount = {
+    accountView?: OnlineProviderAccountView;
     providerId: string;
     providerLabel: string;
     /** B10：当前平台的账户状态（昵称 / 未登录 / 无需登录）。fb8 起只进入口的可访问名与 title，不直接显示。 */

@@ -1,0 +1,23 @@
+/* Original grid-home header with reachable phone controls and a scrolling tab pill. */
+.folia-grid-home-search-submit { display: grid; place-items: center; }
+
+@media (max-width: 767px) and (pointer: coarse) {
+    .folia-grid-home-header { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .folia-grid-home-header > div { min-width: 0; }
+    .folia-grid-home-header h1 { font-size: 20px; }
+    .folia-grid-update-label { display: none; }
+    .folia-grid-header-action { flex-shrink: 0; min-width: 44px; min-height: 44px; }
+    .folia-grid-header-action.ml-4 { margin-left: 6px; }
+    .folia-grid-header-action.ml-1 { margin-left: 2px; }
+    .folia-grid-home-tabs {
+        max-width: 100%;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        transform: none;
+    }
+    .folia-grid-home-tabs::-webkit-scrollbar { display: none; }
+    .folia-grid-home-tabs button { flex-shrink: 0; min-width: 44px; min-height: 44px; }
+    .folia-grid-home-search input { min-height: 44px; padding-left: 42px; font-size: 16px; }
+    .folia-grid-home-search-submit { left: 0; width: 44px; height: 44px; }
+}

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef, startTransition } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useSyncExternalStore, startTransition } from 'react';
+import { isAiConfigured, subscribeAiSettings } from '../../services/aiSettings';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { MotionValue } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -439,11 +440,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const [cacheDirectoryIsDefault, setCacheDirectoryIsDefault] = useState(true);
     const [cacheDirectoryStatus, setCacheDirectoryStatus] = useState<'idle' | 'choosing'>('idle');
     const isElectronRuntime = typeof window !== 'undefined' && Boolean(window.electron);
+    const localAiConfigured = useSyncExternalStore(subscribeAiSettings, isAiConfigured, () => false);
     const savedAiApiKey = savedElectronAiCredentials.AI_PROVIDER === 'openai'
         ? savedElectronAiCredentials.OPENAI_API_KEY
         : savedElectronAiCredentials.GEMINI_API_KEY;
     const aiApiKeyStatus: 'loading' | 'configured' | 'missing' = !isElectronRuntime
-        ? 'configured'
+        ? isCapacitorAndroid() && !localAiConfigured ? 'missing' : 'configured'
         : !electronSettingsLoaded
             ? 'loading'
             : savedAiApiKey
@@ -451,10 +453,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 : 'missing';
 
     useEffect(() => {
-        if (aiApiKeyStatus === 'missing' && themeGenerationSource === 'ai') {
+        if (isElectronRuntime && aiApiKeyStatus === 'missing' && themeGenerationSource === 'ai') {
             onChangeThemeGenerationSource('cover');
         }
-    }, [aiApiKeyStatus, onChangeThemeGenerationSource, themeGenerationSource]);
+    }, [aiApiKeyStatus, isElectronRuntime, onChangeThemeGenerationSource, themeGenerationSource]);
 
     // The four answers land while the window is still opening, and each one alone rendered the whole
     // window again. Read together and applied as one transition, they render it once, between frames.
@@ -1202,7 +1204,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             data-folia-keyboard-window="true"
             data-folia-settings-overlay="true"
             data-ponder-page-scope={activeTab === 'help' ? 'help-page' : 'settings-page'}
-            className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 sm:px-5 sm:py-12"
+            className="folia-touch-settings-layer fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 sm:px-5 sm:py-12"
             style={{ backgroundColor: overlayBackground }}
             onMouseDown={handleOverlayMouseDown}
             onClick={(event) => handleBackdropClose(event, onClose)}
@@ -1214,7 +1216,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 role="dialog"
                 aria-modal="true"
                 aria-label={t('options.settingsWindowName')}
-                className="st-window relative flex h-[90vh] w-full flex-col overflow-hidden rounded-2xl bg-[var(--st-win)] text-[color:var(--st-t1)] shadow-[0_36px_90px_rgba(0,0,0,0.5),0_0_0_1px_var(--st-line2)] md:grid md:h-[86vh] md:w-[960px] md:grid-cols-[212px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]"
+                className="folia-touch-settings-window st-window relative flex h-[90vh] w-full flex-col overflow-hidden rounded-2xl bg-[var(--st-win)] text-[color:var(--st-t1)] shadow-[0_36px_90px_rgba(0,0,0,0.5),0_0_0_1px_var(--st-line2)] md:grid md:h-[86vh] md:w-[960px] md:grid-cols-[212px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]"
                 style={{ ...settingsTokens(isDaylight, theme), ...kitMotionTokens(reducedKitMotion) }}
                 onClick={(event) => event.stopPropagation()}
             >

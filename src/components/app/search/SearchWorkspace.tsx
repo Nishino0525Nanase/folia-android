@@ -13,6 +13,7 @@ import SearchResultsList from './SearchResultsList';
 import { useCollectionNavigationStore } from '../../../stores/useCollectionNavigationStore';
 import { useOnlineProviderAccountStore } from '../../../stores/useOnlineProviderAccountStore';
 import { omni } from '../../../services/onlineMusic/omni';
+import { useMobileTouchLayout } from '../../../hooks/useMobileTouchLayout';
 
 // src/components/app/search/SearchWorkspace.tsx
 
@@ -51,6 +52,8 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
     resolveTrackDisplay,
 }) => {
     const { t } = useTranslation();
+    const isTouchLayout = useMobileTouchLayout();
+    const searchInputRef = useRef<HTMLInputElement>(null);
     const {
         searchQuery,
         searchSourceTab,
@@ -126,6 +129,12 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
         if (source === 'navidrome') return t('search.sourceNavidrome');
         return omni.getProviderLabel(source);
     };
+    const submitSearch = (source?: SearchSource) => {
+        if (!searchQuery.trim() || (isSearching && (!source || source === searchSourceTab))) return;
+        // A submitted search should give a phone's result list its screen space back.
+        if (isTouchLayout) searchInputRef.current?.blur();
+        onSubmitSearch(source);
+    };
 
     useEffect(() => {
         if (!isSearchOpen || hasCollection) return;
@@ -180,25 +189,25 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                     initial={{ opacity: 0, y: 28 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 28 }}
-                    className={`fixed inset-0 flex flex-col overflow-hidden px-3 py-4 sm:px-6 sm:py-6 ${
+                    className={`folia-touch-search fixed inset-0 flex flex-col overflow-hidden px-3 py-4 sm:px-6 sm:py-6 ${
                         hasCollection ? 'z-[5]' : 'z-50'
                     }`}
                     style={{
                         color: theme.primaryColor,
                         backgroundColor: isDaylight ? 'rgba(250,250,250,0.96)' : 'rgba(8,8,10,0.94)',
-                        backdropFilter: 'blur(24px)',
+                        backdropFilter: isTouchLayout ? 'none' : 'blur(24px)',
                     }}
                 >
                     {/* 安全区：安卓的 env() 不可信（见 androidPhoneFit.css ⑥），搜索框由 CSS 整体下移。 */}
                     <header data-folia-safe-top="shift" className="mx-auto flex w-full max-w-5xl shrink-0 flex-col gap-3">
-                        <div className="flex items-center gap-3">
+                        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                             <form
-                                className={`relative flex-1 rounded-2xl border ${
+                                className={`relative flex min-w-0 flex-1 items-center rounded-2xl border pr-1 ${
                                     isDaylight ? 'border-black/10 bg-black/[0.04]' : 'border-white/10 bg-white/[0.05]'
                                 }`}
                                 onSubmit={(event) => {
                                     event.preventDefault();
-                                    onSubmitSearch();
+                                    submitSearch();
                                 }}
                             >
                                 {isSearching ? (
@@ -207,20 +216,32 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                                     <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-45" />
                                 )}
                                 <input
+                                    ref={searchInputRef}
+                                    type="search"
+                                    enterKeyHint="search"
                                     value={searchQuery}
                                     onChange={event => setSearchQuery(event.target.value)}
                                     placeholder={t('search.placeholder')}
-                                    className="w-full bg-transparent py-3.5 pl-11 pr-4 text-sm outline-none"
-                                    autoFocus
+                                    aria-label={t('search.placeholder')}
+                                    className="min-w-0 flex-1 bg-transparent py-3.5 pl-11 pr-2 text-base outline-none sm:text-sm"
+                                    autoFocus={!isTouchLayout || !searchQuery.trim()}
                                 />
+                                <button
+                                    type="submit"
+                                    disabled={isSearching || !searchQuery.trim()}
+                                    className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl px-3 text-sm font-medium transition-opacity disabled:opacity-40"
+                                    style={{ backgroundColor: theme.accentColor, color: theme.backgroundColor }}
+                                >
+                                    {t('libraryBravaisHome.searchSubmit')}
+                                </button>
                             </form>
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className={`rounded-full p-3 ${
+                                className={`flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full ${
                                     isDaylight ? 'bg-black/5 hover:bg-black/10' : 'bg-white/10 hover:bg-white/15'
                                 }`}
-                                aria-label={t('ui.backToHome')}
+                                aria-label={t('libraryBravaisHome.searchClose')}
                             >
                                 <X size={20} />
                             </button>
@@ -239,10 +260,10 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                                     key={source}
                                     onClick={() => {
                                         if (source !== searchSourceTab) {
-                                            onSubmitSearch(source);
+                                            submitSearch(source);
                                         }
                                     }}
-                                    className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium transition-colors ${
+                                    className={`min-h-[44px] shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium transition-colors ${
                                         source === searchSourceTab
                                             ? 'shadow-sm'
                                             : isDaylight
@@ -276,8 +297,8 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                                 <p>{searchErrorText}</p>
                                 <button
                                     type="button"
-                                    onClick={() => onSubmitSearch()}
-                                    className="rounded-full border border-current/15 px-4 py-2 text-sm"
+                                    onClick={() => submitSearch()}
+                                    className="min-h-[44px] rounded-full border border-current/15 px-4 py-2 text-sm"
                                 >
                                     {t('search.retry')}
                                 </button>
@@ -317,7 +338,7 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                                             type="button"
                                             disabled={isLoadingMore}
                                             onClick={onLoadMore}
-                                            className="rounded-full border border-current/15 px-4 py-2 disabled:opacity-50"
+                                            className="min-h-[44px] rounded-full border border-current/15 px-4 py-2 disabled:opacity-50"
                                         >
                                             {t('search.retry')}
                                         </button>
@@ -328,7 +349,7 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                                             type="button"
                                             disabled={isLoadingMore}
                                             onClick={onLoadMore}
-                                            className={`rounded-full border px-5 py-2 text-sm disabled:opacity-50 ${
+                                            className={`min-h-[44px] rounded-full border px-5 py-2 text-sm disabled:opacity-50 ${
                                                 isDaylight
                                                     ? 'border-black/10 bg-black/5 hover:bg-black/10'
                                                     : 'border-white/10 bg-white/5 hover:bg-white/10'

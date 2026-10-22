@@ -35,7 +35,7 @@ export const Toggle: React.FC<ToggleProps> = ({ checked, onChange, disabled, lab
             {...(labelledBy ? { 'aria-labelledby': labelledBy } : {})}
             disabled={disabled}
             onClick={() => onChange(!checked)}
-            className={`st-t-move shrink-0 w-12 h-6 rounded-full p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${checked
+            className={`st-touch-toggle st-t-move shrink-0 w-12 h-6 rounded-full p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${checked
                 ? 'bg-[rgba(114,119,134,1)]'
                 : isDaylight ? 'bg-black/15' : 'bg-white/15'}`}
         >

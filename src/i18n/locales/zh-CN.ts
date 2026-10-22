@@ -1,6 +1,28 @@
 
 
 export default {
+  "mobileHome": {
+    "localEmptyTitle": "添加你的音乐",
+    "localEmptyHint": "导入手机中的音乐，或切换到上方在线分类后搜索。",
+    "localAction": "本地音乐",
+    "gridAction": "使用网格首页",
+    "accountlessHint": "可直接搜索音乐，或导入本地歌曲。"
+  },
+  "mobileTouch": {
+    "expand": "展开播放控制",
+    "collapse": "收起播放控制",
+    "play": "播放",
+    "pause": "暂停",
+    "previous": "上一首",
+    "next": "下一首",
+    "navigation": "页面与操作",
+    "library": "音乐库",
+    "search": "搜索",
+    "lyrics": "歌词",
+    "queue": "队列",
+    "more": "更多",
+    "settings": "设置"
+  },
   "libraryBravais": {
     "suiteName": "Bravais 墙面",
     "homeTitle": "书库",
@@ -1766,6 +1788,21 @@ export default {
     "chaotic": "混乱"
   },
   "help": {
+    "mobileGuide": {
+      "android": "Android 应用",
+      "download": "下载安装包",
+      "title": "手机操作指南",
+      "navigation": "沿用原来的页面入口",
+      "navigationHint": "曲库中直接点搜索和设置；播放页点右下圆形按钮，可选择曲库、搜索、歌词和队列。",
+      "playback": "轻触底部播放胶囊",
+      "playbackHint": "直接播放或暂停，拖动进度跳转。点展开箭头查看切歌、循环和歌词时间轴，再次点按可收起。",
+      "search": "直接搜索，直接播放",
+      "searchHint": "点「搜索」输入歌名或歌手，点搜索按钮提交。结果旁的播放和添加按钮可直接操作。",
+      "more": "需要时再打开工具",
+      "moreHint": "播放页点右下圆形按钮选择页面与操作；曲库沿用原来的工具菜单。",
+      "start": "开始听歌",
+      "revisit": "可在「设置 → 帮助」随时查看。"
+    },
     "title": "帮助",
     "navigation": "导航",
     "switchPlaylist": "切换歌单",
@@ -2173,8 +2210,8 @@ export default {
     "androidUpdateFailureDownloadNoSpace": "存储空间不足，请清理后重试",
     "androidUpdateFailureDownloadFileError": "无法写入安装包文件，请重试",
     "androidUpdateNotes": "更新内容",
-    "personalForkUpdates": "此个人构建采用独立签名，已停用社区版自动更新。后续请从自己的 GitHub 发布页下载。",
-    "personalForkReleases": "打开个人版发布页",
+    "personalForkUpdates": "个人版更新通过下载页提供，下载新版后覆盖安装即可。",
+    "personalForkReleases": "打开个人版下载页",
     "personalForkCredits": "基于 chthollyphile/folia-major 与 maimai993/folia-sonnet，遵循 AGPL-3.0 开源协议。",
     "androidUpdatePanelTitle": "版本更新",
     "androidUpdateSubtitleChecking": "正在联系更新服务器…",
@@ -3060,7 +3097,7 @@ export default {
     "confirmClearAll": "确定要清空所有缓存吗？",
     "cacheClearing": "清除中...",
     "electronSettings": "AI主题设置",
-    "aiThemeDesc": "填自己的密钥，AI 主题直接在设备上生成（不经过任何服务器）。",
+    "aiThemeDesc": "未配置时使用封面配色，不影响听歌和歌词动画。填写自己的密钥后，设备会直接请求所配置的 AI 服务生成主题。",
     "aiKeyStoredLocally": "密钥只保存在本机，不会上传。",
     "aiProvider": "AI 供应商",
     "otherCompatibleApi": "其他兼容接口",

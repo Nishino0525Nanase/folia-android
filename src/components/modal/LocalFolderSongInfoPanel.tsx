@@ -25,17 +25,17 @@ export const LocalFolderSongInfoPanel = ({ folderName, songs, assignments, isDay
     const panelTheme = isDaylight ? 'border-black/10 bg-white/90 text-zinc-900' : 'border-white/10 bg-zinc-950/90 text-white';
 
     return (
-        <div data-folia-keyboard-window="true" className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-3 backdrop-blur-xl md:p-6">
-            <div role="dialog" aria-modal="true" className={`${panelTheme} flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border shadow-2xl`}>
-                <header className="flex items-center justify-between gap-4 border-b border-current/10 px-6 py-5">
+        <div data-folia-keyboard-window="true" className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-3 backdrop-blur-xl max-md:bottom-auto max-md:h-[100dvh] max-md:pb-[max(12px,var(--folia-safe-area-bottom,env(safe-area-inset-bottom,0px)))] max-md:pt-[max(12px,var(--folia-safe-area-top,env(safe-area-inset-top,0px)))] md:p-6">
+            <div role="dialog" aria-modal="true" className={`${panelTheme} flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border shadow-2xl max-md:max-h-full`}>
+                <header className="flex shrink-0 items-center justify-between gap-3 border-b border-current/10 px-4 py-4 md:gap-4 md:px-6 md:py-5">
                     <div className="min-w-0">
                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] opacity-45"><Tags size={14} />{t('localMusic.organizeSongInfo')}</div>
                         <h2 className="mt-1 truncate text-xl font-bold">{folderName}</h2>
                         <p className="mt-1 text-xs opacity-50">{t('localMusic.folderSongInfoHint', { count: songs.length })}</p>
                     </div>
-                    <button type="button" onClick={onClose} className="rounded-full p-2.5 hover:bg-current/10"><X size={21} /></button>
+                    <button type="button" onClick={onClose} aria-label={t('ui.close')} className="grid h-11 w-11 shrink-0 place-items-center rounded-full hover:bg-current/10 md:h-auto md:w-auto md:p-2.5"><X size={21} /></button>
                 </header>
-                <main className="min-h-0 flex-1 overflow-y-auto p-6 custom-scrollbar">
+                <main className="min-h-0 flex-1 overflow-y-auto p-4 custom-scrollbar max-md:overscroll-contain md:p-6">
                     <FolderAutoMatchEditor
                         songs={songs}
                         assignments={assignments}

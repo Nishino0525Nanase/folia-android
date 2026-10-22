@@ -112,16 +112,16 @@ export const FolderAutoMatchEditor = ({ songs, assignments, isDaylight, onManual
                     <div className="mt-1 text-xs opacity-55">{t('localMusic.batchMetadataMatchHint')}</div>
                 </div>
                 {running ? (
-                    <button type="button" onClick={() => abortControllerRef.current?.abort()} className="flex items-center gap-2 rounded-xl bg-red-500/15 px-4 py-2 text-sm font-bold text-red-500">
+                    <button type="button" onClick={() => abortControllerRef.current?.abort()} className="flex items-center gap-2 rounded-xl bg-red-500/15 px-4 py-2 text-sm font-bold text-red-500 max-md:min-h-11">
                         <Square size={14} /> {t('localMusic.cancelMatch')} ({completed}/{selectedCount})
                     </button>
                 ) : (
                     <div className="flex flex-wrap items-center gap-2">
-                        <button type="button" disabled={selectedCount === 0 || busy} onClick={() => void useLocalInfo()} className="flex items-center gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-2 text-sm font-bold text-amber-500 disabled:opacity-35">
+                        <button type="button" disabled={selectedCount === 0 || busy} onClick={() => void useLocalInfo()} className="flex items-center gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-2 text-sm font-bold text-amber-500 disabled:opacity-35 max-md:min-h-11">
                             {restoringLocalInfo ? <Loader2 size={15} className="animate-spin" /> : <HardDrive size={15} />}
                             {t('localMusic.useLocalInfoForSelected', { count: selectedCount })}
                         </button>
-                        <button type="button" disabled={selectedCount === 0 || busy} onClick={() => void run()} className="flex items-center gap-2 rounded-xl bg-blue-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-35">
+                        <button type="button" disabled={selectedCount === 0 || busy} onClick={() => void run()} className="flex items-center gap-2 rounded-xl bg-blue-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-35 max-md:min-h-11">
                             <WandSparkles size={15} /> {t('localMusic.startAutoMatch', { count: selectedCount })}
                         </button>
                     </div>
@@ -132,7 +132,7 @@ export const FolderAutoMatchEditor = ({ songs, assignments, isDaylight, onManual
                     <div className="h-full rounded-full bg-blue-500 transition-[width]" style={{ width: `${selectedCount ? completed / selectedCount * 100 : 0}%` }} />
                 </div>
             )}
-            <label className="flex w-fit items-center gap-2 text-xs font-semibold">
+            <label className="flex min-h-11 w-fit flex-wrap items-center gap-2 text-xs font-semibold md:min-h-0 md:flex-nowrap">
                 <input
                     ref={selectAllRef}
                     type="checkbox"

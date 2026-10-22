@@ -410,7 +410,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             {isOpen && (
                 <motion.div
                     data-folia-keyboard-window="true"
-                    className={`fixed inset-0 z-[150] flex items-start justify-center px-4 pt-[18vh] ${hasClearBackdrop ? '' : 'backdrop-blur-md'}`}
+                    className={`folia-touch-command-layer fixed inset-0 z-[150] flex items-start justify-center px-4 pt-[18vh] ${hasClearBackdrop ? '' : 'backdrop-blur-md'}`}
                     style={{
                         backgroundColor: hasClearBackdrop
                             ? (isDaylight ? 'rgba(250,250,249,0.12)' : 'rgba(0,0,0,0.16)')

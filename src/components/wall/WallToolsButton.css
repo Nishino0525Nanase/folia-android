@@ -652,3 +652,23 @@ button.lattice-tools-slider-icon[aria-pressed="true"] { color: var(--text-accent
         max-height: max(56px, calc(100dvh - 360px));
     }
 }
+
+/* Enlarge actions inside the existing glass panel without introducing another navigation bar. */
+@media (max-width: 767px) and (pointer: coarse) {
+    .lattice-tools { --wall-tools-touch-stack-offset: 64px; }
+    .lattice-tools.has-above { --wall-tools-touch-stack-offset: 116px; }
+    .lattice-tools-panel {
+        flex: 0 1 auto;
+        min-height: 0;
+        max-height: calc(100dvh - var(--wall-tools-bottom, 24px) - var(--wall-tools-touch-stack-offset) - max(16px, var(--folia-safe-area-top, env(safe-area-inset-top, 0px))));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+    .lattice-tools-panel > * { flex-shrink: 0; }
+    .lattice-tools-quick { grid-template-columns: repeat(5, minmax(44px, 1fr)); }
+    .lattice-tools-action,
+    .lattice-tools-quick-action,
+    .lattice-tools-lights-toggle { min-height: 44px; }
+    .lattice-tools-help-trigger { width: 44px; min-height: 44px; }
+    .lattice-tools-slider-icon { min-width: 44px; min-height: 44px; }
+}

@@ -8,7 +8,7 @@ import { Tooltip } from './Tooltip';
 // on, and a quiet text button for the action beside a group heading. Given an icon and no text it
 // is a square icon button, named by its tip.
 
-const BASE_CLASS = 'st-t-fast inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap transition-[background-color,color,opacity,scale] enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40';
+const BASE_CLASS = 'st-action st-t-fast inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap transition-[background-color,color,opacity,scale] enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40';
 
 /** With text. */
 const TEXT_CLASS = {
@@ -47,6 +47,7 @@ export const Button: React.FC<ButtonProps> = ({ onClick, variant, icon: Icon, ti
                 aria-label={children ? undefined : tip}
                 // An icon alone says what it does, not to what: the row it sits in says that.
                 aria-describedby={children ? undefined : labelId}
+                data-icon-only={children ? undefined : true}
                 className={`${BASE_CLASS} ${(children ? TEXT_CLASS : ICON_CLASS)[variant ?? 'fill']}`}
             >
                 {Icon && <Icon size={14} />}

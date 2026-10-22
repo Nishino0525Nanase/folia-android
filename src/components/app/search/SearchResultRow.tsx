@@ -13,6 +13,7 @@ import { getProviderSongMetadata } from '../../../services/onlineMusic/songMetad
 // src/components/app/search/SearchResultRow.tsx
 
 type SearchResultRowProps = {
+    isTouchLayout: boolean;
     track: UnifiedSong;
     style?: React.CSSProperties;
     /**
@@ -36,6 +37,7 @@ const formatDuration = (duration: number) => {
 };
 
 const SearchResultRow: React.FC<SearchResultRowProps> = ({
+    isTouchLayout,
     track,
     style,
     entering = false,
@@ -83,7 +85,7 @@ const SearchResultRow: React.FC<SearchResultRowProps> = ({
                     type="button"
                     disabled={isUnavailable}
                     onClick={() => onPlayTrack(track)}
-                    className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-zinc-500/15 disabled:cursor-not-allowed"
+                    className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-zinc-500/15 disabled:cursor-not-allowed ${isTouchLayout ? 'min-h-[44px] min-w-[44px]' : ''}`}
                     aria-label={t('search.playTrack')}
                 >
                     {coverUrl ? (
@@ -94,7 +96,7 @@ const SearchResultRow: React.FC<SearchResultRowProps> = ({
                         </span>
                     )}
                     {!isUnavailable && (
-                        <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className={`absolute inset-0 flex items-center justify-center bg-black/45 text-white transition-opacity ${isTouchLayout ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                             <Play size={18} fill="currentColor" />
                         </span>
                     )}
@@ -106,7 +108,7 @@ const SearchResultRow: React.FC<SearchResultRowProps> = ({
                             type="button"
                             disabled={isUnavailable}
                             onClick={() => onPlayTrack(track)}
-                            className="truncate text-left text-sm font-semibold disabled:cursor-not-allowed"
+                            className={`max-w-full truncate text-left text-sm font-semibold disabled:cursor-not-allowed ${isTouchLayout ? 'min-h-[44px]' : ''}`}
                             style={{ color: 'var(--text-primary)' }}
                         >
                             {formatSongName(track)}
@@ -163,8 +165,9 @@ const SearchResultRow: React.FC<SearchResultRowProps> = ({
                     <button
                         type="button"
                         onClick={() => onAddTrackToQueue(track)}
-                        className="shrink-0 rounded-full p-2 opacity-60 transition-all hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10 sm:opacity-0 sm:group-hover:opacity-100"
+                        className={`flex shrink-0 items-center justify-center rounded-full transition-all hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10 ${isTouchLayout ? 'h-[44px] w-[44px] opacity-100' : 'p-2 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100'}`}
                         title={t('navidrome.addToQueue')}
+                        aria-label={t('navidrome.addToQueue')}
                     >
                         <Plus size={16} />
                     </button>

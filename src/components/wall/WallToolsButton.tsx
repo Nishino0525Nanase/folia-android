@@ -92,6 +92,7 @@ export function WallToolsSurface({ idPrefix, label, isDaylight, destination, ent
     const tintEnabled = useLatticeSettingsStore(state => state.latticePosterTintEnabled);
     const handleToggleLatticePosterTint = useLatticeSettingsStore(state => state.handleToggleLatticePosterTint);
     const isWideLayout = useMediaQuery('(min-width: 640px)');
+    const isPhoneTouch = useMediaQuery('(max-width: 767px) and (pointer: coarse)');
     const bottomPx = usePlayerBottomBarBottomPx(isWideLayout ? 24 : 16);
     // stack 的 max-height 要减掉按钮此刻的底距（随底栏抬升量变），经 CSS 变量交给样式。
     const bottomVar = useTransform(bottomPx, value => `${value}px`);
@@ -178,6 +179,11 @@ export function WallToolsSurface({ idPrefix, label, isDaylight, destination, ent
                             className={quick.length > 0 ? 'lattice-tools-panel has-quick-actions' : 'lattice-tools-panel'}
                         >
                             {quick.length > 0 && <WallToolsQuickRow actions={quick} onDone={close} />}
+                            {isPhoneTouch && <WallToolsRow entry={{
+                                kind: 'action', id: 'commands', icon: Command,
+                                label: t('options.gridSlideTargetCommandPalette'),
+                                onSelect: handleOpenCommandPalette,
+                            }} onDone={close} />}
                             <WallToolsRow entry={common.volume} onDone={close} />
                             {rows.map(entry => <WallToolsRow key={entry.id} entry={entry} onDone={close} />)}
                             <WallToolsRow entry={tintRow} onDone={close} />

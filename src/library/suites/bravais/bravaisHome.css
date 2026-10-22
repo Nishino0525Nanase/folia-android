@@ -690,6 +690,21 @@
 .bravais-seam-home.is-compact .bravais-seam-shortcuts { gap: 0; }
 .bravais-seam-home.is-compact .bravais-seam-shortcuts-rule { margin-bottom: 8px; }
 
+/* Keep the original spine and tool grid; the touch hit areas fit inside their existing widths. */
+@media (max-width: 767px) and (pointer: coarse) {
+    .bravais-seam-home .bravais-seam-icon,
+    .bravais-seam-home.is-compact .bravais-seam-tools .bravais-seam-icon {
+        width: 44px;
+        height: 44px;
+    }
+    .bravais-seam-home .bravais-seam-tools { grid-template-columns: repeat(2, 44px); }
+    .bravais-seam-home.is-compact .bravais-seam-tools { grid-template-columns: 44px; }
+    .bravais-seam-home.is-compact .bravais-seam-tools .bravais-seam-icon.is-wide { width: 44px; }
+    .bravais-seam-home:not(.is-compact) .bravais-seam-tools .bravais-seam-icon.is-wide { width: auto; }
+    .bravais-seam .bravais-seam-menu.is-home { max-height: calc(100dvh - 180px); overflow-y: auto; overscroll-behavior: contain; }
+    .bravais-seam .bravais-seam-menu.is-home button { min-height: 44px; }
+}
+
 /* 放不下时挪进「⋯」菜单：图标同样用强调色。 */
 .bravais-seam-menu.is-home button.is-shortcut svg { color: var(--text-accent, currentColor); opacity: 1; }
 

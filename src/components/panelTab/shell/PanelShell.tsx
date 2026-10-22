@@ -9,6 +9,10 @@ import { FOLDED_PX } from './SongHeader';
 import { PANEL_BOTTOM_LIFT_PX } from './panelBottomBaseline';
 import { useIsShortViewport, useIsWideShortViewport } from './panelViewport';
 import { useMeasuredSize } from './useMeasuredSize';
+import { useMobileTouchLayout } from '../../../hooks/useMobileTouchLayout';
+import { useTranslation } from 'react-i18next';
+import { X } from 'lucide-react';
+import { useAppViewStore } from '../../../stores/useAppViewStore';
 
 // src/components/panelTab/shell/PanelShell.tsx
 // The frame of the playing page's panel: where it sits, the glass surface, and how tall it is. The
@@ -75,6 +79,9 @@ type PanelSurfaceProps = Omit<PanelShellProps, 'isOpen' | 'handle'> & {
 
 const PanelSurface: React.FC<PanelSurfaceProps> = ({ hasHandle, isCover, tabKey, theme, isDaylight, header, dock, children, layoutRef, onLayoutUpdate }) => {
     const reduced = useKitReducedMotion();
+    const isMobileTouch = useMobileTouchLayout();
+    const { t } = useTranslation();
+    const dockHeightPx = isMobileTouch ? 44 : DOCK_HEIGHT_PX;
     const bottomBarBottomPx = usePlayerBottomBarBottomPx();
     const isShort = useIsShortViewport();
     // 矮而宽：摊宽面板，页签分两栏（见 ControlsTab）。竖屏手机横向没有余量，摊宽只会顶到屏幕边。
@@ -87,14 +94,14 @@ const PanelSurface: React.FC<PanelSurfaceProps> = ({ hasHandle, isCover, tabKey,
     // Never taller than the window allows, wherever the bottom bar's baseline has been lifted to.
     const maxHeight = useTransform(
         bottomBarBottomPx,
-        bottom => `calc(100dvh - var(--pn-under) - ${bottom}px - var(--pn-top-margin))`,
+        bottom => `calc(100dvh - var(--folia-mobile-nav-height, 0px) - var(--pn-under) - ${bottom}px - var(--pn-top-margin))`,
     );
     // 页签栏占掉的纵向：竖轨模式下它花的是横向，纵向这一份要还给页签内容。
     // 走变量而不是算进下面的 calc —— 它随屏幕形态变，塞进 transform 函数里转屏后未必重算。
-    const dockAllowancePx = isWideShort ? 0 : DOCK_GAP_PX + DOCK_HEIGHT_PX;
+    const dockAllowancePx = isWideShort ? 0 : DOCK_GAP_PX + dockHeightPx;
     const headerRoom = useTransform(
         bottomBarBottomPx,
-        bottom => `calc(100dvh - var(--pn-under) - ${bottom}px - var(--pn-top-margin) - ${2 * PADDING_PX}px - var(--pn-dock))`,
+        bottom => `calc(100dvh - var(--folia-mobile-nav-height, 0px) - var(--pn-under) - ${bottom}px - var(--pn-top-margin) - ${2 * PADDING_PX}px - var(--pn-dock))`,
     );
     const scrollRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -114,6 +121,16 @@ const PanelSurface: React.FC<PanelSurfaceProps> = ({ hasHandle, isCover, tabKey,
     const bodyHeight = isCover ? 0 : BODY_TOP_PX.gap + BODY_TOP_PX.line + BODY_TOP_PX.under + content.height;
     // Where the surface comes from and goes back to: a little smaller, toward the handle.
     const away = { opacity: 0, scale: 0.92 };
+    const mobileCloseButton = isMobileTouch ? (
+        <button
+            type="button"
+            className="mb-1 flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 self-end rounded-xl px-3 text-sm text-[color:var(--st-t2)] active:bg-[var(--st-fill)]"
+            onClick={() => useAppViewStore.getState().setIsPanelOpen(false)}
+        >
+            <X size={18} aria-hidden />
+            {t('ui.close')}
+        </button>
+    ) : null;
 
     /* The tab's body: the hairline, then the open tab, which scrolls here when the window is short. */
     const body = (
@@ -184,6 +201,7 @@ const PanelSurface: React.FC<PanelSurfaceProps> = ({ hasHandle, isCover, tabKey,
                  */
                 <>
                     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                        {mobileCloseButton}
                         {header}
                         {body}
                     </div>
@@ -196,10 +214,11 @@ const PanelSurface: React.FC<PanelSurfaceProps> = ({ hasHandle, isCover, tabKey,
                 </>
             ) : (
                 <>
+                    {mobileCloseButton}
                     {header}
                     {body}
 
-                    <div className="shrink-0" style={{ height: DOCK_HEIGHT_PX, marginTop: DOCK_GAP_PX }}>
+                    <div className="shrink-0" style={{ height: dockHeightPx, marginTop: DOCK_GAP_PX }}>
                         {dock}
                     </div>
                 </>
@@ -209,16 +228,17 @@ const PanelSurface: React.FC<PanelSurfaceProps> = ({ hasHandle, isCover, tabKey,
 };
 
 const PanelShell: React.FC<PanelShellProps> = ({ isOpen, handle, ...surface }) => {
+    const isMobileTouch = useMobileTouchLayout();
     const bottomBarBottomPx = usePlayerBottomBarBottomPx();
     const { ref: layoutRef, invalidate: invalidateLayout } = usePlayerOverlayObstacle('player-panel', 'panel');
     // 在播放条那条基线之上再抬一点（见 PANEL_BOTTOM_LIFT_PX）—— 手柄抬的是同一份，两者不会错开。
-    const shellBottom = useTransform(bottomBarBottomPx, bottom => bottom + PANEL_BOTTOM_LIFT_PX);
+    const shellBottom = useTransform(bottomBarBottomPx, bottom => `calc(${bottom + PANEL_BOTTOM_LIFT_PX}px + var(--folia-mobile-nav-height, 0px))`);
 
     return (
         <motion.div
             style={{ bottom: shellBottom }}
             onUpdate={invalidateLayout}
-            className="absolute right-0 z-[60] flex flex-col items-end pointer-events-none"
+            className="folia-touch-panel absolute right-0 z-[60] flex flex-col items-end pointer-events-none"
             // 与手柄同一条基线：同样要从系统导航栏里让出来（见 PanelHandle 的注释）。
             data-folia-safe-bottom="shift"
             data-folia-safe-right="shift"
@@ -227,7 +247,7 @@ const PanelShell: React.FC<PanelShellProps> = ({ isOpen, handle, ...surface }) =
             {/* 右边多留一点：贴着屏幕边时，那圈 20px 圆角看着像被切掉了一块。 */}
             <div className="pr-6 md:pr-8">
                 <AnimatePresence>
-                    {isOpen && <PanelSurface {...surface} layoutRef={layoutRef} onLayoutUpdate={invalidateLayout} />}
+                    {isOpen && <PanelSurface {...surface} hasHandle={surface.hasHandle || isMobileTouch} layoutRef={layoutRef} onLayoutUpdate={invalidateLayout} />}
                 </AnimatePresence>
             </div>
 

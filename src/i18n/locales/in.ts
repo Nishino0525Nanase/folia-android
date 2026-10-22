@@ -1,6 +1,28 @@
 
 
 export default {
+  "mobileHome": {
+    "localEmptyTitle": "Tambahkan musik Anda",
+    "localEmptyHint": "Impor lagu dari perangkat Anda, atau pilih kategori online di atas untuk mencari.",
+    "localAction": "Musik lokal",
+    "gridAction": "Gunakan beranda grid",
+    "accountlessHint": "Cari musik langsung, atau impor lagu lokal Anda."
+  },
+  "mobileTouch": {
+    "expand": "Buka kontrol pemutaran",
+    "collapse": "Tutup kontrol pemutaran",
+    "play": "Putar",
+    "pause": "Jeda",
+    "previous": "Lagu sebelumnya",
+    "next": "Lagu berikutnya",
+    "navigation": "Halaman dan tindakan",
+    "library": "Pustaka",
+    "search": "Cari",
+    "lyrics": "Lirik",
+    "queue": "Antrean",
+    "more": "Lainnya",
+    "settings": "Setelan"
+  },
   "libraryBravais": {
     "suiteName": "Dinding Bravais",
     "homeTitle": "Pustaka",
@@ -1765,6 +1787,21 @@ export default {
     "chaotic": "kacau"
   },
   "help": {
+    "mobileGuide": {
+      "android": "Aplikasi Android",
+      "download": "Unduh APK",
+      "title": "Panduan sentuh",
+      "navigation": "Gunakan kontrol halaman asli",
+      "navigationHint": "Gunakan Cari dan Pengaturan di koleksi. Ketuk tombol bulat kanan bawah pada pemutar untuk memilih Koleksi, Cari, Lirik, atau Antrean.",
+      "playback": "Ketuk kapsul pemutar asli",
+      "playbackHint": "Putar, jeda, dan geser progres secara langsung. Ketuk panah untuk membuka ganti lagu, ulangi, dan garis waktu lirik; ketuk lagi untuk menutup.",
+      "search": "Cari dan putar dengan ketukan",
+      "searchHint": "Buka Cari, masukkan judul atau artis, lalu ketuk tombol cari. Gunakan tombol putar dan tambah di samping hasil.",
+      "more": "Buka alat saat diperlukan",
+      "moreHint": "Ketuk tombol bulat kanan bawah pada pemutar untuk memilih halaman dan tindakan. Koleksi tetap memakai menu alat aslinya.",
+      "start": "Mulai mendengarkan",
+      "revisit": "Buka kembali panduan ini di Pengaturan → Bantuan."
+    },
     "title": "Bantuan",
     "navigation": "Navigasi",
     "switchPlaylist": "Ganti Playlist",
@@ -2172,8 +2209,8 @@ export default {
     "androidUpdateFailureDownloadNoSpace": "Penyimpanan tidak cukup, kosongkan ruang lalu coba lagi",
     "androidUpdateFailureDownloadFileError": "Tidak bisa menulis berkas paket, coba lagi",
     "androidUpdateNotes": "Yang baru",
-    "personalForkUpdates": "Build pribadi ini menggunakan tanda tangan sendiri. Pembaruan otomatis komunitas dinonaktifkan; unduh pembaruan dari rilis GitHub Anda.",
-    "personalForkReleases": "Buka rilis pribadi",
+    "personalForkUpdates": "Pembaruan pribadi tersedia di halaman unduhan. Unduh APK terbaru lalu instal untuk memperbarui aplikasi ini.",
+    "personalForkReleases": "Buka halaman unduhan pribadi",
     "personalForkCredits": "Berdasarkan chthollyphile/folia-major dan maimai993/folia-sonnet, berlisensi AGPL-3.0.",
     "androidUpdatePanelTitle": "Pembaruan versi",
     "androidUpdateSubtitleChecking": "Menghubungi server pembaruan…",
@@ -3059,7 +3096,7 @@ export default {
     "confirmClearAll": "Yakin ingin membersihkan semua cache?",
     "cacheClearing": "Menghapus...",
     "electronSettings": "Pengaturan Tema AI",
-    "aiThemeDesc": "Masukkan kunci Anda sendiri dan tema AI dibuat langsung di perangkat ini (tanpa lewat server).",
+    "aiThemeDesc": "Tanpa kunci, warna sampul digunakan; pemutaran dan animasi lirik tetap berfungsi. Tambahkan kunci Anda untuk meminta tema langsung dari layanan AI yang dikonfigurasi.",
     "aiKeyStoredLocally": "Kunci hanya disimpan di perangkat ini dan tidak pernah diunggah.",
     "aiProvider": "Penyedia AI",
     "otherCompatibleApi": "API Kompatibel Lainnya",

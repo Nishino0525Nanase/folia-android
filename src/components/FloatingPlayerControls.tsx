@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Play, Pause } from 'lucide-react';
+import { AnimatePresence, motion, useTransform } from 'framer-motion';
+import { Play, Pause, ChevronUp, ChevronDown } from 'lucide-react';
 import { MotionValue } from 'framer-motion';
 import ProgressBar from './ProgressBar';
 import { PlayerState, LyricData, Theme } from '../types';
@@ -16,6 +16,8 @@ import { usePlayerChromeSettingsStore } from '../stores/usePlayerChromeSettingsS
 import { PLAYER_BOTTOM_BAR_BASE_OFFSET_PX, clampPlayerBottomBarOffset, resolvePlayerBottomBarMaxOffset } from '../utils/playerBottomBarLayout';
 import type { PlayerControlSlotActionId, PlayerControlSlotContext } from './floating-player/playerControlSlotActions';
 import { usePlayerOverlayObstacle } from '../hooks/usePlayerOverlayLayout';
+import { useMobileTouchLayout } from '../hooks/useMobileTouchLayout';
+import { useMobileNavigationStore } from './app/mobile/mobileNavigationStore';
 
 export interface TrackNavigation {
     /** 当前曲目的稳定身份，用于识别「确实换歌了」；相邻两首同名时标题字符串不变，不能拿标题判断 */
@@ -123,6 +125,7 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
     onCommitBottomBarOffset,
 }) => {
     const { t } = useTranslation();
+    const isMobileTouch = useMobileTouchLayout();
     const { ref: layoutRef, invalidate: invalidateLayout } = usePlayerOverlayObstacle('player-controls', 'playback', !isHidden);
     // const isDaylight = theme?.name === 'Daylight Default'; // Deprecated, passed as prop
     const glassBgExpanded = isDaylight ? 'bg-white/60 border border-white/20 shadow-xl' : 'bg-black/40 border border-white/5';
@@ -136,6 +139,8 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
     const iconBtnClass = isDaylight ? 'hover:bg-black/5 text-black/60' : 'hover:bg-white/10 opacity-40 hover:opacity-100';
 
     const [isHovered, setIsHovered] = useState(false);
+    const [isTouchExpanded, setIsTouchExpanded] = useState(false);
+    const isTouchMenuOpen = useMobileNavigationStore(state => state.isOpen);
     const [isTimelineOpen, setIsTimelineOpen] = useState(false);
     const expandTimeoutRef = useRef<number | null>(null);
     const collapseTimeoutRef = useRef<number | null>(null);
@@ -158,6 +163,9 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
     const swallowNextClickRef = useRef(false);
 
     const bottomBarBottomPx = usePlayerBottomBarBottomPx();
+    const navigationAwareBottom = useTransform(bottomBarBottomPx, value => isMobileTouch
+        ? `calc(${value + (isTouchExpanded ? 64 : 0)}px + var(--folia-safe-area-bottom, env(safe-area-inset-bottom, 0px)))`
+        : `${value}px`);
     const isPositioning = usePlayerBottomBarLayoutStore(state => state.isPositioning);
     const commitPositioning = usePlayerBottomBarLayoutStore(state => state.commitPositioning);
     const cancelPositioning = usePlayerBottomBarLayoutStore(state => state.cancelPositioning);
@@ -176,7 +184,13 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
      */
     const wantsAutoExpand = canAutoExpand && !isPositioning && playerState !== PlayerState.PLAYING && currentView !== 'home';
     // 定位模式强制展开：用户要看到的是最终形态的胶囊，而不是一条细进度条。
-    const showExpanded = isPositioning || isHovered || autoExpanded;
+    const showExpanded = isPositioning || (isMobileTouch
+        ? isTouchExpanded
+        : isHovered || autoExpanded);
+    useEffect(() => { setIsTouchExpanded(false); }, [currentView]);
+    useEffect(() => {
+        if (isTouchMenuOpen) setIsTouchExpanded(false);
+    }, [isTouchMenuOpen]);
 
     /** 排一次「过几秒收起」：暂停自动展开与手动展开共用这一条收回路径。 */
     const scheduleAutoCollapse = useCallback(() => {
@@ -425,26 +439,33 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
         const target = event.target instanceof Element ? event.target : null;
         // 展开态里这些元素各管各的：按钮有自己的 onClick，进度条那一下只 seek ——
         // 都不该再被当成「点了胶囊」（否则调个进度就被送去播放页）。
-        if (showExpanded && target?.closest('button, a, [role="button"], [data-folium-part^="progress"]')) {
+        // 紧凑触屏态的播放 / 展开按钮与进度条也各管各的，不能被点开胶囊的尾随 click 吞掉。
+        if ((showExpanded || isMobileTouch) && target?.closest('button, a, [role="button"], [data-folium-part^="progress"]')) {
             return;
         }
         if (!showExpanded) {
             // 这一次点按的目的已经达到了（把控件露出来）；补发的 click 落在展开后的按钮上
             // 会被当成第二次操作，见 handleBarClickCapture。
             swallowNextClickRef.current = true;
-            setAutoExpanded(true);
-            scheduleAutoCollapse();
+            if (isMobileTouch) {
+                setIsTouchExpanded(true);
+            } else {
+                setAutoExpanded(true);
+                scheduleAutoCollapse();
+            }
             return;
         }
         // 展开态：队列磁贴里再点一下收起（那里不该跳走），其余视图照旧进播放页。
         if (currentView === 'lattice') {
-            setAutoExpanded(false);
+            if (isMobileTouch) setIsTouchExpanded(false);
+            else setAutoExpanded(false);
             return;
         }
         onNavigateToPlayer();
     }, [
         currentView,
         handlePositionDragEnd,
+        isMobileTouch,
         isPositioning,
         onNavigateToPlayer,
         scheduleAutoCollapse,
@@ -465,11 +486,11 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
                 所以挂在这一层不会干扰居中。
             */}
             <motion.div
-                className={`absolute left-1/2 -translate-x-1/2 z-60 w-full flex justify-center pointer-events-none
+                className={`folia-touch-player ${isMobileTouch && !showExpanded ? 'folia-touch-player-compact' : ''} absolute left-1/2 -translate-x-1/2 z-60 w-full flex justify-center pointer-events-none
                     ${currentView === 'home'
                         ? 'max-w-[calc(100vw-120px)] md:max-w-[min(calc(32rem_+_var(--folium-player-bar-extra,0px)),calc(100vw-120px))]'
                         : 'max-w-[min(calc(32rem_+_var(--folium-player-bar-extra,0px)),100vw)] px-4'}`}
-                style={{ bottom: bottomBarBottomPx }}
+                style={{ bottom: navigationAwareBottom }}
                 onUpdate={invalidateLayout}
             >
             <motion.div
@@ -521,8 +542,9 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
                         onClickCapture={handleBarClickCapture}
                         style={{ touchAction: isPositioning ? 'none' : undefined }}
                         className={`backdrop-blur-xl shadow-2xl overflow-hidden rounded-full relative transition-colors duration-300
+                            ${isMobileTouch && !showExpanded ? 'folia-touch-capsule-compact' : ''}
                             ${isPositioning ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}
-                            ${showExpanded ? `p-3 ${glassBgExpanded} w-full` : `px-4 py-2 ${glassBgCollapsed} ${COLLAPSED_WIDTH_CLASS}`}`}
+                            ${showExpanded ? `p-3 ${glassBgExpanded} w-full` : `px-4 py-2 ${glassBgCollapsed} ${isMobileTouch ? 'w-full' : COLLAPSED_WIDTH_CLASS}`}`}
                     >
                         <motion.div
                             layout
@@ -550,6 +572,7 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
                                     slotPrimary={slotPrimary}
                                     slotSecondary={slotSecondary}
                                     slotContext={resolvedSlotContext}
+                                    onCollapse={isMobileTouch ? () => setIsTouchExpanded(false) : undefined}
                                 />
                             ) : (
                                 <CollapsedView
@@ -560,6 +583,12 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
                                     secondaryColor={secondaryColor}
                                     trackColor={trackColor}
                                     controlsDisabled={controlsDisabled}
+                                    touchControls={isMobileTouch ? {
+                                        playing: playerState === PlayerState.PLAYING,
+                                        canTogglePlay,
+                                        onTogglePlay,
+                                        onExpand: () => setIsTouchExpanded(true),
+                                    } : undefined}
                                 />
                             )}
                         </motion.div>
@@ -622,6 +651,7 @@ interface ExpandedViewProps {
     slotPrimary: PlayerControlSlotActionId;
     slotSecondary: PlayerControlSlotActionId;
     slotContext: PlayerControlSlotContext;
+    onCollapse?: () => void;
 }
 
 const ExpandedView: React.FC<ExpandedViewProps> = ({
@@ -643,13 +673,26 @@ const ExpandedView: React.FC<ExpandedViewProps> = ({
     slotPrimary,
     slotSecondary,
     slotContext,
+    onCollapse,
 }) => {
+    const { t } = useTranslation();
     return (
         <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
             {/* Desktop Layout - responsive grid positions apply from the sm breakpoint */}
             {/* Mobile Layout - base grid positions apply below the sm breakpoint */}
             {/* Row 1: Centered Title */}
-            <div data-folia-player-bar-title="true" className="col-span-3 row-start-1 min-w-0 px-2 sm:col-start-2 sm:col-span-1">
+            <div data-folia-player-bar-title="true" className={`col-span-3 row-start-1 min-w-0 px-2 sm:col-start-2 sm:col-span-1 ${onCollapse ? 'flex items-center gap-1' : ''}`}>
+                {onCollapse && (
+                    <button
+                        type="button"
+                        className="grid h-11 w-11 shrink-0 place-items-center rounded-full active:bg-white/10"
+                        aria-label={t('mobileTouch.collapse')}
+                        onClick={event => { event.stopPropagation(); onCollapse(); }}
+                    >
+                        <ChevronDown size={20} aria-hidden />
+                    </button>
+                )}
+                <div className={onCollapse ? 'min-w-0 flex-1' : undefined}>
                 {trackNavigation ? (
                     <TrackTitleNavigator
                         title={currentSong?.name || noTrackText}
@@ -671,6 +714,7 @@ const ExpandedView: React.FC<ExpandedViewProps> = ({
                         {currentSong?.name || noTrackText}
                     </div>
                 )}
+                </div>
             </div>
 
             {/* Row 3: Loop Button, Play Button, Lyrics Button */}
@@ -740,6 +784,12 @@ interface CollapsedViewProps {
     secondaryColor: string;
     trackColor?: string;
     controlsDisabled?: boolean;
+    touchControls?: {
+        playing: boolean;
+        canTogglePlay: boolean;
+        onTogglePlay: () => void;
+        onExpand: () => void;
+    };
 }
 
 const CollapsedView: React.FC<CollapsedViewProps> = ({
@@ -750,9 +800,23 @@ const CollapsedView: React.FC<CollapsedViewProps> = ({
     secondaryColor,
     trackColor,
     controlsDisabled = false,
+    touchControls,
 }) => {
+    const { t } = useTranslation();
     return (
-        <div className="flex items-center w-full justify-center h-8 px-4">
+        <div className={touchControls ? 'folia-touch-compact-row flex h-11 w-full items-center justify-center gap-1' : 'flex items-center w-full justify-center h-8 px-4'}>
+            {touchControls && (
+                <button
+                    type="button"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full disabled:opacity-35"
+                    aria-label={t(touchControls.playing ? 'mobileTouch.pause' : 'mobileTouch.play')}
+                    disabled={controlsDisabled || !touchControls.canTogglePlay}
+                    onClick={event => { event.stopPropagation(); touchControls.onTogglePlay(); }}
+                >
+                    {touchControls.playing ? <Pause size={19} fill="currentColor" aria-hidden /> : <Play size={19} fill="currentColor" aria-hidden />}
+                </button>
+            )}
+            <div className="min-w-0 flex-1">
             <ProgressBar
                 currentTime={currentTime}
                 duration={duration}
@@ -763,6 +827,18 @@ const CollapsedView: React.FC<CollapsedViewProps> = ({
                 disabled={controlsDisabled}
                 collapsed
             />
+            </div>
+            {touchControls && (
+                <button
+                    type="button"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full"
+                    aria-label={t('mobileTouch.expand')}
+                    aria-expanded={false}
+                    onClick={event => { event.stopPropagation(); touchControls.onExpand(); }}
+                >
+                    <ChevronUp size={20} aria-hidden />
+                </button>
+            )}
         </div>
     );
 };

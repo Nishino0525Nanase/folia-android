@@ -156,7 +156,7 @@ const AppShell: React.FC<AppShellProps> = ({
         <div
             data-folia-app-shell="true"
             ref={layoutRootRef}
-            className="fixed inset-0 w-full h-full flex flex-col overflow-hidden font-sans transition-colors duration-500"
+            className="folia-app-shell fixed inset-0 w-full h-full flex flex-col overflow-hidden font-sans transition-colors duration-500"
             style={{
                 ...appStyle,
                 borderRadius: shouldApplyWindowRadius ? resolveWindowCornerRadius(window.electron?.platform ?? '') : undefined,

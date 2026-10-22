@@ -1,6 +1,28 @@
 
 
 export default {
+  "mobileHome": {
+    "localEmptyTitle": "Add your music",
+    "localEmptyHint": "Import songs from your device, or switch to an online category above to search.",
+    "localAction": "Local music",
+    "gridAction": "Use grid home",
+    "accountlessHint": "Search for music directly, or import your local songs."
+  },
+  "mobileTouch": {
+    "expand": "Expand playback controls",
+    "collapse": "Collapse playback controls",
+    "play": "Play",
+    "pause": "Pause",
+    "previous": "Previous track",
+    "next": "Next track",
+    "navigation": "Pages and actions",
+    "library": "Library",
+    "search": "Search",
+    "lyrics": "Lyrics",
+    "queue": "Queue",
+    "more": "More",
+    "settings": "Settings"
+  },
   "libraryBravais": {
     "suiteName": "Bravais wall",
     "homeTitle": "Library",
@@ -1765,6 +1787,21 @@ export default {
     "chaotic": "chaotic"
   },
   "help": {
+    "mobileGuide": {
+      "android": "Android app",
+      "download": "Download APK",
+      "title": "Made for touch",
+      "navigation": "Use the original page controls",
+      "navigationHint": "Use Search and Settings in the library. Tap the round bottom-right button on the player to choose Library, Search, Lyrics or Queue.",
+      "playback": "Tap the original playback capsule",
+      "playbackHint": "Play, pause and drag the progress bar directly. Tap the expand arrow for track navigation, repeat and the lyrics timeline; tap again to collapse.",
+      "search": "Search and play with a tap",
+      "searchHint": "Open Search, enter a song or artist, and tap the search button. Use the play and add buttons beside a result.",
+      "more": "Open tools when needed",
+      "moreHint": "Tap the round bottom-right player button for pages and actions. The library keeps its original tools menu.",
+      "start": "Start listening",
+      "revisit": "Find this guide again in Settings → Help."
+    },
     "title": "Help",
     "navigation": "Navigation",
     "switchPlaylist": "Switch Playlist",
@@ -2172,8 +2209,8 @@ export default {
     "androidUpdateFailureDownloadNoSpace": "Not enough storage, free some space and retry",
     "androidUpdateFailureDownloadFileError": "Unable to write the package file, please retry",
     "androidUpdateNotes": "What's new",
-    "personalForkUpdates": "This personal build uses its own signature. Community auto-updates are disabled; get updates from your GitHub releases.",
-    "personalForkReleases": "Open personal releases",
+    "personalForkUpdates": "Personal updates are available from the download page. Download the newer APK and install it over this app.",
+    "personalForkReleases": "Open personal download page",
     "personalForkCredits": "Based on chthollyphile/folia-major and maimai993/folia-sonnet, licensed under AGPL-3.0.",
     "androidUpdatePanelTitle": "Version update",
     "androidUpdateSubtitleChecking": "Reaching the update server…",
@@ -3059,7 +3096,7 @@ export default {
     "confirmClearAll": "Are you sure you want to clear all cache?",
     "cacheClearing": "Clearing...",
     "electronSettings": "AI Theme Settings",
-    "aiThemeDesc": "Add your own key and AI themes are generated right on this device (nothing goes through a server).",
+    "aiThemeDesc": "Without a key, cover colours are used; playback and lyric animations still work. Add your own key to request themes directly from the configured AI service.",
     "aiKeyStoredLocally": "The key is stored on this device only and is never uploaded.",
     "aiProvider": "AI Provider",
     "otherCompatibleApi": "Other Compatible API",

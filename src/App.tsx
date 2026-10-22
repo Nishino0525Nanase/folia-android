@@ -13,6 +13,7 @@ import { useReducedMotionFor } from './hooks/useReducedMotionFor';
 import AppShell from './components/app/AppShell';
 import Home from './components/app/Home';
 import PlayerPanel from './components/app/PlayerPanel';
+import MobileTouchNavigation from './components/app/mobile/MobileTouchNavigation';
 import ThemeQuickEditorHost from './components/panelTab/ThemeQuickEditor';
 import AppDialogs from './components/app/dialogs/AppDialogs';
 import { useProviderSignOut } from './components/app/dialogs/useProviderSignOut';
@@ -3145,6 +3146,11 @@ export default function App() {
             />
 
             <AppOverlays model={appOverlaysModel} />
+            <MobileTouchNavigation
+                onHome={() => navigateDirectHome({ clearContext: true })}
+                onPlayer={navigateToPlayer}
+                onSearch={navigateToSearch}
+            />
 
             {/* Folium `app.overlay` stage layers: above the whole app, inert unless a layer opts in. */}
             <FoliumStageLayerSlot

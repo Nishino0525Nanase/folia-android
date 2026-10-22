@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, Loader2, Settings, PanelsTopLeft } from 'lucide-react';
+import { Search, Loader2, Settings, PanelsTopLeft, Command } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { resolveSearchSource, useSearchNavigationStore } from '../../../../stores/useSearchNavigationStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -17,7 +17,9 @@ import { createOnlineGridViewCollection } from '../../../../components/app/home/
 import { hasExploreWallEntries } from '../../../../components/app/lattice/exploreWall';
 import type { ProviderCollection, ProviderUser } from '../../../../types/onlineMusic';
 import { useThemeSettingsStore } from '../../../../stores/useThemeSettingsStore';
-import type { LatticeSource } from '../../../../stores/useAppViewStore';
+import { openCommandPalette, type LatticeSource } from '../../../../stores/useAppViewStore';
+import { useMediaQuery } from '../../../../hooks/useMediaQuery';
+import './Grid3D.css';
 import { useExploreFeedStore } from '../../../../stores/useExploreFeedStore';
 import { countRender } from '../../../../dev/renderCount';
 import type { LibraryAccountController } from '../../../core/account/account.contract';
@@ -135,6 +137,7 @@ export const Grid3D: React.FC<Grid3DProps> = (props) => {
     } = props;
 
     const { t, i18n } = useTranslation();
+    const isPhoneTouch = useMediaQuery('(max-width: 767px) and (pointer: coarse)');
     const {
         isDaylight,
     } = useThemeSettingsStore(useShallow(state => ({
@@ -310,12 +313,12 @@ export const Grid3D: React.FC<Grid3DProps> = (props) => {
         <div
             ref={gridRootRef}
             data-ponder-page-scope="grid-page"
-            className={`relative w-full h-full flex flex-col font-sans overflow-hidden ${mainBg} pointer-events-auto backdrop-blur-sm ${bottomPadding}`}
+            className={`folia-grid-home relative w-full h-full flex flex-col font-sans overflow-hidden ${mainBg} pointer-events-auto backdrop-blur-sm ${bottomPadding}`}
         >
 
             {/* Main Header Container (Fades out when sliding/interacting) */}
             <div data-folia-home-header="true" className="transition-opacity duration-300 ease-in-out z-20 opacity-100 select-none">
-                <div className="grid grid-cols-2 md:grid-cols-3 items-center w-full max-w-7xl mx-auto p-4 md:p-8 gap-y-4 md:gap-y-0">
+                <div className="folia-grid-home-header grid grid-cols-2 md:grid-cols-3 items-center w-full max-w-7xl mx-auto p-4 md:p-8 gap-y-4 md:gap-y-0">
                     {/* Left title and settings */}
                     <div className="flex items-center justify-start order-1 md:order-none">
                         <h1 className="text-2xl font-bold tracking-tight opacity-90 flex items-center gap-3">
@@ -323,7 +326,8 @@ export const Grid3D: React.FC<Grid3DProps> = (props) => {
                         </h1>
                         <button
                             onClick={() => onOpenSettings?.('help')}
-                            className={`relative flex items-center gap-1.5 p-2 rounded-full hover:bg-white/10 transition-all ml-4 ${showUpdateIndicator
+                            aria-label={showUpdateIndicator ? `${t('ui.options')} · ${t('options.updateAvailable')}` : t('ui.options')}
+                            className={`folia-grid-header-action relative flex items-center gap-1.5 p-2 rounded-full hover:bg-white/10 transition-all ml-4 ${showUpdateIndicator
                                     ? 'opacity-90 hover:opacity-100'
                                     : 'opacity-40 hover:opacity-100'
                                 }`}
@@ -331,11 +335,18 @@ export const Grid3D: React.FC<Grid3DProps> = (props) => {
                         >
                             <Settings size={20} style={{ color: 'var(--text-primary)' }} />
                             {showUpdateIndicator && (
-                                <span className="text-[10px] font-medium text-zinc-800 dark:text-zinc-200 opacity-80 whitespace-nowrap bg-zinc-200/50 dark:bg-white/10 px-2 py-0.5 rounded-md">
+                                <span className="folia-grid-update-label text-[10px] font-medium text-zinc-800 dark:text-zinc-200 opacity-80 whitespace-nowrap bg-zinc-200/50 dark:bg-white/10 px-2 py-0.5 rounded-md">
                                     {t('options.updateAvailable')}
                                 </span>
                             )}
                         </button>
+                        {isPhoneTouch && (
+                            <button type="button" onClick={openCommandPalette}
+                                className="folia-grid-header-action ml-1 flex items-center justify-center rounded-full opacity-60 transition-colors hover:bg-white/10"
+                                aria-label={t('options.gridSlideTargetCommandPalette')} title={t('options.gridSlideTargetCommandPalette')}>
+                                <Command size={19} aria-hidden />
+                            </button>
+                        )}
                         {scanProgress?.active && (
                             <div
                                 className="relative ml-3"
@@ -397,7 +408,7 @@ export const Grid3D: React.FC<Grid3DProps> = (props) => {
 
                     {/* Center Tab Switcher */}
                     <div className="flex justify-center order-3 md:order-none col-span-2 md:col-span-1">
-                        <div className={`relative ${navPillBg} backdrop-blur-md p-1 rounded-full scale-90 md:scale-100 origin-center`}>
+                        <div className={`folia-grid-home-tabs relative ${navPillBg} backdrop-blur-md p-1 rounded-full scale-90 md:scale-100 origin-center`}>
                             <div className="inline-flex items-center gap-0">
                                 {homeTabs.map((tab) => {
                                     const isActive = homeViewTab === tab.key;
@@ -472,18 +483,19 @@ export const Grid3D: React.FC<Grid3DProps> = (props) => {
 
                     {/* Right Search Bar */}
                     <div className="flex justify-end order-2 md:order-none">
-                        <form onSubmit={handleSearch} className="relative w-full md:w-56 transition-all focus-within:md:w-72">
+                        <form onSubmit={handleSearch} className="folia-grid-home-search relative w-full md:w-56 transition-all focus-within:md:w-72">
                             {isSearchingActive ? (
                                 <Loader2 className="absolute left-3 top-1/2 w-4 h-4 animate-spin opacity-40 -mt-2" />
                             ) : (
-                                <Search
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40 w-4 h-4 cursor-pointer hover:opacity-100 transition-opacity"
-                                    onClick={() => handleSearch()}
-                                />
+                                <button type="submit" aria-label={t('mobileTouch.search')}
+                                    className="folia-grid-home-search-submit absolute left-3 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity">
+                                    <Search className="w-4 h-4" aria-hidden />
+                                </button>
                             )}
                             <input
                                 ref={searchInputRef}
                                 type="text"
+                                enterKeyHint="search"
                                 placeholder={homeViewTab === 'local' ? t('home.searchLocal') : homeViewTab === 'navidrome' ? t('home.searchNavidrome') : t('home.searchDatabase')}
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
