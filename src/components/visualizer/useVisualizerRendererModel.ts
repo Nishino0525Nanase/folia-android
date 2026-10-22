@@ -6,6 +6,8 @@ import { audioBands, audioPower, lyricCurrentTime } from '../../stores/motionSig
 import { useAppViewStore } from '../../stores/useAppViewStore';
 import { useAppChromeStore } from '../../stores/useAppChromeStore';
 import { useSettingsModalStore } from '../../stores/useSettingsModalStore';
+import { useSearchNavigationStore } from '../../stores/useSearchNavigationStore';
+import { useMobileTouchLayout } from '../../hooks/useMobileTouchLayout';
 import { useThemeSettingsStore } from '../../stores/useThemeSettingsStore';
 import { useTypographySettingsStore } from '../../stores/useTypographySettingsStore';
 import { usePlayerChromeSettingsStore } from '../../stores/usePlayerChromeSettingsStore';
@@ -74,6 +76,8 @@ export const useVisualizerRendererModel = ({
     const onPlayerPanelGuideHotspotChange = useAppChromeStore(state => state.setIsPlayerPanelGuideHotspotActive);
     const isSettingsModalOpen = useSettingsModalStore(state => state.settingsModalState.isOpen);
     const isSettingsSubviewOpen = useSettingsModalStore(state => state.isSubSettingsViewOpen);
+    const isSearchOpen = useSearchNavigationStore(state => state.isSearchOpen);
+    const isTouchLayout = useMobileTouchLayout();
     // 首页墙后面透出来的 visualizer 要不要画歌词（bravais「墙后的画面」，stage 经契约报告；没有 stage 时为 false）。
     const backdropLyrics = useLibraryPlayerOcclusionStore(state => selectLibraryPlayerBackdrop(state).lyrics);
     const isDaylight = useThemeSettingsStore(state => state.isDaylight);
@@ -153,7 +157,9 @@ export const useVisualizerRendererModel = ({
         seed,
         songHandoff,
         staticMode,
-        backgroundStaticMode: shouldPauseVisualizerBackground
+        // The phone search surface covers this decoration; keep its last frame until it closes.
+        backgroundStaticMode: (isTouchLayout && isSearchOpen)
+            || shouldPauseVisualizerBackground
             || (
                 background.mode === 'latent'
                 && background.latent?.tuning?.dynamicOnlyInPlayer

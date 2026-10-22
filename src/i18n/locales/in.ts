@@ -1,6 +1,20 @@
 
 
 export default {
+  "importSource": {
+    "serviceUnavailable": "Layanan impor tidak tersedia",
+    "platformRestricted": "Bilibili membatasi permintaan ini. Buka video asli.",
+    "videoUnavailable": "Video atau bagian tidak ditemukan atau tidak dapat diakses",
+    "audioUnavailable": "Audio AAC publik tidak tersedia",
+    "retryLater": "Terlalu banyak permintaan. Coba lagi nanti.",
+    "submit": "Impor",
+    "empty": "Tempel tautan atau ID BV / av, lalu ketuk Impor",
+    "openOriginal": "Buka video asli",
+    "bilibiliLabel": "Impor Bilibili",
+    "bilibiliPlaceholder": "Tempel tautan Bilibili / ID BV / av",
+    "bilibiliDescription": "Impor audio video publik. Setiap bagian akan ditampilkan; tautan dengan p hanya mengimpor bagian tersebut. Pencarian kata kunci belum tersedia. Pemutaran dapat dibatasi; buka video asli melalui tombol di samping lagu.",
+    "importedVideos": "Video yang diimpor"
+},
   "mobileHome": {
     "localEmptyTitle": "Tambahkan musik Anda",
     "localEmptyHint": "Impor lagu dari perangkat Anda, atau pilih kategori online di atas untuk mencari.",

@@ -17,6 +17,7 @@ import { useBlendedColors } from '../useBlendedColors';
 import { beatImpact, downbeatImpact } from '../../../../stores/motionSignals';
 import { getBeatEffectStrength, isBeatFxReady } from '../../../../services/beatFx/beatFxLive';
 import { BEAT_EFFECT_IDS } from '../../../../services/beatFx/beatEffects';
+import { useLatentPixelBudget } from './useLatentPixelBudget';
 
 // src/components/visualizer/backgrounds/latent/LatentBackground.tsx
 // Layers two cover-colored Paper shaders and drives their uniforms without React frame updates.
@@ -41,7 +42,6 @@ interface LatentBackgroundProps {
     blendProgress?: MotionValue<number>;
 }
 
-const MAX_SHADER_PIXELS = 1280 * 720;
 /**
  * 这条循环隔多久真正处理一帧。
  *
@@ -165,6 +165,8 @@ const LatentBackground: React.FC<LatentBackgroundProps> = ({
     blendMs = 0,
     blendProgress,
 }) => {
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const maxShaderPixels = useLatentPixelBudget(containerRef);
     const ditheringRef = useRef<PaperShaderElement | null>(null);
     const meshRef = useRef<PaperShaderElement | null>(null);
     // Stable callback refs: they also lose each shader's WebGL context when it unmounts.
@@ -380,6 +382,7 @@ const LatentBackground: React.FC<LatentBackgroundProps> = ({
     // speed from there and eases a pause in. A prop that followed `paused` would set it at once.
     return (
         <div
+            ref={containerRef}
             className="absolute inset-0 z-0 overflow-hidden"
             style={{ backgroundColor, pointerEvents: 'none' }}
         >
@@ -400,7 +403,7 @@ const LatentBackground: React.FC<LatentBackgroundProps> = ({
                         grainOverlay={0.01}
                         speed={staticMode ? 0 : tuning.meshSpeed}
                         minPixelRatio={1}
-                        maxPixelCount={MAX_SHADER_PIXELS}
+                        maxPixelCount={maxShaderPixels}
                         webGlContextAttributes={PAPER_SHADER_CONTEXT_ATTRIBUTES}
                         style={{ width: '100%', height: '100%' }}
                     />
@@ -428,7 +431,7 @@ const LatentBackground: React.FC<LatentBackgroundProps> = ({
                         size={tuning.ditheringSize}
                         speed={staticMode ? 0 : tuning.ditheringSpeed}
                         minPixelRatio={1}
-                        maxPixelCount={MAX_SHADER_PIXELS}
+                        maxPixelCount={maxShaderPixels}
                         webGlContextAttributes={PAPER_SHADER_CONTEXT_ATTRIBUTES}
                         style={{ width: '100%', height: '100%' }}
                     />

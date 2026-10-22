@@ -58,6 +58,19 @@ afterEach(() => {
 });
 
 describe('omni routing', () => {
+    it('resolves link imports through their owner without keyword searching', async () => {
+        const resolve = vi.fn(async () => [song(providerId, 'stable:part')]);
+        const searchSongs = vi.fn();
+        registerOnlineMusicProvider({
+            ...provider(providerId, { searchSongs }),
+            linkImport: { labelKey: 'import.label', placeholderKey: 'import.placeholder', descriptionKey: 'import.description', resolve },
+        });
+        expect(omni.getLinkImportProviders()).toContain(providerId);
+        expect(omni.getProviderLinkImportInfo(providerId)?.placeholderKey).toBe('import.placeholder');
+        await expect(omni.importProviderSongs(providerId, 'shared link')).resolves.toMatchObject([{ id: 'stable:part' }]);
+        expect(resolve).toHaveBeenCalledWith('shared link');
+        expect(searchSongs).not.toHaveBeenCalled();
+    });
     it('falls back from a persisted provider missing in the current build', () => {
         useOnlineProviderAccountStore.getState().setActiveProviderId(missingProviderId);
 

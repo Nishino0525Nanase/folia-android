@@ -137,6 +137,7 @@ const ThemePreview: React.FC<{
                             songTitle="Cappella Preview"
                             showText
                             staticMode={staticMode}
+                            paused={isPaused}
                             isPreviewMode
                             visualizerOpacity={visualizerOpacity}
                             background={backgroundConfig}

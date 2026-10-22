@@ -10,6 +10,7 @@ import { ytmProvider } from './ytm/ytmProvider';
 import { spotifyProvider } from './spotify/spotifyProvider';
 import { feiniuProvider } from './feiniuProvider';
 import { qishuiProvider } from './qishuiProvider';
+import { bilibiliProvider } from './bilibili/bilibiliProvider';
 
 // src/services/onlineMusic/providerRegistry.ts
 
@@ -114,3 +115,4 @@ registerOnlineMusicProvider(ytmProvider);
 registerOnlineMusicProvider(spotifyProvider);
 registerOnlineMusicProvider(feiniuProvider);
 registerOnlineMusicProvider(qishuiProvider);
+registerOnlineMusicProvider(bilibiliProvider);

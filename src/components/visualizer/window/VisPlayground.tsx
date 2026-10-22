@@ -505,6 +505,7 @@ const VisPlayground: React.FC<VisPlaygroundProps> = ({
                             songTitle={previewPlaceholder.title}
                             showText
                             staticMode={staticMode}
+                            paused={isPreviewPaused}
                             isPreviewMode
                             visualizerOpacity={draftVisualizerOpacity}
                             coverUrl={previewPlaceholder.coverUrl}

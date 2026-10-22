@@ -524,6 +524,32 @@ export const omni = {
         return provider?.shortName || provider?.displayName || providerId;
     },
 
+    getLinkImportProviders(): OmniProviderId[] {
+        return listOnlineMusicProviders().filter(provider => provider.linkImport &&
+            (provider.getAvailability?.().configured ?? true)).map(provider => provider.id);
+    },
+
+    getProviderLinkImportInfo(providerId: OmniProviderId) {
+        const linkImport = getOnlineMusicProvider(providerId)?.linkImport;
+        if (!linkImport) return null;
+        const { labelKey, placeholderKey, descriptionKey } = linkImport;
+        return { labelKey, placeholderKey, descriptionKey };
+    },
+
+    async importProviderSongs(providerId: OmniProviderId, input: string): Promise<UnifiedSong[]> {
+        const provider = requireOnlineMusicProvider(providerId);
+        if (!provider.linkImport) return unsupported(providerId, 'link-import');
+        return runRequest(provider, 'collection', () => provider.linkImport!.resolve(input));
+    },
+
+    async getImportedProviderSongs(providerId: OmniProviderId): Promise<UnifiedSong[]> {
+        return getOnlineMusicProvider(providerId)?.linkImport?.getImported?.() ?? [];
+    },
+
+    getProviderInputPageUrl(providerId: OmniProviderId, input: string): string | null {
+        return getOnlineMusicProvider(providerId)?.linkImport?.getInputPageUrl?.(input) ?? null;
+    },
+
     async searchSongs(query: string, page: PageInput): Promise<OmniPage<UnifiedSong>> {
         return withActiveProvider(async provider => {
             if (!providerSupports(provider, 'search') || !provider.search) return emptyPage(page.offset);

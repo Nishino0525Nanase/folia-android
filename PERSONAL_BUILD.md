@@ -1,6 +1,6 @@
 # Folia 个人安卓构建
 
-这是供 Nishino0525Nanase 使用的非官方构建，版本 **0.7.21.6**，应用 ID 为 `io.github.nishino0525nanase.folia`。播放器、歌词动画与原生媒体控制均来自开源项目，保留 AGPL-3.0 许可证。
+这是供 Nishino0525Nanase 使用的非官方构建，版本 **0.7.21.7**，应用 ID 为 `io.github.nishino0525nanase.folia`。播放器、歌词动画与原生媒体控制均来自开源项目，保留 AGPL-3.0 许可证。
 
 ## 来源
 
@@ -20,6 +20,8 @@
 - 未配置本机 AI 密钥时，使用封面配色并静默完成自动换色；填写密钥后仍可选择 AI 生成，配置说明指向真实 AI 服务。
 - 手机搜索提交后收起键盘，搜索和队列提供 44px 触摸目标；保存弹窗防止重复提交并等待保存完成。
 - 暂停时降低视觉更新频率，隐藏页面停止视觉循环，返回时立即按实际时钟恢复；保留原生频谱通路与播放控制。
+- 手机默认隐现背景按容器 CSS 像素限制两层 Shader 分辨率；搜索覆盖时冻结装饰背景，关闭后恢复，不改变音乐与歌词时钟。主题及样式预览的暂停状态传给渲染器。
+- 搜索页提供 B站视频链接导入与导入记录，支持公开可用音轨及分P；通过同一个公开 HTTPS 服务解析与播放，平台限制仍原样反馈，并提供原视频入口。
 - AI 主题云缓存默认关闭，用户仍可在设置里显式开启。
 - 关于页标明两级上游来源和 AGPL-3.0，保留其他上游署名。
 - 修复上游 `package-lock.json` 与依赖清单不同步的问题。
@@ -37,6 +39,8 @@ bash ./gradlew assembleRelease
 
 发布签名配置使用 `android/keystore.properties.example`。签名密钥、密码和 `keystore.properties` 属于私密构建配置，不应提交到公开仓库或源码压缩包。没有签名配置时 release 产物为未签名包，不能直接安装。
 
+Android 构建为 `VITE_BILIBILI_API_BASE` 设置默认值 `https://folia-elvis.blushbox8.chatgpt.site/api/bilibili`；可用同名环境变量明确覆盖。B站请求使用普通 HTTPS，不走其他音源的原生接口。可选提交花名查询默认关闭，只有 `FOLIA_RESOLVE_COMMIT_NAME=true` 时才联网查询。
+
 ## 使用
 
 首次打开后可导入本地音乐，或在应用中登录所需的音乐平台。在线源通过已有原生桥发送请求，歌曲能否播放仍取决于账号权限、地区和平台接口状态。会员歌曲不会因本项目而获得额外权限。
@@ -49,4 +53,4 @@ bash ./gradlew assembleRelease
 
 ## 稳定下载地址
 
-[获取最新版 Android APK](https://folia-elvis.blushbox8.chatgpt.site/download)。0.7.21.6 可直接覆盖安装个人版 0.7.21.1 至 0.7.21.5，无需卸载；网页地址仍可在手机浏览器使用。
+[获取最新版 Android APK](https://folia-elvis.blushbox8.chatgpt.site/download)。0.7.21.7 可直接覆盖安装个人版 0.7.21.1 至 0.7.21.6，无需卸载；网页地址仍可在手机浏览器使用。

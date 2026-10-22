@@ -21,7 +21,7 @@ export const PLACE_KINDS = {
 export type PlaceKind = keyof typeof PLACE_KINDS;
 
 export interface PlatformNamePlace {
-    n: Partial<Record<'netease' | 'qq' | 'kugou' | 'bodian' | 'ytm' | 'spotify', number>>;
+    n: Partial<Record<'netease' | 'qq' | 'kugou' | 'bodian' | 'ytm' | 'spotify' | 'bilibili', number>>;
     // The kind of the file's lines of code; its comment lines are counted as comments.
     kind: PlaceKind;
     // What the lines are, where the kind alone does not say it.
@@ -29,6 +29,7 @@ export interface PlatformNamePlace {
 }
 
 export const PLATFORM_NAME_PLACES: Record<string, PlatformNamePlace> = {
+    'src/components/app/search/SearchResultsList.tsx': { n: { netease: 1, qq: 1 }, kind: 'doc', why: 'existing native search documentation describes duplicate identities across sources' },
     'api-ts/lyric-proxy.ts': { n: { qq: 2, kugou: 2 }, kind: 'main', why: 'the hosts the lyric relay may reach; raised by the upstream merge 2026-10-17' },
     'api-ts/qq.ts': { n: { qq: 10 }, kind: 'main', why: 'the serverless entry of the QQ backend; the host finds it by path' },
     'api/lyric-proxy.js': { n: { qq: 2, kugou: 1 }, kind: 'main', why: 'the built copy of api-ts/lyric-proxy.ts' },
@@ -100,7 +101,7 @@ export const PLATFORM_NAME_PLACES: Record<string, PlatformNamePlace> = {
     'src/mods/folium/lyricsSource.ts': { n: { netease: 1 }, kind: 'doc' },
     'src/nativeBridge/api/bodian.js': { n: { bodian: 61 }, kind: 'question', why: 'raised by the upstream merge 2026-10-17' },
     'src/nativeBridge/api/cookies.js': { n: { netease: 9, qq: 48, kugou: 9 }, kind: 'question', why: 'raised by the upstream merge 2026-10-17' },
-    'src/nativeBridge/api/eapi.js': { n: { netease: 7 }, kind: 'question', why: 'raised by the upstream merge 2026-10-17' },
+    'src/nativeBridge/api/eapi.js': { n: { netease: 11 }, kind: 'question', why: 'native protocol adapter and its existing cookie/header handling' },
     // qq 121 → 125：扫码确认后要把会话真正交出去那一次（桥原先返回空 cookie），
     // 新增取换票那份 cookie 并交出的一行，加说明它的三行注释。
     'src/nativeBridge/api/folia.js': { n: { netease: 14, qq: 125, kugou: 15, bodian: 3 }, kind: 'question', why: 'raised by the upstream merge 2026-10-17; raised by the cookie hand-off after a QR confirmation; raised by the daily-recommendation fallbacks and the explore route traces 2026-10-20' },
@@ -140,7 +141,7 @@ export const PLATFORM_NAME_PLACES: Record<string, PlatformNamePlace> = {
     'src/services/onlineMusic/omni.ts': { n: { netease: 8, qq: 1, kugou: 2 }, kind: 'doc', why: 'raised by the upstream merge 2026-10-17' },
     'src/services/onlineMusic/onlineCoverFallback.ts': { n: { netease: 2, qq: 1, kugou: 2 }, kind: 'question', why: 'raised by the upstream merge 2026-10-17' },
     'src/services/onlineMusic/providerAccountCache.ts': { n: { kugou: 1 }, kind: 'doc' },
-    'src/services/onlineMusic/providerRegistry.ts': { n: { netease: 2, qq: 2, kugou: 2, bodian: 2, ytm: 2, spotify: 4 }, kind: 'list', why: 'raised by the upstream merge 2026-10-17' },
+    'src/services/onlineMusic/providerRegistry.ts': { n: { netease: 2, qq: 2, kugou: 2, bodian: 2, ytm: 2, spotify: 4, bilibili: 2 }, kind: 'list', why: 'raised by the upstream merge 2026-10-17' },
     'src/services/onlineMusic/qishuiProvider.ts': { n: { bodian: 1 }, kind: 'doc' },
     'src/services/onlineMusic/qq/qqProvider.ts': { n: { kugou: 1 }, kind: 'doc' },
     'src/services/onlineMusic/qq/qqTransport.ts': { n: { netease: 1 }, kind: 'doc' },
@@ -152,7 +153,7 @@ export const PLATFORM_NAME_PLACES: Record<string, PlatformNamePlace> = {
     'src/stores/useAudioSettingsStore.ts': { n: { netease: 11 }, kind: 'stored', why: 'a storage key and the setting kept under it' },
     'src/stores/useExploreFeedStore.ts': { n: { ytm: 2, spotify: 1 }, kind: 'doc' },
     'src/stores/usePersonalFmModeStore.ts': { n: { netease: 1 }, kind: 'doc' },
-    'src/stores/useSearchNavigationStore.ts': { n: { netease: 2 }, kind: 'doc', why: 'two comments on what the round-robin over the buckets avoids, and on which tabs a platform switch keeps its place' },
+    'src/stores/useSearchNavigationStore.ts': { n: { netease: 1 }, kind: 'doc', why: 'comment on which tabs a platform switch keeps in place' },
     'src/types.ts': { n: { netease: 11, qq: 2, ytm: 1 }, kind: 'stored', why: 'the stage API\'s lyric source, a stored song field, the AMLL DB platform' },
     'src/types/localLibrary.ts': { n: { netease: 1, qq: 1, kugou: 1, spotify: 2 }, kind: 'doc' },
     'src/types/onlineMusic.ts': { n: { netease: 4, qq: 4, kugou: 1, bodian: 1, ytm: 5, spotify: 3 }, kind: 'list', why: 'the type of a platform id, and the platform that is active where none was chosen; raised by the upstream merge 2026-10-17' },

@@ -74,6 +74,8 @@ interface SearchNavigationState {
     searchCache: Record<string, SearchCacheEntry>;
     setHomeViewTab: (tab: HomeViewTab) => void;
     setSearchQuery: (query: string) => void;
+    selectSearchSource: (source: SearchSource) => void;
+    showImportedSongs: (providerId: OnlineProviderId) => Promise<void>;
     setSearchScrollTop: (scrollTop: number) => void;
     restoreSearch: (payload: { query: string; sourceTab: SearchSource; returnView?: SearchReturnView; }) => void;
     hideSearchOverlay: () => void;
@@ -245,6 +247,10 @@ const searchOnlineProviderSongs = async (
     limit: number,
     offset: number,
 ): Promise<SearchExecutionResult> => {
+    if (omni.getProviderLinkImportInfo(providerId)) {
+        const results = offset === 0 ? await omni.importProviderSongs(providerId, query) : [];
+        return { results, hasMore: false, nextOffset: results.length };
+    }
     const page = await omni.searchProviderSongs(providerId, query, { limit, offset });
     return { results: page.items, hasMore: page.hasMore, nextOffset: page.nextOffset };
 };
@@ -417,6 +423,30 @@ export const useSearchNavigationStore = create<SearchNavigationState>((set, get)
         set({ homeViewTab: resolvedTab });
     },
     setSearchQuery: (query) => set({ searchQuery: query }),
+    selectSearchSource: (source) => set(state => ({
+        searchSourceTab: source,
+        searchResults: null,
+        searchError: null,
+        searchAuthExpiredProvider: null,
+        isSearching: false,
+        isLoadingMore: false,
+        requestId: state.requestId + 1,
+        hasMore: false,
+        offset: 0,
+        scrollTop: 0,
+    })),
+    showImportedSongs: async (providerId) => {
+        const requestId = get().requestId + 1;
+        set({ searchSourceTab: providerId, searchQuery: '', searchResults: null, searchError: null,
+            searchAuthExpiredProvider: null,
+            requestId, isSearching: true, isLoadingMore: false, hasMore: false, scrollTop: 0, offset: 0 });
+        try {
+            const songs = await omni.getImportedProviderSongs(providerId);
+            if (get().requestId === requestId) set({ searchResults: songs, isSearching: false, offset: songs.length });
+        } catch {
+            if (get().requestId === requestId) set({ searchResults: [], isSearching: false, searchError: 'importSource.serviceUnavailable' });
+        }
+    },
     setSearchScrollTop: (scrollTop) => set(state => {
         const cacheKey = getSearchCacheKey(state.searchQuery, state.searchSourceTab);
         const cached = state.searchCache[cacheKey];

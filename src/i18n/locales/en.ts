@@ -1,6 +1,20 @@
 
 
 export default {
+  "importSource": {
+    "serviceUnavailable": "Import service is unavailable",
+    "platformRestricted": "Bilibili restricted this request. Open the original video.",
+    "videoUnavailable": "The video or part is missing or inaccessible",
+    "audioUnavailable": "No public AAC audio is available",
+    "retryLater": "Too many requests. Please try again later.",
+    "submit": "Import",
+    "empty": "Paste a share link or BV / av ID, then tap Import",
+    "openOriginal": "Open original video",
+    "bilibiliLabel": "Bilibili import",
+    "bilibiliPlaceholder": "Paste a Bilibili link / BV / av ID",
+    "bilibiliDescription": "Import audio from public videos. Multi-part videos list each part; links with p import that part only. Keyword search is unavailable. Playback may be restricted; use the original-video button beside a track.",
+    "importedVideos": "Imported videos"
+},
   "mobileHome": {
     "localEmptyTitle": "Add your music",
     "localEmptyHint": "Import songs from your device, or switch to an online category above to search.",

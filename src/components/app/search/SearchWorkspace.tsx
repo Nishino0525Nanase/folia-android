@@ -66,6 +66,8 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
         hasMore,
         scrollTop,
         setSearchQuery,
+        selectSearchSource,
+        showImportedSongs,
         setSearchScrollTop,
     } = useSearchNavigationStore(useShallow(state => ({
         searchQuery: state.searchQuery,
@@ -79,6 +81,8 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
         hasMore: state.hasMore,
         scrollTop: state.scrollTop,
         setSearchQuery: state.setSearchQuery,
+        selectSearchSource: state.selectSearchSource,
+        showImportedSongs: state.showImportedSongs,
         setSearchScrollTop: state.setSearchScrollTop,
     })));
     const results = useMemo(() => {
@@ -116,11 +120,16 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
             'all',
             activeOnlineProviderId,
             ...online.filter(id => id !== activeOnlineProviderId),
+            ...omni.getLinkImportProviders().filter(id => id !== activeOnlineProviderId && !online.includes(id)),
             'local',
             'cloud',
             'navidrome',
         ];
     }, [activeOnlineProviderId, providerRegistryVersion]);
+    const importInfo = searchSourceTab === 'local' || searchSourceTab === 'navidrome'
+        ? null : omni.getProviderLinkImportInfo(searchSourceTab);
+    const inputPlaceholder = importInfo ? t(importInfo.placeholderKey) : t('search.placeholder');
+    const inputPageUrl = importInfo ? omni.getProviderInputPageUrl(searchSourceTab, searchQuery) : null;
     const hasCollection = useCollectionNavigationStore(state => Boolean(state.snapshot?.stack.length));
     const getSourceLabel = (source: SearchSource) => {
         if (source === 'all') return t('search.sourceAll');
@@ -221,8 +230,8 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                                     enterKeyHint="search"
                                     value={searchQuery}
                                     onChange={event => setSearchQuery(event.target.value)}
-                                    placeholder={t('search.placeholder')}
-                                    aria-label={t('search.placeholder')}
+                                    placeholder={inputPlaceholder}
+                                    aria-label={inputPlaceholder}
                                     className="min-w-0 flex-1 bg-transparent py-3.5 pl-11 pr-2 text-base outline-none sm:text-sm"
                                     autoFocus={!isTouchLayout || !searchQuery.trim()}
                                 />
@@ -232,7 +241,7 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                                     className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl px-3 text-sm font-medium transition-opacity disabled:opacity-40"
                                     style={{ backgroundColor: theme.accentColor, color: theme.backgroundColor }}
                                 >
-                                    {t('libraryBravaisHome.searchSubmit')}
+                                    {importInfo ? t('importSource.submit') : t('libraryBravaisHome.searchSubmit')}
                                 </button>
                             </form>
                             <button
@@ -260,7 +269,13 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                                     key={source}
                                     onClick={() => {
                                         if (source !== searchSourceTab) {
-                                            submitSearch(source);
+                                            if (isTouchLayout) searchInputRef.current?.blur();
+                                            // A link source must let the listener paste a link before resolving it.
+                                            const linkSource = source !== 'local' && source !== 'navidrome'
+                                                && omni.getProviderLinkImportInfo(source);
+                                            if (linkSource) void showImportedSongs(source);
+                                            else if (!searchQuery.trim()) selectSearchSource(source);
+                                            else submitSearch(source);
                                         }
                                     }}
                                     className={`min-h-[44px] shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium transition-colors ${
@@ -279,6 +294,21 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                                 </button>
                             ))}
                         </nav>
+                        {importInfo && (
+                            <div className="flex items-start gap-2 px-1 text-xs">
+                                <p className="flex-1 leading-relaxed opacity-60" role="note">{t(importInfo.descriptionKey)}</p>
+                                <button type="button" disabled={isSearching} onClick={() => void showImportedSongs(searchSourceTab)}
+                                    className="min-h-[44px] shrink-0 rounded-xl border border-current/15 px-3 disabled:opacity-40">
+                                    {t('importSource.importedVideos')}
+                                </button>
+                            </div>
+                        )}
+                        {inputPageUrl && (
+                            <a href={inputPageUrl} target="_blank" rel="noopener noreferrer"
+                                className="flex min-h-[44px] items-center self-start rounded-xl border border-current/15 px-3 text-xs">
+                                {t('importSource.openOriginal')}
+                            </a>
+                        )}
                     </header>
 
                     <div className="mx-auto mt-3 min-h-0 w-full max-w-5xl flex-1">
@@ -294,7 +324,7 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                         ) : searchError && results.length === 0 ? (
                             <div className="flex h-full flex-col items-center justify-center gap-3 text-center opacity-65">
                                 <AlertCircle size={32} />
-                                <p>{searchErrorText}</p>
+                                <p className="max-w-md break-words px-4 text-sm">{importInfo ? t(searchError) : searchErrorText}</p>
                                 <button
                                     type="button"
                                     onClick={() => submitSearch()}
@@ -305,7 +335,7 @@ const SearchWorkspace: React.FC<SearchWorkspaceProps> = ({
                             </div>
                         ) : results.length === 0 ? (
                             <div className="flex h-full items-center justify-center text-sm opacity-50">
-                                {t('home.noResults')}
+                                {importInfo ? t('importSource.empty') : t('home.noResults')}
                             </div>
                         ) : (
                             <div className="flex h-full flex-col">

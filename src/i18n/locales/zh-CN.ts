@@ -1,6 +1,20 @@
 
 
 export default {
+  "importSource": {
+    "serviceUnavailable": "导入服务暂时不可用",
+    "platformRestricted": "B 站限制了此请求，请打开原视频播放",
+    "videoUnavailable": "视频或分 P 不存在，或当前无法访问",
+    "audioUnavailable": "没有可用的公开 AAC 音频",
+    "retryLater": "请求过于频繁，请稍后重试",
+    "submit": "导入",
+    "empty": "粘贴分享链接或 BV / av 号后点“导入”",
+    "openOriginal": "打开原视频",
+    "bilibiliLabel": "B 站导入",
+    "bilibiliPlaceholder": "粘贴 B 站链接 / BV / av 号",
+    "bilibiliDescription": "导入公开视频的音频；多 P 视频会列出各分 P，链接带 p 参数时只导入该 P。暂不支持关键词搜索。平台可能限制播放，可点歌曲右侧打开原视频。",
+    "importedVideos": "已导入的视频"
+},
   "mobileHome": {
     "localEmptyTitle": "添加你的音乐",
     "localEmptyHint": "导入手机中的音乐，或切换到上方在线分类后搜索。",

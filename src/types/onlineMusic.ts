@@ -834,6 +834,15 @@ export interface OnlineMusicProvider {
     songMetadata?: OnlineSongMetadataProvider;
     getSongPageUrl?(song: SongResult): string | null;
     search?: OnlineSearchProvider;
+    /** Link imports are distinct from keyword search; the provider resolves stable media identities. */
+    linkImport?: {
+        labelKey: string;
+        placeholderKey: string;
+        descriptionKey: string;
+        resolve(input: string): Promise<UnifiedSong[]>;
+        getImported?(): Promise<UnifiedSong[]>;
+        getInputPageUrl?(input: string): string | null;
+    };
     playback?: OnlinePlaybackProvider;
     playbackReports?: OnlinePlaybackReportProvider;
     lyrics?: OnlineLyricsProvider;

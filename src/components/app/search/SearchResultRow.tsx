@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Disc, Play, Plus } from 'lucide-react';
+import { Disc, ExternalLink, Play, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { UnifiedSong } from '../../../types';
 import type { MediaId } from '../../../types/onlineMusic';
@@ -9,6 +9,7 @@ import { getSizedCoverUrl } from '../../../utils/coverUrl';
 import { getSongUnavailableLabel, isSongUnavailable } from '../../../services/onlineMusic/songAvailability';
 import { canResolveSongCatalogRef } from '../../../services/onlineMusic/catalogRefs';
 import { getProviderSongMetadata } from '../../../services/onlineMusic/songMetadata';
+import { omni } from '../../../services/onlineMusic/omni';
 
 // src/components/app/search/SearchResultRow.tsx
 
@@ -54,6 +55,9 @@ const SearchResultRow: React.FC<SearchResultRowProps> = ({
     const coverUrl = getSizedCoverUrl(metadata.coverUrl, 120);
     const artists = metadata.artists;
     const album = metadata.album;
+    const source = track.sourceRef;
+    const originalUrl = source?.kind === 'online' && omni.getProviderLinkImportInfo(source.providerId)
+        ? omni.getSongPageUrl(track) : null;
     const canOpenAlbum = Boolean(album?.name && (
         track.isLocal ? album.entityId
             : track.isNavidrome ? track.navidromeData?.albumId
@@ -171,6 +175,13 @@ const SearchResultRow: React.FC<SearchResultRowProps> = ({
                     >
                         <Plus size={16} />
                     </button>
+                )}
+                {originalUrl && (
+                    <a href={originalUrl} target="_blank" rel="noopener noreferrer"
+                        className={`flex shrink-0 items-center justify-center rounded-full opacity-65 hover:opacity-100 ${isTouchLayout ? 'h-[44px] w-[44px]' : 'p-2'}`}
+                        title={t('importSource.openOriginal')} aria-label={t('importSource.openOriginal')}>
+                        <ExternalLink size={16} />
+                    </a>
                 )}
             </motion.div>
         </div>

@@ -3,6 +3,7 @@ import { resolveCommandPaletteSearchSource, useSearchNavigationStore } from '@/s
 import { neteaseApi } from '@/services/onlineMusic/netease/netease';
 import { getNavidromeConfig, navidromeApi } from '@/services/navidromeService';
 import type { LocalLibraryAssignment, LocalLibraryEntity } from '@/types/localLibrary';
+import { omni } from '@/services/onlineMusic/omni';
 
 vi.mock('@/services/onlineMusic/netease/netease', () => ({
     neteaseApi: {
@@ -30,6 +31,7 @@ describe('useSearchNavigationStore', () => {
     };
 
     beforeEach(() => {
+        vi.restoreAllMocks();
         cloudSearchMock.mockReset();
         getNavidromeConfigMock.mockReset();
         getNavidromeConfigMock.mockReturnValue(null);
@@ -45,12 +47,53 @@ describe('useSearchNavigationStore', () => {
             isSearching: false,
             isLoadingMore: false,
             searchError: null,
+            searchAuthExpiredProvider: null,
             requestId: 0,
             offset: 0,
             limit: 30,
             hasMore: false,
             scrollTop: 0,
             searchCache: {},
+        });
+    });
+
+    it('uses link import instead of keyword search and never paginates imported parts', async () => {
+        vi.spyOn(omni, 'getProviderLinkImportInfo').mockReturnValue({ labelKey: 'import', placeholderKey: 'paste', descriptionKey: 'help' });
+        const importSongs = vi.spyOn(omni, 'importProviderSongs').mockResolvedValue([]);
+        const search = vi.spyOn(omni, 'searchProviderSongs');
+        await useSearchNavigationStore.getState().submitSearch({ query: 'video link', sourceTab: 'link-fixture', deps });
+        expect(importSongs).toHaveBeenCalledWith('link-fixture', 'video link');
+        expect(search).not.toHaveBeenCalled();
+        expect(useSearchNavigationStore.getState().hasMore).toBe(false);
+    });
+
+    it('changes source without submitting stale input and ignores the previous pending response', async () => {
+        let finish!: (value: any) => void;
+        cloudSearchMock.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+        const pending = useSearchNavigationStore.getState().submitSearch({ query: 'old', sourceTab: 'netease', deps });
+        useSearchNavigationStore.getState().selectSearchSource('local');
+        finish({ result: { songs: [{ id: 1 }], songCount: 1 } });
+        await pending;
+        expect(useSearchNavigationStore.getState()).toMatchObject({ searchSourceTab: 'local', searchResults: null, isSearching: false });
+    });
+
+    it('clears the previous provider auth error when selecting another source', () => {
+        useSearchNavigationStore.setState({ searchError: 'expired', searchAuthExpiredProvider: 'netease' });
+        useSearchNavigationStore.getState().selectSearchSource('local');
+        expect(useSearchNavigationStore.getState()).toMatchObject({
+            searchSourceTab: 'local', searchError: null, searchAuthExpiredProvider: null,
+        });
+    });
+
+    it('clears previous auth expiry before loading imports, including when that read fails', async () => {
+        vi.spyOn(omni, 'getImportedProviderSongs').mockRejectedValueOnce(new Error('service unavailable'));
+        useSearchNavigationStore.setState({ searchError: 'expired', searchAuthExpiredProvider: 'netease' });
+        const pending = useSearchNavigationStore.getState().showImportedSongs('bilibili');
+        expect(useSearchNavigationStore.getState().searchAuthExpiredProvider).toBeNull();
+        await pending;
+        expect(useSearchNavigationStore.getState()).toMatchObject({
+            searchSourceTab: 'bilibili', searchResults: [], isSearching: false,
+            searchError: 'importSource.serviceUnavailable', searchAuthExpiredProvider: null,
         });
     });
 
