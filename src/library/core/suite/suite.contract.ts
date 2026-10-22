@@ -67,6 +67,7 @@ export type LibraryActionId =
     | 'filter'
     | 'sort'
     | 'reload'
+    | 'import-collection'
     | 'resume-sync'
     | 'remove-entry'
     | 'subscribe'

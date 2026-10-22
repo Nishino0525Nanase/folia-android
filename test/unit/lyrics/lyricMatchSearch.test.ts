@@ -134,7 +134,7 @@ describe('the search of the lyric match window', () => {
         expect(shown()).toEqual({ results: [], chosen: null, searching: false });
     });
 
-    it('on another tab: a local file searches what was typed, an online or Navidrome song goes back to its own text', async () => {
+    it('keeps edited words across sources unless the caller explicitly requests a reset', async () => {
         await draw(named);
         await searchFor('typed');
         await does(() => search.setSource('qq'));
@@ -149,6 +149,45 @@ describe('the search of the lyric match window', () => {
         await does(() => search.setSource('qq'));
         expect(search.query).toBe(OWN_TEXT);
         expect({ source: lastAsked().source, text: lastAsked().text }).toEqual({ source: 'qq', text: OWN_TEXT });
+    });
+
+    it('keeps a corrected song/artist query even when switching sources before submitting it', async () => {
+        await draw(named, { pickResult: results => results[0] ?? null });
+        await does(() => lastAsked().answer([result('video-title-match')]));
+        await does(() => search.setQuery('Actual song - Actual singer'));
+        await does(() => search.setSource('qq'));
+
+        expect(search.query).toBe('Actual song - Actual singer');
+        expect({ source: lastAsked().source, text: lastAsked().text }).toEqual({ source: 'qq', text: 'Actual song - Actual singer' });
+        expect(shown()).toEqual({ results: [], chosen: null, searching: true });
+    });
+
+    it('invalidates a pending save and cannot select an old source result after switching', async () => {
+        await draw(named, { pickResult: results => results[0] ?? null });
+        const oldResult = result('same-id');
+        await does(() => lastAsked().answer([oldResult]));
+        const selectionBeforeSwitch = search.isSelectionCurrent;
+        const chooseBeforeSwitch = search.setSelectedResult;
+        expect(selectionBeforeSwitch(oldResult, 'netease')).toBe(true);
+
+        await does(() => search.setSource('qq'));
+        const currentResult = result('same-id');
+        await does(() => lastAsked().answer([currentResult]));
+        await does(() => chooseBeforeSwitch(oldResult));
+
+        expect(selectionBeforeSwitch(oldResult, 'netease')).toBe(false);
+        expect(search.selectedResult).toBe(currentResult);
+        expect(search.isSelectionCurrent(currentResult, 'qq')).toBe(true);
+    });
+
+    it('ignores a previous source answer after a new source has returned', async () => {
+        await draw(named, { pickResult: results => results[0] ?? null });
+        const oldSource = lastAsked();
+        await does(() => search.setSource('qq'));
+        await does(() => lastAsked().answer([result('new-source')]));
+        await does(() => oldSource.answer([result('old-source')]));
+
+        expect(shown()).toEqual({ results: ['new-source'], chosen: 'new-source', searching: false });
     });
 
     // AMLL DB has its own search now (#515): it takes the typed words like the platforms do.

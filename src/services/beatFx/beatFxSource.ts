@@ -62,7 +62,7 @@ const readStreamedTrackBytes = async (song: SongResult): Promise<ArrayBuffer | n
     if (getPlaybackSourceRef(song).kind !== 'online') return null;
     const prefetched = getPrefetchedData(song);
     const url = prefetched?.audioUrl;
-    if (!url || url === 'CACHED_IN_DB' || !isUrlValid(prefetched.audioUrlFetchedAt) || !/^https?:/.test(url)) return null;
+    if (!url || url === 'CACHED_IN_DB' || !isUrlValid(prefetched.audioUrlFetchedAt, prefetched.audioUrlExpiresAt) || !/^https?:/.test(url)) return null;
     try {
         const response = await fetch(url);
         const blob = await response.blob();

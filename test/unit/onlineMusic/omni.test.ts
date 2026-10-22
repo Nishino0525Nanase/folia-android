@@ -58,6 +58,22 @@ afterEach(() => {
 });
 
 describe('omni routing', () => {
+    it('imports a collection through its owner and rejects sources without an importer', async () => {
+        const target = { providerId, id: 'favorite-1', name: 'Favorites', type: 'playlist' as const };
+        const importCollection = vi.fn(async () => [song(providerId, 'video:first')]);
+        registerOnlineMusicProvider({
+            ...provider(providerId, undefined),
+            linkImport: { labelKey: 'import', placeholderKey: 'paste', descriptionKey: 'help', resolve: async () => [], importCollection },
+        });
+        registerOnlineMusicProvider(provider(otherProviderId, undefined));
+        useOnlineProviderAccountStore.getState().setActiveProviderId(otherProviderId);
+        expect(omni.canImportCollection(target)).toBe(true);
+        await expect(omni.importCollectionSongs(target)).resolves.toMatchObject([{ id: 'video:first' }]);
+        expect(importCollection).toHaveBeenCalledWith(target);
+        const unsupported = { ...target, providerId: otherProviderId };
+        expect(omni.canImportCollection(unsupported)).toBe(false);
+        await expect(omni.importCollectionSongs(unsupported)).rejects.toMatchObject({ code: 'unsupported' });
+    });
     it('resolves link imports through their owner without keyword searching', async () => {
         const resolve = vi.fn(async () => [song(providerId, 'stable:part')]);
         const searchSongs = vi.fn();

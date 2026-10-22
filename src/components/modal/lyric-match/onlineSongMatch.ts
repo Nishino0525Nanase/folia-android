@@ -17,14 +17,17 @@ export const saveOnlineLyricMatch = async (
     song: SongResult,
     source: LyricProviderSource,
     selectedResult: SongResult,
+    shouldCommit: () => boolean = () => true,
 ): Promise<boolean> => {
     const processed = await fetchLyricsForMatchSource(source, selectedResult);
 
+    if (!shouldCommit()) return false;
     if (!processed || (!hasRenderableLyrics(processed.lyrics) && !processed.isPureMusic)) {
         return false;
     }
 
     const previousState = await loadOnlineLyricsState(song);
+    if (!shouldCommit()) return false;
     const nextState: OnlineLyricsState = {
         lyricsSource: 'online',
         importedLyrics: previousState?.importedLyrics ?? null,

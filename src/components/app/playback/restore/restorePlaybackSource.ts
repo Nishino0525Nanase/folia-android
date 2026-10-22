@@ -24,9 +24,10 @@ import { getLocalCoverAssetUrl } from '../../../../services/localCoverAssetUrl';
 import { isPureMusicLyricText } from '../../../../utils/lyrics/pureMusic';
 import { migrateLyricDataRenderHints } from '../../../../utils/lyrics/renderHints';
 import { resolveLocalSongLyrics } from '../../../../utils/lyrics/localSongLyrics';
-import { loadOnlineLyricsState, resolveOnlineLyrics } from '../../../../utils/onlineLyricsState';
+import { hasAuthoritativeOnlineLyricsSelection, loadOnlineLyricsState, resolveOnlineLyrics, resolveOnlineLyricsPureMusic } from '../../../../utils/onlineLyricsState';
 import type { AudioQualityPreference, MediaId } from '../../../../types/onlineMusic';
 import { omni } from '../../../../services/onlineMusic/omni';
+import { getOptionalProviderLyrics } from '../../../../services/onlineMusic/optionalLyrics';
 import { onlineFailureOf, type OnlineFailure } from '../../../../services/onlineMusic/failure/onlineFailureCase';
 import { getCachedSongCoverUrl, getSongCacheWithLegacyMigration } from '../../../../services/onlineMusic/resourceCache';
 import { getSongCoverUrl } from '../../../../services/onlineMusic/songMetadata';
@@ -325,6 +326,19 @@ export const restorePlaybackSourceForSong = async (
     // the session restore would take back the autoplay and the window hand-off would put the old
     // address back over the fresh one. A throw that comes after the listener moved on is stale.
     try {
+        if (hasAuthoritativeOnlineLyricsSelection(onlineLyricsState)) {
+            const selectedLyrics = resolveOnlineLyrics(onlineLyricsState, null);
+            setCurrentSong(prev => {
+                if (!prev || !isSamePlaybackSong(prev, song)) return prev;
+                return {
+                    ...prev,
+                    isPureMusic: resolveOnlineLyricsPureMusic(onlineLyricsState, selectedLyrics?.lines.map(line => line.fullText).join('\n') ?? ''),
+                };
+            });
+            setLyrics(selectedLyrics);
+            return 'restored';
+        }
+
         const cachedLyrics = await getSongCacheWithLegacyMigration<LyricData>('lyric', song, migrateLyricDataRenderHints);
         if (overtaken()) return 'stale';
         const restoredPreferredLyrics = resolveOnlineLyrics(onlineLyricsState, cachedLyrics);
@@ -347,7 +361,7 @@ export const restorePlaybackSourceForSong = async (
         const effectiveUserId = songProviderId
             ? (useOnlineProviderAccountStore.getState().accounts[songProviderId]?.user?.id ?? userId)
             : userId;
-        const processed = await omni.getLyrics(song, { userId: effectiveUserId });
+        const processed = await getOptionalProviderLyrics(song, { userId: effectiveUserId });
         if (overtaken()) return 'stale';
         const resolvedLyrics = resolveOnlineLyrics(onlineLyricsState, processed.lyrics);
         setCurrentSong(prev => {

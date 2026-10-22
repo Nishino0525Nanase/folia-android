@@ -2,6 +2,19 @@
 
 export default {
   "importSource": {
+    "loginRequired": "Masuk ke akun Bilibili terlebih dahulu",
+    "loginExpired": "Sesi Bilibili telah kedaluwarsa. Silakan masuk lagi.",
+    "invalidResponse": "Respons platform tidak dapat dibaca. Coba lagi nanti.",
+    "sessionUnavailable": "Layanan koneksi akun tidak tersedia",
+    "favoriteUnavailable": "Folder favorit ini tidak ditemukan atau tidak dapat diakses akun ini",
+    "favoriteFirstPart": "Video favorit memutar bagian pertama. Impor tautan video untuk memilih bagian lain.",
+    "favoriteImported": "Folder favorit diimpor",
+    "importCollection": "Impor favorit",
+    "importingCollection": "Mengimpor…",
+    "collectionImportHint": "Menyimpan referensi media ke Video yang diimpor; tidak mengunduh audio.",
+    "collectionImported": "{{count}} lagu disimpan ke Video yang diimpor",
+    "collectionImportFailed": "Gagal mengimpor koleksi ini. Coba lagi.",
+
     "serviceUnavailable": "Layanan impor tidak tersedia",
     "platformRestricted": "Bilibili membatasi permintaan ini. Buka video asli.",
     "videoUnavailable": "Video atau bagian tidak ditemukan atau tidak dapat diakses",
@@ -23,6 +36,8 @@ export default {
     "accountlessHint": "Cari musik langsung, atau impor lagu lokal Anda."
   },
   "mobileTouch": {
+    "manualLyrics": "Lirik manual",
+
     "expand": "Buka kontrol pemutaran",
     "collapse": "Tutup kontrol pemutaran",
     "play": "Putar",
@@ -758,6 +773,7 @@ export default {
       "grid-sort-direction": { "title": "Balik arah urutan", "description": "Beralih antara urutan naik dan turun pada daftar lagu lokal" },
       "grid-toggle-info-panel": { "title": "Alihkan panel koleksi", "description": "Tampilkan atau sembunyikan panel info dan aksi koleksi" },
       "grid-toggle-track-list": { "title": "Alihkan daftar lagu", "description": "Tampilkan atau sembunyikan daftar lagu di samping kisi" },
+      "grid-import-collection": {"title": "Impor favorit saat ini", "description": "Simpan referensi media koleksi ini ke Video yang diimpor"},
       "grid-resync-folder": { "title": "Impor ulang folder ini", "description": "Pindai ulang folder lokal ini dan segarkan lagunya" },
       "grid-resync-all-folders": { "title": "Impor ulang semua folder", "description": "Pindai ulang semua folder lokal dan segarkan pustaka" },
       "grid-organize-song-info": { "title": "Rapikan info lagu", "description": "Rapikan judul, artis, dan album pada folder ini" },
@@ -1150,6 +1166,8 @@ export default {
     "nothingSelected": "Pilih minimal satu sumber dan satu format"
   },
   "lyricFile": {
+    "importFailed": "Gagal mengimpor berkas lirik. Periksa format atau pengodeannya.",
+
     "button": "Impor / ekspor lirik",
     "title": "Berkas lirik",
     "description": "Impor berkas lirik untuk mengganti versi yang tampil, atau simpan lirik lagu ini sebagai berkas.",
@@ -1529,6 +1547,9 @@ export default {
     "signIn": "Masuk"
   },
   "home": {
+    "loginTitleBilibili": "Masuk ke Bilibili dan baca favorit",
+    "loginNoteBilibili": "Pindai dan konfirmasi dengan aplikasi Bilibili milik Anda. Di ponsel yang sama, ambil tangkapan layar dan pilih dari album pemindai. Sesi digunakan untuk membaca favorit dan meminta audio.",
+
     "welcome": "Selamat datang di Folia",
     "lattice": "Kolase antrean",
     "latticeLabel": "Kolase antrean",
@@ -3998,7 +4019,7 @@ export default {
     "kugouNoCover": "Kugou tidak menyediakan karya seni sampul, jadi karya seni sampul lokal akan dipertahankan.",
     "artistLabel": "Artis",
     "albumLabel": "Album",
-    "noSelection": "Pilih lagu di sebelah kiri",
+    "noSelection": "Pilih lagu untuk melihat pratinjau lirik",
     "lyricPreview": "Pratinjau Lirik",
     "clickToPreview": "Klik untuk Pratinjau",
     "wordByWord": "Kata per kata",

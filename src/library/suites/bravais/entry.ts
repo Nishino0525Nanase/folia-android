@@ -65,6 +65,7 @@ const COLLECTION_ACTIONS: readonly LibraryActionId[] = [
     'filter',
     'sort',
     'reload',
+    'import-collection',
     'resume-sync',
     'remove-entry',
     'subscribe',

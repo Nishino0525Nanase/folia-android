@@ -550,6 +550,16 @@ export const omni = {
         return getOnlineMusicProvider(providerId)?.linkImport?.getInputPageUrl?.(input) ?? null;
     },
 
+    canImportCollection(collection: OmniCollection): boolean {
+        return Boolean(getOnlineMusicProvider(collection.providerId)?.linkImport?.importCollection);
+    },
+
+    async importCollectionSongs(collection: OmniCollection): Promise<UnifiedSong[]> {
+        const provider = requireOnlineMusicProvider(collection.providerId);
+        if (!provider.linkImport?.importCollection) return unsupported(provider.id, 'collection-import');
+        return runRequest(provider, 'collection', () => provider.linkImport!.importCollection!(collection));
+    },
+
     async searchSongs(query: string, page: PageInput): Promise<OmniPage<UnifiedSong>> {
         return withActiveProvider(async provider => {
             if (!providerSupports(provider, 'search') || !provider.search) return emptyPage(page.offset);

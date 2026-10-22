@@ -14,6 +14,7 @@ const setup = () => {
         hideSearch: record('hide-search'),
         closePanel: record('close-panel'),
         openQueue: record('open-queue'),
+        openManualLyrics: record('open-manual-lyrics'),
         revealPlayer: record('reveal-player'),
         openSettings: record('settings'),
         openCommands: record('commands'),
@@ -32,6 +33,12 @@ describe('mobile touch navigation', () => {
         const { actions, events } = setup();
         actions.lyrics();
         expect(events).toEqual(['hide-search', 'close-panel', 'reveal-player', 'player']);
+    });
+
+    it('opens the existing lyric source panel after revealing the player', () => {
+        const { actions, events } = setup();
+        actions.manualLyrics();
+        expect(events).toEqual(['hide-search', 'reveal-player', 'player', 'open-manual-lyrics']);
     });
 
     it('opens search with its current query, source and return page', () => {

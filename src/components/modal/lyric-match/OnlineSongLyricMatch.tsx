@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SongResult } from '../../../types';
 import { getProviderSongMetadata } from '../../../services/onlineMusic/songMetadata';
@@ -15,7 +15,7 @@ import { useLyricMatchSearch } from './useLyricMatchSearch';
 interface OnlineSongLyricMatchProps {
     song: SongResult;
     onClose: () => void;
-    onMatch: () => void;
+    onMatch: () => void | Promise<void>;
     isDaylight: boolean;
 }
 
@@ -30,18 +30,33 @@ const OnlineSongLyricMatch: React.FC<OnlineSongLyricMatchProps> = ({ song, onClo
         durationMs: metadata.durationMs,
     }), [song]);
 
-    const search = useLyricMatchSearch(song, songInfo, { pickResult: pickOnlineResult, resetsQueryOnSourceChange: true });
+    const search = useLyricMatchSearch(song, songInfo, { pickResult: pickOnlineResult });
     const { source, selectedResult } = search;
+    const mountedRef = useRef(true);
+    const savingRef = useRef(false);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
 
+    // A delayed fetch may only commit while this exact song/source/selection is still open.
     const save = async (result: SongResult) => {
+        if (savingRef.current || !search.isSelectionCurrent(result, source)) return;
+        savingRef.current = true;
+        const shouldCommit = () => mountedRef.current && search.isSelectionCurrent(result, source);
         try {
-            if (!await saveOnlineLyricMatch(song, source, result)) {
+            const saved = await saveOnlineLyricMatch(song, source, result, shouldCommit);
+            if (!shouldCommit()) return;
+            if (!saved) {
                 setStatusMessage({ type: 'error', text: t('localMusic.noLyricsAvailable') });
                 return;
             }
-            onMatch();
+            await onMatch();
         } catch (error) {
             console.error('Online lyric match failed', error);
+            if (shouldCommit()) setStatusMessage({ type: 'error', text: t('localMusic.matchFailed') });
+        } finally {
+            savingRef.current = false;
         }
     };
 

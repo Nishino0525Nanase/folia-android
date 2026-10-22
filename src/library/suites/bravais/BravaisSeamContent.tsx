@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { ChevronLeft, FoldHorizontal, ListFilter, ListPlus, Maximize2, Play } from 'lucide-react';
+import { ChevronLeft, Download, FoldHorizontal, ListFilter, ListPlus, Loader2, Maximize2, Play } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { BravaisLayer } from './bravaisLayer';
 import type { BravaisHomeShortcut } from './bravaisHomeModels';
@@ -148,6 +148,14 @@ const SpineSeam: React.FC<{ layer: BravaisLayer; actions: BravaisSeamActions }> 
                 </button>
             )}
             <div className="bravais-seam-spacer" />
+            {seam.collection?.importCollection && (
+                <button type="button" className="bravais-seam-icon" style={{ minHeight: 44, minWidth: 44 }}
+                    data-bravais-seam-action="import-collection" disabled={seam.collection.importCollection.disabled}
+                    aria-label={seam.collection.importCollection.label} title={seam.collection.importCollection.hint}
+                    onClick={seam.collection.importCollection.run}>
+                    {seam.collection.importCollection.pending ? <Loader2 aria-hidden className="animate-spin" /> : <Download aria-hidden />}
+                </button>
+            )}
             {seam.onPlayScope && (
                 <button type="button" className="bravais-seam-icon" data-bravais-seam-action="play-scope" onClick={seam.onPlayScope}
                     aria-label={seam.scopeLabels?.play ?? t('libraryBravais.playAll')} title={seam.scopeLabels?.play ?? t('libraryBravais.playAll')}>

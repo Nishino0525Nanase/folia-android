@@ -114,6 +114,25 @@ describe('a song of an online platform', () => {
         expect(mocks.loadOnlineLyricsState).not.toHaveBeenCalled();
         expect(mocks.saveOnlineLyricsState).not.toHaveBeenCalled();
     });
+
+    it('discards a selection that became stale while its lyrics were loading', async () => {
+        let finish!: (value: { lyrics: LyricData; isPureMusic: boolean }) => void;
+        mocks.fetchLyricsForMatchSource.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+        let current = true;
+        const saving = saveOnlineLyricMatch(song, 'qq', chosen, () => current);
+        current = false;
+        finish({ lyrics, isPureMusic: false });
+        expect(await saving).toBe(false);
+        expect(mocks.loadOnlineLyricsState).not.toHaveBeenCalled();
+        expect(mocks.saveOnlineLyricsState).not.toHaveBeenCalled();
+    });
+
+    it('checks the target again after reading its previous state, before committing', async () => {
+        let current = true;
+        mocks.loadOnlineLyricsState.mockImplementation(async () => { current = false; return null; });
+        expect(await saveOnlineLyricMatch(song, 'qq', chosen, () => current)).toBe(false);
+        expect(mocks.saveOnlineLyricsState).not.toHaveBeenCalled();
+    });
 });
 
 describe('a song of a Navidrome server', () => {

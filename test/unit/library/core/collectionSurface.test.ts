@@ -70,6 +70,8 @@ const everything = (declaredActions?: LibraryDeclaredActions): GridSurfaceParams
     canEditEntity: true,
     canEditPlaylist: true,
     canToggleSubscribe: true,
+    canImportCollection: true,
+    importCollection: vi.fn(),
     toggleInfoPanel: vi.fn(),
     resyncFolder: vi.fn(),
     toggleSubscribe: vi.fn(),
@@ -77,6 +79,16 @@ const everything = (declaredActions?: LibraryDeclaredActions): GridSurfaceParams
 });
 
 describe('suite-declared actions on the command surface', () => {
+    it('offers imports only when supported, enabled and declared, and dispatches the same action', () => {
+        const params = everything({ actions: ['import-collection'], extraActions: [] });
+        expect(buildGridSurfaceState(params).availableActions).toEqual(['import-collection']);
+        runGridSurfaceAction('import-collection', params);
+        expect(params.importCollection).toHaveBeenCalledTimes(1);
+        params.canImportCollection = false;
+        runGridSurfaceAction('import-collection', params);
+        expect(params.importCollection).toHaveBeenCalledTimes(1);
+        expect(buildGridSurfaceState(params).availableActions).toEqual([]);
+    });
     it('maps every command to a core action id or a suite-local action', () => {
         for (const source of Object.values(GRID_SURFACE_ACTION_SOURCES)) {
             if ('action' in source) expect(LIBRARY_ACTION_IDS).toContain(source.action);

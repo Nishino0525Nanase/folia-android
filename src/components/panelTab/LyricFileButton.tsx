@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDownUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePlaybackStore } from '../../stores/usePlaybackStore';
@@ -8,6 +8,8 @@ import { openCommandPaletteCommand, setIsPanelOpen } from '../../stores/useAppVi
 import { exportCurrentSongLyrics } from '../../services/lyricExport/currentSongExport';
 import type { LyricExportFormat } from '../../services/lyricExport/types';
 import { hasExportableLyrics } from '../../utils/lyrics/exportableLyrics';
+import { readLyricFile } from '../../utils/lyrics/lyricFileDecoding';
+import { getPlaybackSongKey } from '../../utils/appPlaybackGuards';
 import { LYRIC_EXPORT_COMMAND_ID } from '../command-palette/commands/lyricExportCommands';
 import LyricFileDialog from './LyricFileDialog';
 import { PanelButton } from './shell/PanelButton';
@@ -28,27 +30,46 @@ const LyricFileButton: React.FC<LyricFileButtonProps> = ({ isDaylight, onImportL
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const importSequenceRef = useRef(0);
+    const mountedRef = useRef(true);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+            importSequenceRef.current += 1;
+        };
+    }, []);
     const currentSong = usePlaybackStore(state => state.currentSong);
     const lyrics = usePlaybackStore(state => state.lyrics);
     const canExportCurrent = Boolean(currentSong) && hasExportableLyrics(lyrics);
 
     const close = useCallback(() => setIsOpen(false), []);
 
-    const handleImportChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImportChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         // Emptied, so that choosing the same file again is a change too.
         event.target.value = '';
         close();
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            const content = reader.result as string | null;
-            if (content) {
-                onImportLyrics?.(content, file.name);
-            }
+        if (!file || !currentSong || !onImportLyrics) return;
+        const songKey = getPlaybackSongKey(currentSong);
+        const sequence = ++importSequenceRef.current;
+        const isCurrent = () => {
+            const playing = usePlaybackStore.getState().currentSong;
+            return mountedRef.current && importSequenceRef.current === sequence
+                && Boolean(playing && getPlaybackSongKey(playing) === songKey);
         };
-        reader.readAsText(file);
+        try {
+            const content = await readLyricFile(file);
+            if (!isCurrent()) return;
+            if (!content.trim()) {
+                setStatusMessage({ type: 'error', text: t('lyricFile.importFailed') });
+                return;
+            }
+            await onImportLyrics(content, file.name);
+        } catch (error) {
+            console.error('[LyricFileButton] Import failed', error);
+            if (isCurrent()) setStatusMessage({ type: 'error', text: t('lyricFile.importFailed') });
+        }
     };
 
     const exportCurrent = async (format: LyricExportFormat) => {

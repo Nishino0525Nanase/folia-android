@@ -16,7 +16,7 @@ vi.mock('@/services/onlinePlayback', () => ({
     applyOnlineAudioSourceMetadata: (song: unknown) => song,
 }));
 vi.mock('@/services/onlineMusic/omni', () => ({
-    omni: { canPlaySong: canPlaySongMock, getLyrics: getLyricsMock, getProviderLabel: (id: string) => id },
+    omni: { canPlaySong: canPlaySongMock, getLyrics: getLyricsMock, getProviderLabel: (id: string) => id, getProviderCapabilities: () => ({ lyrics: true }) },
 }));
 vi.mock('@/stores/usePlaybackStore', () => ({
     usePlaybackStore: { getState: () => playbackState },
@@ -43,9 +43,9 @@ vi.mock('@/services/onlineMusic/resourceCache', () => ({
     getCachedSongCoverUrl: vi.fn(async () => null),
     getSongCacheWithLegacyMigration: vi.fn(async () => null),
 }));
-vi.mock('@/utils/onlineLyricsState', () => ({
+vi.mock('@/utils/onlineLyricsState', async importOriginal => ({
+    ...await importOriginal<typeof import('@/utils/onlineLyricsState')>(),
     loadOnlineLyricsState: vi.fn(async () => null),
-    resolveOnlineLyrics: (_state: unknown, lyrics: unknown) => lyrics ?? null,
 }));
 vi.mock('@/services/coverCache', () => ({
     getCachedCoverUrl: vi.fn(async () => null),
@@ -76,6 +76,7 @@ import { installPlaybackFailedListener } from '@/services/hostExtensionHooks';
 import { getLocalSongs } from '@/services/db';
 import { ensureLocalSongCoverAsset, getAudioFromLocalSong } from '@/services/localMusicService';
 import { getLocalLibraryCatalogSnapshot } from '@/services/localLibraryEntityRepository';
+import { loadOnlineLyricsState } from '@/utils/onlineLyricsState';
 import type { LocalSong, SongResult } from '@/types';
 
 // test/unit/playback/restorePlaybackSource.test.ts
@@ -155,6 +156,18 @@ describe('restorePlaybackSourceForSong (online)', () => {
         askForSong(otherSong);
         expect(isCurrent()).toBe(false);
         expect(setAudioSrcMock).toHaveBeenCalledWith('https://cdn.example/song.mp3');
+    });
+
+    it('restores a saved instrumental selection without fetching native lyrics', async () => {
+        loadAudioSourceMock.mockResolvedValue({ kind: 'ok', audioSrc: 'https://cdn.example/song.mp3' });
+        vi.mocked(loadOnlineLyricsState).mockResolvedValueOnce({
+            lyricsSource: 'online', hasOnlineOverride: true, onlineOverrideLyrics: null, matchedIsPureMusic: true,
+        });
+        const { result, setLyrics } = restore();
+        await expect(result).resolves.toBe('restored');
+        expect(getLyricsMock).not.toHaveBeenCalled();
+        expect(setLyrics).toHaveBeenCalledExactlyOnceWith(null);
+        expect(setCurrentSongMock.mock.lastCall?.[0](song)).toMatchObject({ isPureMusic: true });
     });
 
     it('fails after one attempt and stays quiet when the caller has its own source to fall back on', async () => {

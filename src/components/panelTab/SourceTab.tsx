@@ -11,6 +11,7 @@ import { PanelButton } from './shell/PanelButton';
 import { PanelIconButton } from './shell/PanelIconButton';
 import { PanelRow } from './shell/PanelRow';
 import { Segments } from './shell/Segments';
+import '../modal/lyric-match/LyricMatchWindow.css';
 
 // src/components/panelTab/SourceTab.tsx
 // The panel tab that follows the playing song, as one layout for every kind of song: where the
@@ -60,7 +61,7 @@ export const SourceTab = <K extends string>({
     const { t } = useTranslation();
 
     return (
-        <div>
+        <div data-lyric-source-panel>
             <PanelRow label={t('localMusic.lyrics')}>
                 {onClearLyrics && (
                     <PanelIconButton size="s" label={t('localMusic.delete')} onClick={onClearLyrics}>
@@ -83,8 +84,10 @@ export const SourceTab = <K extends string>({
                     </span>
                 )}
             </PanelRow>
-            <LyricTimelineOffsetControl offsetMs={lyricTimelineOffsetMs} onOffsetChange={onLyricTimelineOffsetChange} />
-            <div className="flex flex-wrap gap-2 px-1 py-2">
+            <div data-lyric-timeline-offset>
+                <LyricTimelineOffsetControl offsetMs={lyricTimelineOffsetMs} onOffsetChange={onLyricTimelineOffsetChange} />
+            </div>
+            <div data-lyric-source-actions className="flex flex-wrap gap-2 px-1 py-2">
                 <PanelButton grow icon={Search} onClick={onMatchOnline}>
                     {t('localMusic.matchOnline')}
                 </PanelButton>

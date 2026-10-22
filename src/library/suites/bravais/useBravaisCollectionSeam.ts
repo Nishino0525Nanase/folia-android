@@ -10,6 +10,7 @@ import type { CollectionActions } from '../../core/collection/mutations/useColle
 import type { CollectionView } from '../../core/collection/useCollectionView';
 import { type SongSortPreset } from '../../core/collection/songSortOptions';
 import type { SongSortDirection, SongSortField } from '../../../utils/songSorting';
+import type { CollectionImportAction } from '../../core/collection/import/useCollectionImport';
 import { projectCollectionStatus, resolveWallPeriodCount } from './bravaisCollectionStatus';
 import type { BravaisLayerEntries, BravaisLayerWall, BravaisSeamCollection, BravaisSeamFilter, BravaisSeamMenuItem } from './bravaisSeamModels';
 import type { useBravaisCollectionForms } from './useBravaisCollectionForms';
@@ -26,6 +27,7 @@ type Notice = ReturnType<typeof useBravaisMutationNotice>;
 
 export type BravaisCollectionSeamInput = {
     collection: LibraryCollectionSurfaceProps['collection'];
+    collectionImport: CollectionImportAction;
     mutations: LibraryCollectionSurfaceProps['mutations'];
     snapshot: CollectionResourceSnapshot | null;
     mutationSnapshot: CollectionMutationSnapshot;
@@ -240,6 +242,13 @@ export const useBravaisCollectionSeam = (input: BravaisCollectionSeamInput) => {
     const seamCollection = useMemo<BravaisSeamCollection>(() => ({
         description,
         subscribe,
+        importCollection: input.collectionImport.supported && declares('import-collection') ? {
+            label: t(input.collectionImport.pending ? 'importSource.importingCollection' : 'importSource.importCollection'),
+            hint: t('importSource.collectionImportHint'),
+            pending: input.collectionImport.pending,
+            disabled: !input.collectionImport.enabled,
+            run: () => void latest.current.collectionImport.run(),
+        } : undefined,
         sync: syncLine,
         status,
         notice: notice.notice,
@@ -250,7 +259,7 @@ export const useBravaisCollectionSeam = (input: BravaisCollectionSeamInput) => {
         form,
     // status / syncLine 是每次渲染新算的小对象：按它们的文案比较，免得层描述白换身份。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }), [daily, description, form, menu, notice.notice, status?.tone, status?.text, subscribe, syncLine?.state, syncLine?.label, t]);
+    }), [daily, declares, description, form, input.collectionImport.enabled, input.collectionImport.pending, input.collectionImport.supported, menu, notice.notice, status?.tone, status?.text, subscribe, syncLine?.state, syncLine?.label, t]);
 
     // 墙的内容规则：补页期间的循环周期（新页只翻新 slot）、有限拼贴的规划条目数、过滤身份、首屏呼吸。
     const periodCount = resolveWallPeriodCount({ itemCount: input.itemCount, totalCount, sync });

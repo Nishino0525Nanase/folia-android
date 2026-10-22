@@ -8,7 +8,7 @@ import { getCachedCoverUrl, loadCachedOrFetchCover } from '../../../../services/
 import { ensureLocalSongCoverAsset } from '../../../../services/localMusicService';
 import { addSongsToLocalPlaylist, buildCanonicalLocalSongIdIndex, createLocalPlaylist, getLocalPlaylists, setLocalSongFavorite } from '../../../../services/localPlaylistService';
 import { applyLocalLibraryEntityDisplay, buildLocalQueue, buildNavidromeQueue, buildUnifiedLocalSong, buildUnifiedNavidromeSong, resolveLocalSongMetadata } from '../../../../services/playbackAdapters';
-import { getPrefetchedData } from '../../../../services/prefetchService';
+import { getPrefetchedData, invalidatePrefetchedLyrics } from '../../../../services/prefetchService';
 import { retireBlobUrl } from '../../../../services/playbackBlobUrls';
 import type { ThemeCacheSongKey } from '../../../../services/themeCache';
 import { hasRenderableLyrics } from '../../../../utils/appPlaybackHelpers';
@@ -31,6 +31,7 @@ import { getPlatformLyricSource } from '../../../../utils/lyrics/lyricSources';
 import { resolveExplicitFileTimedLyricFormat } from '../../../../utils/lyrics/formatDetection';
 import { applyUploadedLocalLyrics } from '../../../../utils/lyrics/localLyricsUpload';
 import { omni } from '../../../../services/onlineMusic/omni';
+import { getOptionalProviderLyrics, resolveSavedOnlineLyrics } from '../../../../services/onlineMusic/optionalLyrics';
 import { getProviderSongMetadata } from '../../../../services/onlineMusic/songMetadata';
 import { getSongResourceCacheKey } from '../../../../services/onlineMusic/resourceKeys';
 import { getSongCacheWithLegacyMigration } from '../../../../services/onlineMusic/resourceCache';
@@ -42,7 +43,7 @@ import type { AudioQualityPreference, MediaId, ProviderCollection } from '../../
 import type { PlaybackSnapshot, PlaybackNavigationOptions } from '../../../../types/appPlayback';
 import { getNavidromeMatchCacheKey, type NavidromeMatchData, type NavidromeSong } from '../../../../types/navidrome';
 import { applyQueueAddBehavior } from '../../../../utils/queueAddBehavior';
-import { loadOnlineLyricsState, resolveOnlineLyrics, saveOnlineLyricsState, getOnlineLyricsStateCacheKey } from '../../../../utils/onlineLyricsState';
+import { hasAuthoritativeOnlineLyricsSelection, loadOnlineLyricsState, resolveOnlineLyrics, saveOnlineLyricsState, getOnlineLyricsStateCacheKey } from '../../../../utils/onlineLyricsState';
 import { hasLocalSongCover } from '../../../../utils/localSongCover';
 import { isSameLocalSongRecord } from '../../../../utils/localSongRecordEquality';
 import { getLocalCoverAssetUrl } from '../../../../services/localCoverAssetUrl';
@@ -317,26 +318,23 @@ export function useLibraryPlaybackController({
         onlineSong: SongResult,
         fallbackLyrics: LyricData | null = lyrics
     ): Promise<LyricData | null> => {
+        const providerId = getPlaybackSourceRef(onlineSong);
+        if (providerId.kind === 'online' && !omni.getProviderCapabilities(providerId.providerId).lyrics) return null;
         const cachedLyrics = await getSongCacheWithLegacyMigration<LyricData>('lyric', onlineSong, migrateLyricDataRenderHints);
         if (cachedLyrics) return cachedLyrics;
 
         const prefetched = getPrefetchedData(onlineSong, audioQuality);
         if (prefetched?.lyrics) return prefetched.lyrics;
 
-        return (await omni.getLyrics(onlineSong, { userId })).lyrics ?? fallbackLyrics;
+        return (await getOptionalProviderLyrics(onlineSong, { userId })).lyrics ?? fallbackLyrics;
     }, [audioQuality, lyrics, userId]);
 
     const resolveOnlineSongLyricsState = useCallback(async (
         onlineSong: SongResult,
         fallbackLyrics: LyricData | null = lyrics
     ): Promise<{ state: OnlineLyricsState | null; lyrics: LyricData | null; }> => {
-        const state = await loadOnlineLyricsState(onlineSong);
-        const baseLyrics = await loadBaseOnlineLyrics(onlineSong, fallbackLyrics);
-        return {
-            state,
-            lyrics: resolveOnlineLyrics(state, baseLyrics),
-        };
-    }, [loadBaseOnlineLyrics, lyrics]);
+        return resolveSavedOnlineLyrics(onlineSong, () => loadBaseOnlineLyrics(onlineSong, fallbackLyrics));
+    }, [loadBaseOnlineLyrics]);
 
     // 同一文件被导入两次时，歌单里留下的是 canonical 那一份的 id，而播放中的可能是另一份副本。
     const canonicalLocalSongIds = useMemo(() => buildCanonicalLocalSongIdIndex(localSongs), [localSongs]);
@@ -1208,7 +1206,13 @@ export function useLibraryPlaybackController({
                     lrcContent: content,
                     formatHint: resolveExplicitFileTimedLyricFormat(fileName),
                 });
+            if (!isStillPlaying(currentSong)) return;
+            if (!importedLyrics) {
+                setStatusMsg({ type: 'error', text: t('lyricFile.importFailed') });
+                return;
+            }
             const previousState = await loadOnlineLyricsState(currentSong);
+            if (!isStillPlaying(currentSong)) return;
             const nextState: OnlineLyricsState = {
                 lyricsSource: 'imported',
                 importedLyrics,
@@ -1262,8 +1266,9 @@ export function useLibraryPlaybackController({
 
         try {
             await saveOnlineLyricsState(currentSong, nextState);
-            const baseLyrics = await loadBaseOnlineLyrics(currentSong, lyrics);
+            const baseLyrics = hasAuthoritativeOnlineLyricsSelection(nextState) ? null : await loadBaseOnlineLyrics(currentSong, lyrics);
             const nextLyrics = resolveOnlineLyrics(nextState, baseLyrics);
+            if (!isStillPlaying(currentSong)) return;
             const updatedSong = { ...currentSong, onlineLyricsState: nextState };
             setCurrentSong(prev => isSamePlaybackSong(prev, currentSong) ? updatedSong : prev);
             setLyrics(nextLyrics);
@@ -1313,8 +1318,10 @@ export function useLibraryPlaybackController({
         try {
             const key = getOnlineLyricsStateCacheKey(currentSong);
             await removeFromCache(key);
+            invalidatePrefetchedLyrics(currentSong);
 
             const resolved = await resolveOnlineSongLyricsState(currentSong, null);
+            if (!isStillPlaying(currentSong)) return;
             const updatedSong = {
                 ...currentSong,
                 onlineLyricsState: undefined,
@@ -1490,7 +1497,7 @@ export function useLibraryPlaybackController({
             const artistName = currentSongMetadata.artists.map(artist => artist.name).filter(Boolean).join(', ');
             const albumName = currentSongMetadata.album?.name || '';
             const sourceRef = getPlaybackSourceRef(currentSong);
-            const ownLyricsResult = await omni.getLyrics(currentSong);
+            const ownLyricsResult = await getOptionalProviderLyrics(currentSong);
             const ownLyricSource = getPlatformLyricSource(sourceRef.kind === 'online' ? sourceRef.providerId : null);
             const bestMatch = await autoMatchBestLyric(currentSong.name, artistName, currentSongMetadata.durationMs, {
                 album: albumName,

@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SongResult } from '@/types';
 import { OnlineProviderError } from '@/types/onlineMusic';
-import { clearPrefetchRuntime, getPrefetchWindowKey, getPrefetchedData, resolvePrefetchAudioUrl, shouldRefreshPrefetchAfterQueueEdit, updatePrefetchedAudioUrl } from '@/services/prefetchService';
+import { clearPrefetchRuntime, getPrefetchWindowKey, getPrefetchedData, isUrlValid, resolvePrefetchAudioUrl, shouldRefreshPrefetchAfterQueueEdit, updatePrefetchedAudioUrl } from '@/services/prefetchService';
 
 // test/unit/prefetchService.test.ts
 
@@ -39,6 +39,7 @@ const song: SongResult = {
 
 describe('prefetched online ReplayGain metadata', () => {
     beforeEach(() => clearPrefetchRuntime());
+    afterEach(() => vi.restoreAllMocks());
 
     it('keeps ReplayGain alongside a prefetched URL', () => {
         updatePrefetchedAudioUrl(song, 'https://audio.test/song.flac', 'high', {
@@ -68,6 +69,23 @@ describe('prefetched online ReplayGain metadata', () => {
             audioUrl: null,
             replayGain: undefined,
         });
+    });
+
+    it('expires a provider ticket earlier than the fixed cache TTL and keeps lyrics/cache metadata separate', () => {
+        const now = 1_000_000;
+        const clock = vi.spyOn(Date, 'now').mockReturnValue(now);
+        updatePrefetchedAudioUrl(song, 'https://audio.test/short-ticket.flac', 'high', { trackGain: -7.1 }, now + 300_000);
+        expect(getPrefetchedData(song, 'high')?.audioUrlExpiresAt).toBe(now + 300_000);
+        clock.mockReturnValue(now + 300_000);
+        expect(getPrefetchedData(song, 'high')).toMatchObject({ audioUrl: null, replayGain: undefined, audioUrlExpiresAt: undefined });
+        expect(isUrlValid(now)).toBe(true);
+    });
+
+    it('keeps the fixed TTL as the upper limit and preserves the legacy behavior without an expiry', () => {
+        vi.spyOn(Date, 'now').mockReturnValue(1_000_000 + 1_200_000);
+        expect(isUrlValid(1_000_000, 9_000_000)).toBe(false);
+        expect(isUrlValid(1_000_000)).toBe(false);
+        expect(isUrlValid(1_000_001)).toBe(true);
     });
 });
 
@@ -146,6 +164,11 @@ describe('resolvePrefetchAudioUrl', () => {
             replayGain: { trackGain: -6 },
         });
         expect(mocks.getAudioSource).toHaveBeenCalledWith(song, 'high');
+    });
+
+    it('retains the provider ticket expiration for subsequent cache validation', async () => {
+        mocks.getAudioSource.mockResolvedValueOnce({ url: 'https://audio.test/song.flac', expiresAt: 9_000_000, quality: 'high' });
+        await expect(resolvePrefetchAudioUrl(song, 'high', signal())).resolves.toMatchObject({ audioUrlExpiresAt: 9_000_000 });
     });
 
     it('answers the media-cache sentinel without asking the provider', async () => {

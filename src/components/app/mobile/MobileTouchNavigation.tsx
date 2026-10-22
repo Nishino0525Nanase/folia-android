@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo } from 'react';
-import { Library, Search, AudioLines, ListMusic, Ellipsis, Settings } from 'lucide-react';
+import { Library, Search, AudioLines, ListMusic, Ellipsis, Settings, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAppViewStore, openCommandPalette } from '../../../stores/useAppViewStore';
 import { useAppChromeStore } from '../../../stores/useAppChromeStore';
 import { useSearchNavigationStore, type SearchSource } from '../../../stores/useSearchNavigationStore';
 import { useSettingsModalStore } from '../../../stores/useSettingsModalStore';
+import { usePlaybackStore } from '../../../stores/usePlaybackStore';
+import { getPlaybackSourceRef } from '../../../utils/appPlaybackGuards';
 import Sheet from '../../shared/Sheet';
 import { createMobileNavigationActions } from './mobileNavigationActions';
 import { useMobileTouchLayout } from '../../../hooks/useMobileTouchLayout';
@@ -26,6 +28,8 @@ const MobileTouchNavigation: React.FC<MobileTouchNavigationProps> = ({ onHome, o
     const panelTab = useAppViewStore(state => state.panelTab);
     const isSearchOpen = useSearchNavigationStore(state => state.isSearchOpen);
     const isOpen = useMobileNavigationStore(state => state.isOpen);
+    const hasOnlineSong = usePlaybackStore(state => Boolean(state.currentSong
+        && getPlaybackSourceRef(state.currentSong).kind === 'online'));
     useEffect(() => {
         if (!isMobileTouch) closeMobileNavigation();
     }, [isMobileTouch]);
@@ -47,6 +51,12 @@ const MobileTouchNavigation: React.FC<MobileTouchNavigationProps> = ({ onHome, o
             useAppViewStore.getState().setPanelTab('queue');
             useAppViewStore.getState().setIsPanelOpen(true);
         },
+        openManualLyrics: () => {
+            const song = usePlaybackStore.getState().currentSong;
+            if (!song || getPlaybackSourceRef(song).kind !== 'online') return;
+            useAppViewStore.getState().setPanelTab('onlineLyrics');
+            useAppViewStore.getState().setIsPanelOpen(true);
+        },
         revealPlayer: () => useAppChromeStore.getState().setIsPlayerChromeHidden(false),
         openSettings: () => useSettingsModalStore.getState().openSettings('options'),
         openCommands: openCommandPalette,
@@ -57,8 +67,9 @@ const MobileTouchNavigation: React.FC<MobileTouchNavigationProps> = ({ onHome, o
     const items = [
         { id: 'library', icon: Library, active: view === 'home' && !isSearchOpen },
         { id: 'search', icon: Search, active: isSearchOpen },
-        { id: 'lyrics', icon: AudioLines, active: view === 'player' && !(isPanelOpen && panelTab === 'queue') },
+        { id: 'lyrics', icon: AudioLines, active: view === 'player' && !(isPanelOpen && (panelTab === 'queue' || panelTab === 'onlineLyrics')) },
         { id: 'queue', icon: ListMusic, active: view === 'player' && isPanelOpen && panelTab === 'queue' },
+        ...(hasOnlineSong ? [{ id: 'manualLyrics' as const, icon: FileText, active: view === 'player' && isPanelOpen && panelTab === 'onlineLyrics' }] : []),
         { id: 'more', icon: Ellipsis, active: false },
         { id: 'settings', icon: Settings, active: false },
     ] as const;

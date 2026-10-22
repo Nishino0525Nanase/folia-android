@@ -2,6 +2,19 @@
 
 export default {
   "importSource": {
+    "loginRequired": "Sign in to Bilibili first",
+    "loginExpired": "Your Bilibili sign-in expired. Sign in again.",
+    "invalidResponse": "Could not read the platform response. Try again later.",
+    "sessionUnavailable": "Account connection service is unavailable",
+    "favoriteUnavailable": "This favorite folder is missing or inaccessible to this account",
+    "favoriteFirstPart": "Favorite videos play their first part. Import a video link to choose another part.",
+    "favoriteImported": "Favorite folder imported",
+    "importCollection": "Import favorites",
+    "importingCollection": "Importing…",
+    "collectionImportHint": "Saves media references to Imported videos; does not download audio.",
+    "collectionImported": "Imported {{count}} tracks to Imported videos",
+    "collectionImportFailed": "Could not import this collection. Please try again.",
+
     "serviceUnavailable": "Import service is unavailable",
     "platformRestricted": "Bilibili restricted this request. Open the original video.",
     "videoUnavailable": "The video or part is missing or inaccessible",
@@ -23,6 +36,8 @@ export default {
     "accountlessHint": "Search for music directly, or import your local songs."
   },
   "mobileTouch": {
+    "manualLyrics": "Manual lyrics",
+
     "expand": "Expand playback controls",
     "collapse": "Collapse playback controls",
     "play": "Play",
@@ -758,6 +773,7 @@ export default {
       "grid-sort-direction": { "title": "Reverse sort order", "description": "Switch the local track list between ascending and descending" },
       "grid-toggle-info-panel": { "title": "Toggle collection panel", "description": "Show or hide the collection info and actions panel" },
       "grid-toggle-track-list": { "title": "Toggle track list", "description": "Show or hide the track list beside the grid" },
+      "grid-import-collection": {"title": "Import current favorites", "description": "Save this collection’s media references to Imported videos"},
       "grid-resync-folder": { "title": "Reimport this folder", "description": "Scan this local folder again and refresh its songs" },
       "grid-resync-all-folders": { "title": "Reimport every folder", "description": "Scan every local folder again and refresh the library" },
       "grid-organize-song-info": { "title": "Organize song info", "description": "Clean up the titles, artists and albums of this folder" },
@@ -1150,6 +1166,8 @@ export default {
     "nothingSelected": "Pick at least one source and one format"
   },
   "lyricFile": {
+    "importFailed": "Could not import the lyric file. Check its format or encoding.",
+
     "button": "Import / export lyrics",
     "title": "Lyric file",
     "description": "Import a lyric file to replace the version on screen, or save this song’s lyrics as a file.",
@@ -1529,6 +1547,9 @@ export default {
     "signIn": "Sign in"
   },
   "home": {
+    "loginTitleBilibili": "Sign in to Bilibili and read favorites",
+    "loginNoteBilibili": "Scan and approve with your own Bilibili app. On the same phone, take a screenshot and select it from the scanner album. Your sign-in is used to read favorites and request audio.",
+
     "welcome": "Welcome to Folia",
     "lattice": "Queue collage",
     "latticeLabel": "Queue collage",
@@ -3998,7 +4019,7 @@ export default {
     "kugouNoCover": "Kugou does not provide cover art, so local cover art will be kept.",
     "artistLabel": "Artist",
     "albumLabel": "Album",
-    "noSelection": "Select a song on the left",
+    "noSelection": "Select a song to preview its lyrics",
     "lyricPreview": "Lyric Preview",
     "clickToPreview": "Click to Preview",
     "wordByWord": "Word-by-word",

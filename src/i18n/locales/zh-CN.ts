@@ -2,6 +2,19 @@
 
 export default {
   "importSource": {
+    "loginRequired": "请先登录 B 站账号",
+    "loginExpired": "B 站登录已过期，请重新登录",
+    "invalidResponse": "B 站返回的数据无法读取，请稍后重试",
+    "sessionUnavailable": "账号连接服务尚未就绪",
+    "favoriteUnavailable": "这个收藏夹不存在，或当前账号无法访问",
+    "favoriteFirstPart": "收藏夹视频默认播放首 P；需要其他分 P 时可使用视频链接导入。",
+    "favoriteImported": "收藏夹已导入",
+    "importCollection": "导入收藏夹",
+    "importingCollection": "正在导入…",
+    "collectionImportHint": "仅保存歌曲引用到“已导入的视频”，不下载音频。",
+    "collectionImported": "已导入 {{count}} 首到“已导入的视频”",
+    "collectionImportFailed": "收藏夹导入失败，请重试。",
+
     "serviceUnavailable": "导入服务暂时不可用",
     "platformRestricted": "B 站限制了此请求，请打开原视频播放",
     "videoUnavailable": "视频或分 P 不存在，或当前无法访问",
@@ -23,6 +36,8 @@ export default {
     "accountlessHint": "可直接搜索音乐，或导入本地歌曲。"
   },
   "mobileTouch": {
+    "manualLyrics": "手动歌词",
+
     "expand": "展开播放控制",
     "collapse": "收起播放控制",
     "play": "播放",
@@ -759,6 +774,7 @@ export default {
       "grid-sort-direction": { "title": "反转排序方向", "description": "在正序和倒序之间切换本地曲目列表" },
       "grid-toggle-info-panel": { "title": "切换合集面板", "description": "显示或隐藏合集信息与操作面板" },
       "grid-toggle-track-list": { "title": "切换曲目列表", "description": "显示或隐藏网格旁的曲目列表" },
+      "grid-import-collection": {"title": "导入当前收藏夹", "description": "把这个收藏夹的歌曲引用保存到已导入列表"},
       "grid-resync-folder": { "title": "重新导入此文件夹", "description": "重新扫描这个本地文件夹并刷新其中的歌曲" },
       "grid-resync-all-folders": { "title": "重新导入全部文件夹", "description": "重新扫描所有本地文件夹并刷新曲库" },
       "grid-organize-song-info": { "title": "整理歌曲信息", "description": "整理这个文件夹里歌曲的标题、艺人和专辑" },
@@ -1151,6 +1167,8 @@ export default {
     "nothingSelected": "至少选一个范围和一种格式"
   },
   "lyricFile": {
+    "importFailed": "歌词文件导入失败，请检查文件格式或编码。",
+
     "button": "导入 / 导出歌词",
     "title": "歌词文件",
     "description": "导入歌词文件替换当前显示的版本，或把这首歌的歌词存成文件。",
@@ -1530,6 +1548,9 @@ export default {
     "signIn": "登录"
   },
   "home": {
+    "loginTitleBilibili": "登录 B 站并读取收藏夹",
+    "loginNoteBilibili": "请使用本人登录的 B 站 App 扫码确认；同一台手机可截图后，在 B 站扫一扫中从相册识别。登录用于读取你的收藏夹和请求音频。",
+
     "welcome": "欢迎使用 Folia",
     "lattice": "队列拼贴",
     "latticeLabel": "队列拼贴",
@@ -3999,7 +4020,7 @@ export default {
     "kugouNoCover": "酷狗音乐暂不提供封面，选择封面时会保留本地封面。",
     "artistLabel": "歌手",
     "albumLabel": "专辑",
-    "noSelection": "请在左侧选择一首歌曲",
+    "noSelection": "选择一首歌曲预览歌词",
     "lyricPreview": "歌词预览",
     "clickToPreview": "点击预览歌词",
     "wordByWord": "逐字",

@@ -1,0 +1,132 @@
+/* Phone matching keeps the existing search, preview and footer in one scrollable column. */
+@media (max-width: 767px) {
+    [data-lyric-source-actions] > button,
+    [data-lyric-source-panel] > [role="group"]:first-child button,
+    [data-lyric-timeline-offset] button {
+        min-height: 44px;
+        min-width: 44px;
+        touch-action: manipulation;
+    }
+
+    [data-lyric-source-panel] > [role="group"]:first-child [role="group"] {
+        height: 48px;
+    }
+
+    [data-lyric-timeline-offset] span:has(> input[role="spinbutton"]) {
+        height: 44px;
+    }
+
+    [data-lyric-timeline-offset] input[role="spinbutton"] {
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    .folia-lyric-match-overlay {
+        padding: max(8px, var(--folia-safe-area-top, env(safe-area-inset-top, 0px))) 8px max(8px, var(--folia-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+        backdrop-filter: none;
+    }
+
+    .folia-lyric-match {
+        height: min(900px, calc(100dvh - 16px - var(--folia-safe-area-top, env(safe-area-inset-top, 0px)) - var(--folia-safe-area-bottom, env(safe-area-inset-bottom, 0px))));
+        max-height: 100%;
+        min-height: 0;
+        backdrop-filter: none;
+    }
+
+    .folia-lyric-match button {
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+
+    .folia-lyric-match-header,
+    .folia-lyric-match-footer {
+        flex-shrink: 0;
+        padding: 8px 12px;
+        gap: 8px;
+    }
+
+    .folia-lyric-match-header > button {
+        min-width: 44px;
+        flex-shrink: 0;
+    }
+
+    .folia-lyric-match-body {
+        flex-direction: column;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .folia-lyric-match-candidates,
+    .folia-lyric-match-preview {
+        width: 100%;
+        min-width: 0;
+        flex-shrink: 0;
+        border-left: 0;
+        border-right: 0;
+    }
+
+    .folia-lyric-match-candidates > div:first-child {
+        padding: 8px 12px;
+    }
+
+    .folia-lyric-match-sources {
+        overflow-x: auto;
+        gap: 12px;
+        margin-bottom: 8px;
+        padding-bottom: 0;
+        scrollbar-width: thin;
+    }
+
+    .folia-lyric-match-sources button {
+        flex-shrink: 0;
+        padding: 8px;
+        white-space: nowrap;
+    }
+
+    .folia-lyric-match-search {
+        gap: 8px;
+    }
+
+    .folia-lyric-match-search > div {
+        gap: 8px;
+        padding: 8px 10px;
+    }
+
+    .folia-lyric-match-search input {
+        font-size: 16px;
+    }
+
+    .folia-lyric-match-search svg {
+        flex-shrink: 0;
+    }
+
+    .folia-lyric-match-results {
+        flex: 0 1 auto;
+        max-height: 34dvh;
+        padding: 0 12px 12px;
+        overscroll-behavior-y: contain;
+    }
+
+    .folia-lyric-match-preview {
+        border-top-width: 1px;
+        border-top-style: solid;
+        padding: 12px;
+    }
+
+    .folia-lyric-match-preview-info {
+        flex: none;
+        overflow: visible;
+        padding: 0;
+    }
+
+    .folia-lyric-match-cover {
+        width: 64px;
+        height: 64px;
+        min-height: 64px;
+    }
+
+    .folia-lyric-match-footer > button {
+        flex: 1 1 0;
+        justify-content: center;
+    }
+}

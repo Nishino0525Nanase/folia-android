@@ -36,6 +36,11 @@ export const saveOnlineLyricsState = async (song: SongResult, state: OnlineLyric
     await saveToCache(key, migrateOnlineLyricsState(state).value);
 };
 
+/** A saved manual choice, including "instrumental", must not depend on the source's lyric API. */
+export const hasAuthoritativeOnlineLyricsSelection = (state: OnlineLyricsState | null | undefined): boolean => (
+    Boolean(state?.hasOnlineOverride || (state?.lyricsSource === 'imported' && state.importedLyrics))
+);
+
 export const resolveOnlineLyrics = (
     state: OnlineLyricsState | null | undefined,
     fallbackLyrics: OnlineLyricsState['onlineOverrideLyrics']

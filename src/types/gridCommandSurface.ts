@@ -33,6 +33,7 @@ export type GridSurfaceActionId =
     | 'edit-entity'
     | 'toggle-edit-mode'
     | 'reload-online-collection'
+    | 'import-collection'
     | 'toggle-subscribe';
 
 export type GridSurfaceState = {

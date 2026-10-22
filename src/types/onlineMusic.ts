@@ -842,6 +842,8 @@ export interface OnlineMusicProvider {
         resolve(input: string): Promise<UnifiedSong[]>;
         getImported?(): Promise<UnifiedSong[]>;
         getInputPageUrl?(input: string): string | null;
+        /** Saves this provider's collection as local media references; does not download audio. */
+        importCollection?(collection: ProviderCollection): Promise<UnifiedSong[]>;
     };
     playback?: OnlinePlaybackProvider;
     playbackReports?: OnlinePlaybackReportProvider;

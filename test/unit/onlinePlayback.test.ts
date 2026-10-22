@@ -21,6 +21,7 @@ vi.mock('@/services/onlineMusic/omni', () => ({
     omni: {
         getAudioSource: sourceMock,
         getLyrics: lyricsMock,
+        getProviderCapabilities: () => ({ lyrics: true }),
         getAlternateArtistName: otherArtistNameMock,
         resolveAudioQuality: (_providerId: string, preference: string) => preference,
         isPreviewAudioSource: () => false,
@@ -42,7 +43,6 @@ vi.mock('@/utils/lyrics/autoMatchBestLyric', () => ({
 vi.mock('@/utils/onlineLyricsState', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/utils/onlineLyricsState')>()),
     loadOnlineLyricsState: loadLyricsStateMock,
-    resolveOnlineLyrics: (_state: unknown, lyrics: unknown) => lyrics,
     saveOnlineLyricsState: saveLyricsStateMock,
 }));
 
@@ -134,6 +134,7 @@ describe('online audio ReplayGain plumbing', () => {
         sourceMock.mockResolvedValue({
             url: 'https://audio.test/song.flac',
             fetchedAt: 1,
+            expiresAt: 99_999,
             quality: 'high',
             replayGain: { trackGain: -12.1, trackPeak: 0.95 },
         });
@@ -150,6 +151,7 @@ describe('online audio ReplayGain plumbing', () => {
             'https://audio.test/song.flac',
             'high',
             { trackGain: -12.1, trackPeak: 0.95 },
+            99_999,
         );
     });
 
@@ -184,7 +186,7 @@ describe('online audio ReplayGain plumbing', () => {
         if (result.kind === 'ok') {
             expect(result.replayGain).toBeUndefined();
         }
-        expect(updatePrefetchedAudioUrlMock).toHaveBeenCalledWith(song, 'https://audio.test/song.mp3', 'high', undefined);
+        expect(updatePrefetchedAudioUrlMock).toHaveBeenCalledWith(song, 'https://audio.test/song.mp3', 'high', undefined, undefined);
     });
 });
 

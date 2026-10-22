@@ -102,6 +102,7 @@ export type BravaisSeamCollection = {
      */
     description?: string;
     subscribe?: BravaisSeamSubscribe;
+    importCollection?: { label: string; hint: string; pending: boolean; disabled: boolean; run: () => void };
     sync?: BravaisSeamSync;
     status?: BravaisSeamStatus;
     notice?: BravaisSeamNotice | null;

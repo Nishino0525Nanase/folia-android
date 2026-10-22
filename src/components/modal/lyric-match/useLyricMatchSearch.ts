@@ -38,13 +38,35 @@ export const useLyricMatchSearch = (
     songInfo: LyricMatchSongInfo,
     { pickResult, resetsQueryOnSourceChange }: LyricMatchSearchOptions = {},
 ) => {
-    const [source, setSource, sources] = useLyricMatchSourceChoice();
+    const [source, chooseSource, sources] = useLyricMatchSourceChoice();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SongResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [selectedResult, setSelectedResult] = useState<SongResult | null>(null);
     const requestIdRef = useRef(0);
     const searchedSourceRef = useRef(source);
+    const latestIdentityRef = useRef({ song, source });
+    latestIdentityRef.current = { song, source };
+    const [resultContext, setResultContext] = useState<{ song: unknown; source: LyricProviderSource } | null>(null);
+    const hasCurrentResults = resultContext?.song === song && resultContext?.source === source;
+    const visibleResults = hasCurrentResults ? results : [];
+    const visibleSelection = hasCurrentResults ? selectedResult : null;
+    const latestSelectionRef = useRef({ results: visibleResults, selectedResult: visibleSelection, isSearching });
+    latestSelectionRef.current = { results: visibleResults, selectedResult: visibleSelection, isSearching };
+
+    // A removed account, source switch or closed window invalidates any late search answer.
+    useEffect(() => () => { requestIdRef.current += 1; }, []);
+
+    const setSource = (next: LyricProviderSource) => {
+        if (next === source) return;
+        requestIdRef.current += 1;
+        latestIdentityRef.current = { song, source: next };
+        latestSelectionRef.current = { results: [], selectedResult: null, isSearching: true };
+        setResults([]);
+        setSelectedResult(null);
+        setResultContext(null);
+        chooseSource(next);
+    };
 
     const songQuery = buildLyricSearchQuery(songInfo.title, songInfo.artist, songInfo.album);
 
@@ -64,20 +86,25 @@ export const useLyricMatchSearch = (
         }
 
         const requestId = ++requestIdRef.current;
+        const targetSong = song;
+        const isCurrent = () => requestId === requestIdRef.current
+            && latestIdentityRef.current.song === targetSong
+            && latestIdentityRef.current.source === activeSource;
         setIsSearching(true);
         setResults([]);
         setSelectedResult(null);
+        setResultContext({ song: targetSong, source: activeSource });
 
         try {
             const found = await searchLyricsByMatchSource(activeSource, text, songInfo);
-            if (requestId !== requestIdRef.current) return;
+            if (!isCurrent()) return;
 
             setResults(found);
             setSelectedResult(pickResult?.(found) ?? null);
         } catch (error) {
-            console.error('[LyricMatch] Search failed:', error);
+            if (isCurrent()) console.error('[LyricMatch] Search failed:', error);
         } finally {
-            if (requestId === requestIdRef.current) {
+            if (isCurrent()) {
                 setIsSearching(false);
             }
         }
@@ -107,10 +134,25 @@ export const useLyricMatchSearch = (
         sources,
         query,
         setQuery,
-        results,
+        results: visibleResults,
         isSearching,
-        selectedResult,
-        setSelectedResult,
+        selectedResult: visibleSelection,
+        setSelectedResult: (result: SongResult | null) => {
+            if (result === null) {
+                setSelectedResult(null);
+            } else if (latestIdentityRef.current.song === song && latestIdentityRef.current.source === source
+                && latestSelectionRef.current.results.includes(result) && !latestSelectionRef.current.isSearching) {
+                setSelectedResult(result);
+            }
+        },
+        /** A save must still refer to the result chosen for this song and this lyric source. */
+        isSelectionCurrent: (result: SongResult, expectedSource: LyricProviderSource) => (
+            latestIdentityRef.current.song === song
+            && latestIdentityRef.current.source === expectedSource
+            && latestSelectionRef.current.selectedResult === result
+            && latestSelectionRef.current.results.includes(result)
+            && !latestSelectionRef.current.isSearching
+        ),
         /** Searches the text in the box on the source the window is on. */
         submit: () => runSearch(query, source),
     };

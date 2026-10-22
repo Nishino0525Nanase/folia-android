@@ -86,6 +86,8 @@ import {
     useLibraryBrowseSessionStore,
 } from '../../../core/shared/useLibraryBrowseSessionStore';
 import { useTrackSorting } from '../../../core/collection/useTrackSorting';
+import { useCollectionImport } from '../../../core/collection/import/useCollectionImport';
+import { CollectionImportButton } from '../../../core/collection/import/CollectionImportButton';
 
 interface GridViewProps {
     title: string;
@@ -1575,6 +1577,8 @@ export const GridView: React.FC<GridViewProps> = ({
     const infoPanelCoverUrl = infoCollection?.coverUrl || '';
     // 只有 tracks 模式下的合集才有切入面板，没有面板时标题不做成可点控件
     const hasCutInPanel = mode === 'tracks' && Boolean(collection);
+    const collectionImport = useCollectionImport(mode === 'tracks' ? collection : null,
+        isActive && (!declaredActions || declaredActions.actions.includes('import-collection')));
 
     // Everything the palette is allowed to do to this grid, and the branch rules that decide which
     // of it applies. Declared next to the buttons it mirrors so the two cannot disagree; the actual
@@ -1593,6 +1597,8 @@ export const GridView: React.FC<GridViewProps> = ({
         setSortDirection: sorting.setDirection,
         setSortPreset: sorting.applyPreset,
         canReloadOnlineCollection: canReloadThisCollection && !loading,
+        canImportCollection: collectionImport.enabled,
+        importCollection: () => void collectionImport.run(),
         playFiltered: () => onPlayAll?.(contextActionTracks),
         enqueueFiltered: () => onAddAllToQueue?.(contextActionTracks),
         reloadOnlineCollection,
@@ -1732,6 +1738,12 @@ export const GridView: React.FC<GridViewProps> = ({
                     <p className="mt-0.5 max-w-[min(40rem,calc(100vw-8rem))] text-xs leading-relaxed opacity-50 line-clamp-2 whitespace-normal break-words">
                         {infoCollection?.description || subtitle}
                     </p>
+                )}
+                {collectionImport.supported && (
+                    <div className="mt-2 flex max-w-[calc(100vw-6rem)] flex-col items-center gap-1" onClick={event => event.stopPropagation()}>
+                        <CollectionImportButton action={collectionImport} />
+                        <p className="text-[10px] leading-relaxed opacity-55">{t('importSource.collectionImportHint')}</p>
+                    </div>
                 )}
             </div>
 

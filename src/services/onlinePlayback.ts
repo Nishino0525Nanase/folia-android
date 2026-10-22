@@ -3,7 +3,7 @@ import { saveToCache } from './db';
 import { PrefetchedSongData, isUrlValid, updatePrefetchedAudioUrl } from './prefetchService';
 import { isPureMusicLyricText } from '../utils/lyrics/pureMusic';
 import { migrateLyricDataRenderHints } from '../utils/lyrics/renderHints';
-import { loadOnlineLyricsState, markOnlineLyricsPureMusic, resolveOnlineLyrics, resolveOnlineLyricsPureMusic, saveOnlineLyricsState } from '../utils/onlineLyricsState';
+import { hasAuthoritativeOnlineLyricsSelection, loadOnlineLyricsState, markOnlineLyricsPureMusic, resolveOnlineLyrics, resolveOnlineLyricsPureMusic, saveOnlineLyricsState } from '../utils/onlineLyricsState';
 import { autoMatchBestLyric } from '../utils/lyrics/autoMatchBestLyric';
 import { getPlatformLyricSource } from '../utils/lyrics/lyricSources';
 import { resolveLyricSourcePreference } from '../utils/lyrics/lyricSourcePreference';
@@ -23,6 +23,7 @@ import { useLyricSettingsStore } from '../stores/useLyricSettingsStore';
 import { useOnlineProviderAccountStore } from '../stores/useOnlineProviderAccountStore';
 import { saveLyricCacheSongMetadata } from './lyricExport/lyricCacheMetadata';
 import { errorFields } from '../utils/errorText';
+import { getOptionalProviderLyrics } from './onlineMusic/optionalLyrics';
 
 // How long playback waits for a stored copy's header to give its play length (`wholeCopy`). Past
 // it the copy plays untested: the check must not hold up a song that starts from the cache.
@@ -113,7 +114,7 @@ export async function loadOnlineSongAudioSource(
     const fromCopy = await playCopy(await readCopy(level));
     if (fromCopy) return fromCopy;
 
-    if (prefetched?.audioUrl && prefetched.audioUrl !== 'CACHED_IN_DB' && isUrlValid(prefetched.audioUrlFetchedAt)) {
+    if (prefetched?.audioUrl && prefetched.audioUrl !== 'CACHED_IN_DB' && isUrlValid(prefetched.audioUrlFetchedAt, prefetched.audioUrlExpiresAt)) {
         return {
             kind: 'ok',
             audioSrc: prefetched.audioUrl,
@@ -150,7 +151,7 @@ export async function loadOnlineSongAudioSource(
         const url = thrown === undefined ? toPlayableAudioUrl(source?.url) : null;
         if (url) {
             const replayGain = applyOnlineAudioSourceMetadata(song, source?.replayGain).replayGain;
-            updatePrefetchedAudioUrl(song, url, audioQuality, replayGain);
+            updatePrefetchedAudioUrl(song, url, audioQuality, replayGain, source?.expiresAt);
             return { kind: 'ok', audioSrc: url, replayGain, preview: omni.isPreviewAudioSource(url) };
         }
         const failure = thrown === undefined
@@ -200,11 +201,18 @@ export async function loadOnlineSongLyrics(
     if (!isCurrent()) return;
     onStateChange?.(onlineLyricsState);
 
+    if (hasAuthoritativeOnlineLyricsSelection(onlineLyricsState)) {
+        const selectedLyrics = resolveOnlineLyrics(onlineLyricsState, null);
+        onPureMusicChange?.(resolveOnlineLyricsPureMusic(onlineLyricsState, selectedLyrics?.lines.map(line => line.fullText).join('\n') ?? ''));
+        onLyrics(selectedLyrics);
+        onDone();
+        return;
+    }
+
     const cachedLyrics = await getSongCacheWithLegacyMigration<LyricData>('lyric', song, migrateLyricDataRenderHints);
     if (!isCurrent()) return;
     const preferredCachedLyrics = resolveOnlineLyrics(onlineLyricsState, cachedLyrics);
-    const hasAuthoritativeLyricsSelection = onlineLyricsState?.lyricsSource === 'imported'
-        || Boolean(onlineLyricsState?.hasOnlineOverride);
+    const hasAuthoritativeLyricsSelection = hasAuthoritativeOnlineLyricsSelection(onlineLyricsState);
     if (preferredCachedLyrics && (hasAuthoritativeLyricsSelection || !initialSettingsLyricSettings.autoUseBestLyric)) {
         const cachedText = preferredCachedLyrics.lines.map(line => line.fullText).join('\n');
         onPureMusicChange?.(resolveOnlineLyricsPureMusic(onlineLyricsState, cachedText));
@@ -253,7 +261,7 @@ export async function loadOnlineSongLyrics(
             chorusRanges: [],
           }
         : await (async () => {
-            const result = await omni.getLyrics(song, { userId });
+            const result = await getOptionalProviderLyrics(song, { userId });
             return {
                 mainLrc: result.mainText ?? null,
                 yrcLrc: result.wordByWordText ?? null,

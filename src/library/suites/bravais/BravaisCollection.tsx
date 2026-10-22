@@ -29,9 +29,10 @@ import { useBravaisPlaybackMarks } from './useBravaisPlaybackMarks';
 import { useBravaisSessionFocus } from './useBravaisSessionFocus';
 import { projectBravaisSeamAlbum } from './bravaisAlbumModel';
 import { assignAlbumCoverArt } from './bravaisAlbumWall';
+import { useCollectionImport } from '../../core/collection/import/useCollectionImport';
 
 // src/library/suites/bravais/BravaisCollection.tsx
-// 集合 surface（B7：全部 23 个动作）。它不画墙：订阅 core binding，把曲目投影成层描述推进 stage store，再向命令面板注册
+// 集合 surface（B7：集合动作与本机引用导入）。它不画墙：订阅 core binding，把曲目投影成层描述推进 stage store，再向命令面板注册
 // 集合动作（useGridSurfaceRegistration + buildCoreSurfaceParams，按 entry 的声明过滤）。画面上只有一个不可见、铺满的
 // 锚点（页面教程的 none 标记与探针要的语义属性）。
 // 双模式（设计稿 §4）：没有过滤时层是无限拼贴（全部条目），过滤时退化为有限拼贴（只放匹配项，严格 rank），清空后翻回
@@ -77,6 +78,7 @@ const BravaisCollection: React.FC<LibraryCollectionSurfaceProps> = ({
     const view = useCollectionView({ tracks, committedQuery: filter.committedQuery, localSort });
     const actions = useCollectionActions({ resource, snapshot, view, port: playback, collectionType: collection.type });
     const mutationSnapshot = useCollectionMutationSnapshot(mutations);
+    const collectionImport = useCollectionImport(collection, isActive && declaredActions.actions.includes('import-collection'));
 
     // 命令面板：与网格、TUI 同一个构建函数，按 entry 的声明过滤；bravais 没有网格的三个局部动作（见 entry）。
     const surfaceParams = buildCoreSurfaceParams({
@@ -84,6 +86,8 @@ const BravaisCollection: React.FC<LibraryCollectionSurfaceProps> = ({
         supportsLocalTrackSorting,
         availableSortPresets: supportsTrackSorting ? sorting.presets : [],
         canReloadOnlineCollection: actions.capabilities.reload.enabled,
+        canImportCollection: collectionImport.enabled,
+        importCollection: () => void collectionImport.run(),
         filteredTrackCount: view.contextTracks.length,
         isFilterActive: view.isFilterActive,
         sortField: sorting.field,
@@ -165,6 +169,7 @@ const BravaisCollection: React.FC<LibraryCollectionSurfaceProps> = ({
     const { seamCollection, filter: seamFilter, wall, entries, matchLabel } = useBravaisCollectionSeam({
         collection,
         mutations,
+        collectionImport,
         snapshot,
         mutationSnapshot,
         view,

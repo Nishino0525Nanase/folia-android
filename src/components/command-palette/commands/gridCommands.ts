@@ -1,4 +1,4 @@
-import { ArrowDownUp, CalendarClock, Clock, FolderSync, Heart, ListMusic, ListOrdered, PanelLeft, PanelRight, Pencil, Play, RefreshCw, Share, SquarePen, Star, Tags, Type, User } from 'lucide-react';
+import { ArrowDownUp, CalendarClock, Clock, Download, FolderSync, Heart, ListMusic, ListOrdered, PanelLeft, PanelRight, Pencil, Play, RefreshCw, Share, SquarePen, Star, Tags, Type, User } from 'lucide-react';
 import { createGridSurfaceCommand } from '../commandFactories';
 import type { CommandPaletteCommand } from '../types';
 
@@ -86,6 +86,14 @@ export const gridCommands: CommandPaletteCommand[] = [
         ['sort default', 'original order', '默认顺序', '原序'],
         'sort-default',
         ListMusic,
+    ),
+    createGridSurfaceCommand(
+        'grid-import-collection',
+        'Import this collection',
+        'Save its media references to imported videos without downloading audio',
+        ['import collection', 'import favorites', '导入收藏夹', '导入歌单'],
+        'import-collection',
+        Download,
     ),
     createGridSurfaceCommand(
         'grid-sort-file-name',

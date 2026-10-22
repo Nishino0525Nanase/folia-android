@@ -38,6 +38,7 @@ export type CoreSurfaceParams = {
     canToggleSubscribe: boolean;
     /** Online collection that can be fetched again past its cache; false while a load is running. */
     canReloadOnlineCollection: boolean;
+    canImportCollection?: boolean;
     /** A source action is in flight; the disk and network actions grey out, exactly as the buttons do. */
     isSourceActionPending: boolean;
     /** 订阅切换进行中（订阅按钮此时禁用）。 */
@@ -68,6 +69,7 @@ export type CoreSurfaceParams = {
     editEntity: () => void;
     toggleSubscribe: () => void;
     reloadOnlineCollection: () => void;
+    importCollection?: () => void;
 };
 
 /** renderer 那一半：suite 自己的局部动作（extraActions）。没有这些面板的 renderer 不给。 */
@@ -110,9 +112,11 @@ export type CoreSurfaceInputs = {
 
     /** 重新拉取此刻可用（useCollectionActions 的 capabilities.reload.enabled）。 */
     canReloadOnlineCollection: boolean;
+    canImportCollection?: boolean;
     playFiltered: () => void;
     enqueueFiltered: () => void;
     reloadOnlineCollection: () => void;
+    importCollection?: () => void;
 
     /** renderer 订阅到的控制器快照（没有控制器时是 EMPTY_COLLECTION_MUTATION_SNAPSHOT：什么都不支持）。 */
     mutationSnapshot: CollectionMutationSnapshot;
@@ -156,6 +160,7 @@ export const buildCoreSurfaceParams = (
         supportsLocalTrackSorting: inputs.supportsLocalTrackSorting,
         availableSortPresets: inputs.availableSortPresets,
         canReloadOnlineCollection: inputs.canReloadOnlineCollection,
+        canImportCollection: inputs.canImportCollection,
         canResyncFolder: hasController && capabilities.resyncFolder.supported,
         canResyncAllFolders: hasController && capabilities.resyncAllFolders.supported,
         canOrganizeSongInfo: hasController && capabilities.organizeSongInfo.supported,
@@ -179,6 +184,7 @@ export const buildCoreSurfaceParams = (
             inputs.setSortDirection(preset.direction);
         }),
         reloadOnlineCollection: inputs.reloadOnlineCollection,
+        importCollection: inputs.importCollection,
         // 结果不在这里处理，与面板按钮一致（失败由控制器经端口的 statusMessage 报出）。
         resyncFolder: () => void mutations?.resyncFolder(),
         resyncAllFolders: () => void mutations?.resyncAllFolders(),
@@ -218,6 +224,7 @@ export const GRID_SURFACE_ACTION_SOURCES: Readonly<Record<GridSurfaceActionId, {
     'edit-entity': { action: 'edit-entity' },
     'toggle-edit-mode': { extra: 'toggle-edit-mode' },
     'reload-online-collection': { action: 'reload' },
+    'import-collection': { action: 'import-collection' },
     'toggle-subscribe': { action: 'subscribe' },
 };
 
@@ -305,6 +312,9 @@ export const buildGridSurfaceState = (params: GridSurfaceParams): GridSurfaceSta
     if (params.canReloadOnlineCollection) {
         availableActions.push('reload-online-collection');
     }
+    if (params.canImportCollection && params.importCollection) {
+        availableActions.push('import-collection');
+    }
     // 订阅按钮在切换进行中禁用，命令跟着退场。
     if (params.canToggleSubscribe && !params.isSubscribing) {
         availableActions.push('toggle-subscribe');
@@ -361,6 +371,7 @@ export const runGridSurfaceAction = (action: GridSurfaceActionId, params: GridSu
         case 'edit-entity': return params.editEntity();
         case 'toggle-edit-mode': return params.toggleEditMode();
         case 'reload-online-collection': return params.reloadOnlineCollection();
+        case 'import-collection': return params.importCollection?.();
         case 'toggle-subscribe': return params.toggleSubscribe();
         default: return;
     }

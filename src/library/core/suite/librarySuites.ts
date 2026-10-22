@@ -58,6 +58,7 @@ export const LIBRARY_ACTION_IDS: readonly LibraryActionId[] = [
     'filter',
     'sort',
     'reload',
+    'import-collection',
     'resume-sync',
     'remove-entry',
     'subscribe',

@@ -9,6 +9,7 @@ export type MobileNavigationActionsDeps = {
     hideSearch: () => void;
     closePanel: () => void;
     openQueue: () => void;
+    openManualLyrics: () => void;
     revealPlayer: () => void;
     openSettings: () => void;
     openCommands: () => void;
@@ -36,6 +37,12 @@ export const createMobileNavigationActions = (deps: MobileNavigationActionsDeps)
         deps.revealPlayer();
         deps.navigatePlayer();
         deps.openQueue();
+    },
+    manualLyrics: () => {
+        deps.hideSearch();
+        deps.revealPlayer();
+        deps.navigatePlayer();
+        deps.openManualLyrics();
     },
     more: deps.openCommands,
     settings: deps.openSettings,

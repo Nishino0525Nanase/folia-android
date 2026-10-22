@@ -74,6 +74,7 @@ const grid: LibrarySuiteManifest = {
                 'filter',
                 'sort',
                 'reload',
+                'import-collection',
                 'resume-sync',
                 'remove-entry',
                 'subscribe',

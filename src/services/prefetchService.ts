@@ -11,11 +11,12 @@ import { isPureMusicLyricText } from '../utils/lyrics/pureMusic';
 import { autoMatchBestLyric } from '../utils/lyrics/autoMatchBestLyric';
 import { resolveLyricSourcePreference } from '../utils/lyrics/lyricSourcePreference';
 import { getPlatformLyricSource } from '../utils/lyrics/lyricSources';
-import { loadOnlineLyricsState, markOnlineLyricsPureMusic, resolveOnlineLyrics, saveOnlineLyricsState } from '../utils/onlineLyricsState';
+import { hasAuthoritativeOnlineLyricsSelection, loadOnlineLyricsState, markOnlineLyricsPureMusic, resolveOnlineLyrics, resolveOnlineLyricsPureMusic, saveOnlineLyricsState } from '../utils/onlineLyricsState';
 import type { AudioQualityPreference, MediaId } from '../types/onlineMusic';
 import { getPlaybackSourceRef } from '../utils/appPlaybackGuards';
 import { nextTransitionSong, queueIndexOf } from '../utils/playbackNeighbors';
 import { omni } from './onlineMusic/omni';
+import { getOptionalProviderLyrics } from './onlineMusic/optionalLyrics';
 import { getSongResourceCacheKey } from './onlineMusic/resourceKeys';
 import { getSongCacheWithLegacyMigration, hasCachedSongAudio } from './onlineMusic/resourceCache';
 import { toPlayableAudioUrl, toSafePlaybackUrl } from '../utils/appPlaybackHelpers';
@@ -86,6 +87,7 @@ export interface PrefetchedSongData {
     songId: MediaId;
     audioUrl: string | null;
     audioUrlFetchedAt: number;
+    audioUrlExpiresAt?: number;
     audioUrlQuality: string | null; // Track which quality the URL was fetched for
     replayGain?: ReplayGainInfo;
     lyrics: LyricData | null;
@@ -115,8 +117,11 @@ let currentPrefetchAbortController: AbortController | null = null;
 /**
  * Check if a prefetched URL is still valid (not expired)
  */
-export const isUrlValid = (fetchedAt: number): boolean => {
-    return Date.now() - fetchedAt < URL_TTL_MS;
+export const isUrlValid = (fetchedAt: number, expiresAt?: number): boolean => {
+    const deadline = typeof expiresAt === 'number' && Number.isFinite(expiresAt)
+        ? Math.min(fetchedAt + URL_TTL_MS, expiresAt)
+        : fetchedAt + URL_TTL_MS;
+    return Date.now() < deadline;
 };
 
 /**
@@ -144,10 +149,11 @@ export const getPrefetchedData = (song: SongResult, requiredQuality?: AudioQuali
     const hasUrl = Boolean(cached.audioUrl) && cached.audioUrl !== 'CACHED_IN_DB';
 
     // Check if URL is expired
-    if (hasUrl && !isUrlValid(cached.audioUrlFetchedAt)) {
+    if (hasUrl && !isUrlValid(cached.audioUrlFetchedAt, cached.audioUrlExpiresAt)) {
         console.log(`[Prefetch] URL expired for song ${songId}, will refetch`);
         cached.audioUrl = null;
         cached.audioUrlQuality = null;
+        cached.audioUrlExpiresAt = undefined;
         cached.replayGain = undefined;
     }
 
@@ -157,6 +163,7 @@ export const getPrefetchedData = (song: SongResult, requiredQuality?: AudioQuali
         // Don't use cached URL, but keep other data (lyrics, cover)
         cached.audioUrl = null;
         cached.audioUrlQuality = null;
+        cached.audioUrlExpiresAt = undefined;
         cached.replayGain = undefined;
     }
 
@@ -166,6 +173,7 @@ export const getPrefetchedData = (song: SongResult, requiredQuality?: AudioQuali
 /** 预取到的音源：'CACHED_IN_DB' 表示媒体缓存里已有这首歌，否则是 provider 给的地址与它附带的 ReplayGain。 */
 export interface PrefetchedAudioUrl {
     audioUrl: string;
+    audioUrlExpiresAt?: number;
     replayGain?: ReplayGainInfo;
 }
 
@@ -203,7 +211,7 @@ export const resolvePrefetchAudioUrl = async (
         const url = toPlayableAudioUrl(audioSource?.url);
         if (!url) return null;
         console.log(`[Prefetch] Got audio URL for: ${song.name} (quality: ${audioQuality})`);
-        return { audioUrl: url, replayGain: audioSource?.replayGain };
+        return { audioUrl: url, audioUrlExpiresAt: audioSource?.expiresAt, replayGain: audioSource?.replayGain };
     } catch (e) {
         console.warn(`[Prefetch] Failed to get audio URL for ${song.name}:`, e);
         // 只有平台要求稍后再试、或它的服务出了错才登记冷却；别的失败在这里什么都不留。
@@ -237,17 +245,14 @@ const prefetchSong = async (
     const songKey = getPrefetchSongKey(song);
 
     // Check if already prefetched with valid URL
-    const existing = prefetchCache.get(songKey);
-    if (existing?.audioUrl && existing.audioUrl !== 'CACHED_IN_DB') {
-        existing.audioUrl = toSafePlaybackUrl(existing.audioUrl) ?? null;
-    }
+    const existing = getPrefetchedData(song, audioQuality);
   const currentSettingsLyricSettings = useLyricSettingsStore.getState();
     // 「跟随播放平台来源」存的是 'follow-source'，缓存里存的是解析出来的具体平台 ——
     // 两边必须拿同一种值比，否则这一项永远不命中，每轮预取都整首重来。
     const resolvedLyricSource = resolveLyricSourcePreference(currentSettingsLyricSettings, song);
     const lyricPreferenceMatches = !currentSettingsLyricSettings.autoUseBestLyric
         || existing?.lyricPreferenceSource === resolvedLyricSource;
-    if (existing && lyricPreferenceMatches && existing.audioUrl && isUrlValid(existing.audioUrlFetchedAt) && (existing.lyrics || existing.lyricRaw?.isPureMusic)) {
+    if (existing && lyricPreferenceMatches && existing.audioUrl && (existing.audioUrl === 'CACHED_IN_DB' || isUrlValid(existing.audioUrlFetchedAt, existing.audioUrlExpiresAt)) && (existing.lyrics || existing.lyricRaw?.isPureMusic)) {
         console.log(`[Prefetch] Already cached: ${song.name}`);
         touchPrefetchCacheEntry(songKey, existing);
         analyseForAutomix(song, existing.audioUrl);
@@ -259,8 +264,9 @@ const prefetchSong = async (
     const data: PrefetchedSongData = {
         songKey,
         songId,
-        audioUrl: existing?.audioUrl && existing.audioUrlQuality === audioQuality && isUrlValid(existing.audioUrlFetchedAt) ? existing.audioUrl : null,
+        audioUrl: existing?.audioUrl ?? null,
         audioUrlFetchedAt: existing?.audioUrlFetchedAt || 0,
+        audioUrlExpiresAt: existing?.audioUrlExpiresAt,
         audioUrlQuality: existing?.audioUrlQuality || null,
         replayGain: existing?.replayGain ?? song.replayGain,
         lyrics: existing?.lyrics || null,
@@ -275,6 +281,7 @@ const prefetchSong = async (
         if (resolved) {
             data.audioUrl = resolved.audioUrl;
             data.audioUrlFetchedAt = Date.now();
+            data.audioUrlExpiresAt = resolved.audioUrlExpiresAt;
             if (resolved.audioUrl !== 'CACHED_IN_DB') {
                 data.audioUrlQuality = audioQuality;
                 data.replayGain = resolved.replayGain
@@ -287,9 +294,23 @@ const prefetchSong = async (
     // Prefetch lyrics (if not cached)
     if (!data.lyrics) {
         try {
+            const savedState = await loadOnlineLyricsState(song);
             // Check IndexedDB cache first
-            const cachedLyrics = await getSongCacheWithLegacyMigration<LyricData>('lyric', song, migrateLyricDataRenderHints);
-            if (cachedLyrics) {
+            const cachedLyrics = hasAuthoritativeOnlineLyricsSelection(savedState)
+                ? null
+                : await getSongCacheWithLegacyMigration<LyricData>('lyric', song, migrateLyricDataRenderHints);
+            if (hasAuthoritativeOnlineLyricsSelection(savedState)) {
+                data.lyrics = resolveOnlineLyrics(savedState, null);
+                data.lyricRaw = {
+                    mainLrc: null,
+                    yrcLrc: null,
+                    transLrc: null,
+                    isPureMusic: resolveOnlineLyricsPureMusic(savedState, data.lyrics?.lines.map(line => line.fullText).join('\n') ?? ''),
+                };
+                data.lyricPreferenceSource = currentSettingsLyricSettings.autoUseBestLyric
+                    ? resolvedLyricSource
+                    : null;
+            } else if (cachedLyrics) {
                 console.log(`[Prefetch] Lyrics in IndexedDB for: ${song.name}`);
                 data.lyrics = cachedLyrics;
                 // The same stamp the fetched path leaves below. Without it a track whose lyrics came
@@ -299,7 +320,7 @@ const prefetchSong = async (
                     ? resolvedLyricSource
                     : null;
             } else if (!signal.aborted) {
-                const lyricResult = await omni.getLyrics(song, { userId });
+                const lyricResult = await getOptionalProviderLyrics(song, { userId });
                 const processed = {
                     mainLrc: lyricResult.mainText ?? null,
                     yrcLrc: lyricResult.wordByWordText ?? null,
@@ -326,7 +347,7 @@ const prefetchSong = async (
   const settingsLyricSettings = useLyricSettingsStore.getState();
                 const autoUseBest = settingsLyricSettings.autoUseBestLyric;
                 const preferredSource = resolveLyricSourcePreference(settingsLyricSettings, song);
-                const shouldAutoMatch = autoUseBest && !onlineLyricsState?.hasOnlineOverride;
+                const shouldAutoMatch = autoUseBest && !hasAuthoritativeOnlineLyricsSelection(onlineLyricsState);
 
                 if (shouldAutoMatch) {
                     try {
@@ -430,6 +451,7 @@ export const updatePrefetchedAudioUrl = (
     audioUrl: string,
     audioQuality: string,
     replayGain?: ReplayGainInfo,
+    expiresAt?: number,
 ): void => {
     const songKey = getPrefetchSongKey(song);
     const existing = prefetchCache.get(songKey);
@@ -439,6 +461,7 @@ export const updatePrefetchedAudioUrl = (
         songId: song.id,
         audioUrl,
         audioUrlFetchedAt: Date.now(),
+        audioUrlExpiresAt: audioUrl === 'CACHED_IN_DB' ? undefined : expiresAt,
         audioUrlQuality: audioQuality,
         replayGain: replayGain
             ? { ...song.replayGain, ...existing?.replayGain, ...replayGain }
@@ -581,17 +604,21 @@ export const cleanupPrefetchCache = (currentQueue: SongResult[]): void => {
     console.log(`[Prefetch] Cleanup complete, cache size: ${prefetchCache.size}`);
 };
 
-export const invalidatePrefetchedLyrics = (): void => {
+export const invalidatePrefetchedLyrics = (song?: SongResult): void => {
+    const onlyKey = song ? getPrefetchSongKey(song) : null;
+    let cleared = 0;
     for (const [songKey, cached] of prefetchCache.entries()) {
+        if (onlyKey !== null && songKey !== onlyKey) continue;
         prefetchCache.set(songKey, {
             ...cached,
             lyrics: null,
             lyricRaw: null,
             lyricPreferenceSource: null,
         });
+        cleared += 1;
     }
 
-    console.log(`[Prefetch] Invalidated lyrics for ${prefetchCache.size} prefetched songs`);
+    console.log(`[Prefetch] Invalidated lyrics for ${cleared} prefetched songs`);
 };
 
 // Aborts provider-bound work and releases every in-memory prefetch entry.

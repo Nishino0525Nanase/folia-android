@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, ChevronLeft, ChevronRight, Inbox, List, Loader2, MoreHorizontal, RefreshCw, SearchX, Star } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Download, Inbox, List, Loader2, MoreHorizontal, RefreshCw, SearchX, Star } from 'lucide-react';
 import type {
     BravaisSeamCollection as BravaisSeamCollectionModel,
     BravaisSeamStatus,
@@ -146,6 +146,14 @@ export const BravaisSeamCollectionMenu: React.FC<{
         <>
             <div ref={anchorRef} className="bravais-seam-more-anchor" onKeyDown={onKeyDown}>
             <div className="bravais-seam-actions">
+                {collection?.importCollection && (
+                    <button type="button" className="bravais-chrome-button" style={{ minHeight: 44 }}
+                        data-bravais-seam-action="import-collection" title={collection.importCollection.hint}
+                        disabled={collection.importCollection.disabled} onClick={collection.importCollection.run}>
+                        {collection.importCollection.pending ? <Loader2 aria-hidden className="animate-spin" /> : <Download aria-hidden />}
+                        {collection.importCollection.label}
+                    </button>
+                )}
                 {collection?.listLabel && onOpenList && (
                     <button type="button" className="bravais-chrome-button" data-bravais-seam-action="list" onClick={onOpenList}>
                         <List aria-hidden />{collection.listLabel}
@@ -158,6 +166,7 @@ export const BravaisSeamCollectionMenu: React.FC<{
                     </button>
                 )}
             </div>
+            {collection?.importCollection && <p className="mt-1 text-[10px] leading-relaxed opacity-55">{collection.importCollection.hint}</p>}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div key="menu" className="bravais-seam-menu" role="menu" data-bravais-seam-menu {...pop}>
