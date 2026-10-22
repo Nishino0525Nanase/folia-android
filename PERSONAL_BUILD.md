@@ -1,6 +1,10 @@
 # Folia 个人安卓构建
 
-这是供 Nishino0525Nanase 使用的非官方构建，版本 **0.7.21.9**，应用 ID 为 `io.github.nishino0525nanase.folia`。播放器、歌词动画与原生媒体控制均来自开源项目，保留 AGPL-3.0 许可证。
+这是供 Nishino0525Nanase 使用的非官方构建，版本 **0.7.21.10**，应用 ID 为 `io.github.nishino0525nanase.folia`。播放器、歌词动画与原生媒体控制均来自开源项目，保留 AGPL-3.0 许可证。
+
+## B站登录诊断修正 0.7.21.10
+
+用户的 0.7.21.8 真机日志确认：二维码生成请求被 B站以 HTTP 412 拒绝，应用接口返回 403，尚未进入扫码。此次补上登录错误分类与上游码显示，移除登录时误用的“打开原视频”提示。429 限流与 502 服务错误分别显示；不自动重试或更换请求通道。该修正不解除平台拒绝，B站登录和账号收藏夹导入目前仍未实测可用。
 
 ## 来源
 
@@ -57,4 +61,4 @@ Android 构建为 `VITE_BILIBILI_API_BASE` 设置默认值 `https://folia-elvis.
 
 ## 稳定下载地址
 
-[获取最新版 Android APK](https://folia-elvis.blushbox8.chatgpt.site/download)。0.7.21.9 可直接覆盖安装个人版 0.7.21.1 至 0.7.21.8，无需卸载；网页地址仍可在手机浏览器使用。
+[获取最新版 Android APK](https://folia-elvis.blushbox8.chatgpt.site/download)。0.7.21.10 可直接覆盖安装个人版 0.7.21.1 至 0.7.21.9，无需卸载；网页地址仍可在手机浏览器使用。

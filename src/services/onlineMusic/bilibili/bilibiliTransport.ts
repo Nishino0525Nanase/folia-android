@@ -26,7 +26,7 @@ const record = (value: unknown): Record<string, unknown> => (
     value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
 );
 
-const errorFromResponse = async (response: Response): Promise<OnlineProviderError> => {
+const errorFromResponse = async (response: Response, login = false): Promise<OnlineProviderError> => {
     let body: Record<string, unknown> = {};
     if (response.headers.get('content-type')?.includes('application/json')) {
         try { body = record(await response.json()); } catch { /* HEAD failures use safe error headers. */ }
@@ -35,12 +35,15 @@ const errorFromResponse = async (response: Response): Promise<OnlineProviderErro
     const upstream = body.upstreamCode ?? response.headers.get('X-Folia-Upstream-Code');
     const upstreamCode = upstream === null || upstream === undefined ? undefined : String(upstream);
     const restricted = response.status === 403 || response.status === 412 || code.includes('restricted');
-    const messageKey = response.status === 401 ? 'importSource.loginRequired'
+    const messageKey = response.status === 429 ? 'importSource.retryLater'
+        : login && restricted ? 'home.loginBilibiliRestricted'
+        : response.status === 401 ? 'importSource.loginRequired'
         : code === 'session-unavailable' || code === 'session-not-configured' ? 'importSource.sessionUnavailable'
-            : response.status === 400 ? 'importSource.bilibiliPlaceholder' : restricted ? 'importSource.platformRestricted'
+            : login ? 'importSource.serviceUnavailable'
+                : response.status === 400 ? 'importSource.bilibiliPlaceholder' : restricted ? 'importSource.platformRestricted'
                 : response.status === 404 ? 'importSource.videoUnavailable'
                     : response.status === 422 ? 'importSource.audioUnavailable'
-                        : response.status === 429 ? 'importSource.retryLater' : 'importSource.serviceUnavailable';
+                        : 'importSource.serviceUnavailable';
     return new OnlineProviderError(
         response.status === 401 ? 'auth-required' : response.status === 400 ? 'unsupported' : response.status === 422 ? 'not-playable' : 'unavailable',
         i18n.t(messageKey), 'bilibili', { code, ...(upstreamCode === undefined ? {} : { upstreamCode }), httpStatus: response.status }, response.status,
@@ -72,7 +75,7 @@ const request = async <T>(path: string, init: RequestInit, consume: (response: R
         assertCurrentSession();
         if (!response.ok) {
             if (options.account && response.status === 401) clearBilibiliSessionIfSent(sentSession);
-            throw await errorFromResponse(response);
+            throw await errorFromResponse(response, options.login);
         }
         const result = await consume(response);
         assertCurrentSession();

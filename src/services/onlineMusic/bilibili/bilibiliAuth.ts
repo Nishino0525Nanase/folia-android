@@ -26,7 +26,22 @@ const safeQrImage = (value: unknown): string | null => {
 };
 
 export const bilibiliAuth: OnlineAuthProvider = {
-    getLoginTexts: () => ({ title: 'home.loginTitleBilibili', note: 'home.loginNoteBilibili' }),
+    getLoginTexts: () => ({
+        title: 'home.loginTitleBilibili', note: 'home.loginNoteBilibili',
+        caseNotes: { refused: 'home.loginCaseBilibiliRefused' },
+    }),
+    describeLoginFailure(_step, error) {
+        if (!(error instanceof OnlineProviderError) || error.providerId !== 'bilibili') return null;
+        const cause = record(error.cause);
+        // Preserve the backend status and upstream code for both the dialog and copied report.
+        // Login refusal is not an audio failure, and must never be reported as an unknown error.
+        return {
+            httpStatus: error.httpStatus,
+            message: error.message,
+            ...(typeof cause.code === 'string' ? { code: cause.code } : {}),
+            ...(typeof cause.upstreamCode === 'string' ? { upstreamCode: cause.upstreamCode } : {}),
+        };
+    },
     showsKeptAccountAtStart: true,
     async getLoginStatus() {
         const generation = getBilibiliSessionGeneration();

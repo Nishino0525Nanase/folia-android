@@ -1553,6 +1553,8 @@ export default {
   "home": {
     "loginTitleBilibili": "Masuk ke Bilibili dan baca favorit",
     "loginNoteBilibili": "Pindai dan konfirmasi dengan aplikasi Bilibili milik Anda. Di ponsel yang sama, ambil tangkapan layar dan pilih dari album pemindai. Sesi digunakan untuk membaca favorit dan meminta audio.",
+    "loginBilibiliRestricted": "Bilibili menolak permintaan masuk. Kode QR tidak dapat dibuat atau dikonfirmasi.",
+    "loginCaseBilibiliRefused": "Bilibili menolak jalur masuk ini, sehingga favorit akun belum dapat diimpor. Hindari penyegaran berulang; memperbarui Folia atau masuk di aplikasi Bilibili tidak membuat sesi di sini.",
 
     "welcome": "Selamat datang di Folia",
     "lattice": "Kolase antrean",

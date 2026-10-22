@@ -5,6 +5,9 @@ The login window creates an ordinary web QR request; the account owner must appr
 Bilibili app. This is a candidate first-party web protocol adapter, not a registered Open Platform
 OAuth integration. Live login, favorites and playback have not been verified in this environment;
 the earlier anonymous metadata request returned HTTP 412 and verification stopped there.
+A user report from Android 0.7.21.8 also confirmed upstream HTTP 412 at QR creation
+(backend HTTP 403), before scanning. The login adapter preserves both codes and
+classifies this refusal explicitly; that diagnostic fix does not unblock login.
 
 Only the Worker's sealed session bearer is stored in the provider namespace. Raw platform cookies
 stay encrypted on the server side, and are sent only to fixed platform API paths. No ambient browser

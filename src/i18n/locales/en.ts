@@ -1553,6 +1553,8 @@ export default {
   "home": {
     "loginTitleBilibili": "Sign in to Bilibili and read favorites",
     "loginNoteBilibili": "Scan and approve with your own Bilibili app. On the same phone, take a screenshot and select it from the scanner album. Your sign-in is used to read favorites and request audio.",
+    "loginBilibiliRestricted": "Bilibili refused the sign-in request. The QR code cannot be created or confirmed.",
+    "loginCaseBilibiliRefused": "Bilibili has refused this sign-in channel, so account favorites cannot be imported right now. Avoid repeated refreshes; updating Folia or signing in to the Bilibili app does not establish a session here.",
 
     "welcome": "Welcome to Folia",
     "lattice": "Queue collage",

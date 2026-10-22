@@ -1554,6 +1554,8 @@ export default {
   "home": {
     "loginTitleBilibili": "登录 B 站并读取收藏夹",
     "loginNoteBilibili": "请使用本人登录的 B 站 App 扫码确认；同一台手机可截图后，在 B 站扫一扫中从相册识别。登录用于读取你的收藏夹和请求音频。",
+    "loginBilibiliRestricted": "B 站拒绝了登录请求，当前无法获取或确认二维码。",
+    "loginCaseBilibiliRefused": "当前登录通道被 B 站拒绝，账号收藏夹暂时无法导入。请勿连续刷新；更新客户端或在 B 站 App 中登录并不代表此通道已恢复。",
 
     "welcome": "欢迎使用 Folia",
     "lattice": "队列拼贴",

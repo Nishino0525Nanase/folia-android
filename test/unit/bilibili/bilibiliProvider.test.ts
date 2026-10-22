@@ -15,6 +15,8 @@ vi.mock('@/services/repositories/cacheRepository', () => ({
     putCacheEntry: async (key: string, value: unknown) => { stored.values.set(key, structuredClone(value)); },
 }));
 
+import { loginCaseOf, loginFailureFacts, noteLoginFailure } from '@/services/onlineMusic/login/loginFailureCase';
+import { OnlineProviderError } from '@/types/onlineMusic';
 import { bilibiliProvider } from '@/services/onlineMusic/bilibili/bilibiliProvider';
 import { normalizeBilibiliFavoriteFolder, normalizeBilibiliFavoriteVideo, bilibiliSongPageUrl, bilibiliVideoSongs, normalizeBilibiliSong, parseBilibiliMediaId, readBilibiliResolvedVideo } from '@/services/onlineMusic/bilibili/bilibiliNormalize';
 import { keepBilibiliImports, loadBilibiliImports } from '@/services/onlineMusic/bilibili/bilibiliImports';
@@ -178,6 +180,54 @@ const favoriteVideo = { bvid: video.bvid, aid: video.aid, title: video.title, co
 
 // No token below is a real session; fixtures verify only the app/backend contract.
 describe('explicit QR account flow', () => {
+    it.each([
+        { status: 403, code: 'upstream-restricted', upstreamCode: '412', expected: 'refused', message: 'home.loginBilibiliRestricted' },
+        { status: 412, code: 'upstream-restricted', upstreamCode: '412', expected: 'refused', message: 'home.loginBilibiliRestricted' },
+        { status: 429, code: 'upstream-restricted', upstreamCode: '429', expected: 'retry-later', message: 'importSource.retryLater' },
+        { status: 502, code: 'upstream-response', upstreamCode: undefined, expected: 'unreachable', message: 'importSource.serviceUnavailable' },
+    ])('keeps a QR refusal out of unknown errors: HTTP $status', async ({ status, code, upstreamCode, expected, message }) => {
+        const fetchMock = vi.fn().mockResolvedValue(Response.json({ code, upstreamCode }, { status }));
+        vi.stubGlobal('fetch', fetchMock);
+        const auth = bilibiliProvider.auth!;
+        const error = await auth.startLogin!().then(() => null, error => error);
+        // This is the same annotation contract used by omni.runLoginStep.
+        noteLoginFailure(error, auth.describeLoginFailure?.('start', error));
+        const facts = loginFailureFacts({ step: 'start', inBrowser: false, scanned: false }, { error });
+        expect(facts).toMatchObject({ step: 'start', scanned: false, httpStatus: status, code, message });
+        expect(facts.upstreamCode).toBe(upstreamCode);
+        expect(loginCaseOf(facts).id).toBe(expected);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(getBilibiliSession()).toBe('');
+        await expect(auth.createQr!('no-code')).rejects.toMatchObject({ code: 'invalid-response' });
+        expect(auth.getLoginTexts!().caseNotes?.refused).toBe('home.loginCaseBilibiliRefused');
+    });
+
+    it('preserves refusal facts during polling and does not create a session', async () => {
+        const fetchMock = vi.fn().mockResolvedValueOnce(qrResponse())
+            .mockResolvedValueOnce(Response.json({ code: 'upstream-restricted', upstreamCode: '-352' }, { status: 403 }));
+        vi.stubGlobal('fetch', fetchMock);
+        const auth = bilibiliProvider.auth!;
+        const key = await auth.startLogin!();
+        const error = await auth.checkLogin!(key).then(() => null, error => error);
+        noteLoginFailure(error, auth.describeLoginFailure?.('check', error));
+        const facts = loginFailureFacts({ step: 'check', inBrowser: false, scanned: true }, { error });
+        expect(facts).toMatchObject({ httpStatus: 403, upstreamCode: '-352', message: 'home.loginBilibiliRestricted' });
+        expect(loginCaseOf(facts).id).toBe('refused');
+        expect(getBilibiliSession()).toBe('');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not reinterpret foreign errors or turn connection failures into a refusal', async () => {
+        const auth = bilibiliProvider.auth!;
+        expect(auth.describeLoginFailure!('start', new OnlineProviderError('unavailable', 'Other', 'other', undefined, 403))).toBeNull();
+        vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Connection failed')));
+        const error = await auth.startLogin!().then(() => null, error => error);
+        noteLoginFailure(error, auth.describeLoginFailure?.('start', error));
+        const facts = loginFailureFacts({ step: 'start', inBrowser: false, scanned: false }, { error });
+        expect(loginCaseOf(facts).id).toBe('unreachable');
+        expect(facts.httpStatus).toBeUndefined();
+    });
+
     it('keeps a confirmed sealed bearer without browser cookies or a bearer in the request URL', async () => {
         const fetchMock = vi.fn()
             .mockResolvedValueOnce(qrResponse())
