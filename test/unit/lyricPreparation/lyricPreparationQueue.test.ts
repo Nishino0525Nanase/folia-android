@@ -123,3 +123,17 @@ describe('automatic audio fallback', () => {
         expect(h.deps.recognize).toHaveBeenCalledTimes(3); expect(h.deps.prepare).toHaveBeenCalledOnce();
     });
 });
+
+it('rechecks old unresolved video imports once for the newly available subtitle capability', async () => {
+    const saved: PreparationSnapshot = { version: 2, paused: false, entries: ['ready', 'unmatched', 'review', 'failed'].map((status, i) =>
+        ({ key: String(i), song: song(i), groups: ['a'], status: status as PreparationResult, updatedAt: 0 })) };
+    const prepare = vi.fn(async (): Promise<PreparationResult> => 'unmatched');
+    const deps = { load: async () => saved, save: vi.fn(async (_snapshot: PreparationSnapshot) => {}), prepare,
+        retryUnresolved: () => true, canRun: () => true, wait: async () => {} };
+    const queue = createLyricPreparationQueue(deps); await queue.initialize(); await settle(); await queue.flush();
+    expect(prepare).toHaveBeenCalledTimes(3); expect(queue.getSnapshot().entries[0].status).toBe('ready');
+    const snapshot = structuredClone(queue.getSnapshot()); expect(snapshot.version).toBe(3);
+    prepare.mockClear();
+    const restart = createLyricPreparationQueue({ ...deps, load: async () => snapshot });
+    await restart.initialize(); await settle(); expect(prepare).not.toHaveBeenCalled();
+});

@@ -194,7 +194,9 @@ export async function loadOnlineSongLyrics(
         onDone: () => void;
     }
 ): Promise<void> {
-    const { isCurrent, onLyrics, onPureMusicChange, onStateChange, onAutoMatchStart, onDone } = callbacks;
+    const { isCurrent, onLyrics, onPureMusicChange, onStateChange, onAutoMatchStart } = callbacks;
+    let done = false;
+    const onDone = () => { if (!done) { done = true; callbacks.onDone(); } };
     const lyricCacheKey = getSongResourceCacheKey('lyric', song);
     const matchTarget = omni.getLyricMatchTarget(song);
     const onlineLyricsState = await loadOnlineLyricsState(song);
@@ -229,7 +231,7 @@ export async function loadOnlineSongLyrics(
     if (await showLatestSelection()) return;
     const preferredCachedLyrics = resolveOnlineLyrics(onlineLyricsState, cachedLyrics);
     const hasAuthoritativeLyricsSelection = hasAuthoritativeOnlineLyricsSelection(onlineLyricsState);
-    if (preferredCachedLyrics && (hasAuthoritativeLyricsSelection || !initialSettingsLyricSettings.autoUseBestLyric)) {
+    if (preferredCachedLyrics && (preferredCachedLyrics.mediaSubtitle || hasAuthoritativeLyricsSelection || !initialSettingsLyricSettings.autoUseBestLyric)) {
         const cachedText = preferredCachedLyrics.lines.map(line => line.fullText).join('\n');
         onPureMusicChange?.(resolveOnlineLyricsPureMusic(onlineLyricsState, cachedText));
         onLyrics(preferredCachedLyrics);
@@ -250,7 +252,7 @@ export async function loadOnlineSongLyrics(
         const effectiveLyrics = preferredPrefetchedLyrics ?? prefetched.lyrics;
 
   const settingsLyricSettings = useLyricSettingsStore.getState();
-        const shouldAutoMatch = settingsLyricSettings.autoUseBestLyric && matchTarget.autoMatch !== false && !onlineLyricsState?.hasOnlineOverride;
+        const shouldAutoMatch = settingsLyricSettings.autoUseBestLyric && matchTarget.autoMatch !== false && !onlineLyricsState?.hasOnlineOverride && !prefetched?.lyrics?.mediaSubtitle;
 
         if (!shouldAutoMatch) {
             const effectiveText = effectiveLyrics?.lines.map(line => line.fullText).join('\n') ?? '';
@@ -266,6 +268,9 @@ export async function loadOnlineSongLyrics(
             return;
         }
     }
+
+    // Subtitle network requests are optional display data, never a prerequisite for starting audio.
+    if (omni.hasMediaTimedLyrics(song)) onDone();
 
     const processed = prefetched?.lyrics
         ? {
@@ -296,7 +301,7 @@ export async function loadOnlineSongLyrics(
     let finalState = onlineLyricsState;
 
   const settingsLyricSettings = useLyricSettingsStore.getState();
-    const shouldAutoMatch = settingsLyricSettings.autoUseBestLyric && matchTarget.autoMatch !== false && !onlineLyricsState?.hasOnlineOverride;
+    const shouldAutoMatch = settingsLyricSettings.autoUseBestLyric && matchTarget.autoMatch !== false && !onlineLyricsState?.hasOnlineOverride && !parsedLyrics?.mediaSubtitle;
 
     if (shouldAutoMatch) {
         // The lyrics in hand are already displayable, so hand them over and report done BEFORE the

@@ -435,6 +435,8 @@ export interface OnlinePlaybackReportProvider {
 }
 
 export interface OnlineLyricsProvider {
+    /** Existing subtitles follow the media timeline and should be preferred to catalogue matches. */
+    mediaTimed?: boolean;
     getLyrics(song: SongResult, context?: { userId?: MediaId | null }): Promise<ProviderLyricsResult>;
     getChorusRanges?(songId: MediaId): Promise<ChorusRange[]>;
     // 这首歌的歌手在别的平台上可能用的另一个名字；没有就返回 null。

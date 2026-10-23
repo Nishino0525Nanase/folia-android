@@ -3,8 +3,8 @@ import type { SongResult } from '@/types';
 import { prepareSongLyrics } from '@/services/lyricPreparation/prepareSongLyrics';
 
 // A whole preparation job must honour stored choices, confidence and cancellation before saving.
-const mocks = vi.hoisted(() => ({ load: vi.fn(), match: vi.fn(), save: vi.fn(), target: vi.fn() }));
-vi.mock('@/services/onlineMusic/omni', () => ({ omni: { getLyricMatchTarget: mocks.target } }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), match: vi.fn(), save: vi.fn(), target: vi.fn(), media: vi.fn(), lyrics: vi.fn() }));
+vi.mock('@/services/onlineMusic/omni', () => ({ omni: { getLyricMatchTarget: mocks.target, hasMediaTimedLyrics: mocks.media, getLyrics: mocks.lyrics } }));
 vi.mock('@/utils/lyrics/autoMatchBestLyric', () => ({ autoMatchBestLyric: mocks.match }));
 vi.mock('@/utils/onlineLyricsState', () => ({ loadOnlineLyricsState: mocks.load, savePreparedOnlineLyrics: mocks.save,
     hasAuthoritativeOnlineLyricsSelection: (state: any) => Boolean(state?.hasOnlineOverride || state?.importedLyrics) }));
@@ -45,4 +45,25 @@ it('bounds a stalled match and invalidates its continuation', async () => {
     expect(await result).toBe('failed');
     expect(mocks.match.mock.calls[0][3].isCurrent()).toBe(false);
     expect(mocks.save).not.toHaveBeenCalled();
+});
+
+it('uses original video captions before title matching, including ambiguous video titles', async () => {
+    mocks.media.mockReturnValue(true); mocks.target.mockReturnValue({ autoMatch: false });
+    const lyrics = { mediaSubtitle: { language: 'ja', automatic: false }, lines: [{ startTime: 12.4, endTime: 15, fullText: '字幕' }] };
+    mocks.lyrics.mockResolvedValue({ lyrics, isPureMusic: false });
+    expect(await prepareSongLyrics(song, () => true)).toBe('ready');
+    expect(mocks.match).not.toHaveBeenCalled();
+    expect(mocks.save).toHaveBeenCalledWith(song, expect.objectContaining({ onlineOverrideLyrics: lyrics, matchedIsPureMusic: false }), expect.any(Function));
+});
+it('falls back to text search when the original video has no available subtitles', async () => {
+    mocks.media.mockReturnValue(true); mocks.lyrics.mockResolvedValue({ lyrics: null, isPureMusic: false });
+    mocks.match.mockResolvedValue(null);
+    expect(await prepareSongLyrics(song, () => true)).toBe('unmatched');
+    expect(mocks.match).toHaveBeenCalledOnce();
+});
+it('does not save original captions that finish after pausing the queue', async () => {
+    let current = true; mocks.media.mockReturnValue(true);
+    mocks.lyrics.mockImplementation(async () => { current = false; return { lyrics: { mediaSubtitle: {}, lines: [] } }; });
+    expect(await prepareSongLyrics(song, () => current)).toBe('failed');
+    expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.match).not.toHaveBeenCalled();
 });

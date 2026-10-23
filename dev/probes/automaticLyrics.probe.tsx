@@ -12,19 +12,24 @@ import type { ProbeDefinition } from './definition';
 
 // A real Omni import exercises text matching, persistence and playback display without speech inference.
 const id = 'probe-auto-lyrics';
+const subtitles = new URLSearchParams(location.search).has('subtitles');
 const match = new URLSearchParams(location.search).has('match');
 useLyricSettingsStore.setState({ preferredAlternativeLyricSource: 'lrclib', autoUseBestLyric: true });
 const song: UnifiedSong = { id: 'unidentified', name: 'Imported unidentified audio', artists: [], album: { id: 0, name: '' }, durationMs: 11000,
     sourceRef: { kind: 'online', providerId: id, mediaId: 'unidentified' } };
 const provider: OnlineMusicProvider = {
     id, displayName: 'Automatic lyric probe',
-    capabilities: { search: false, playback: true, lyrics: false, auth: false, userLibrary: false, playlists: false, albums: false,
+    capabilities: { search: false, playback: true, lyrics: subtitles, auth: false, userLibrary: false, playlists: false, albums: false,
         artists: false, recommendations: false, mutations: false, wordByWordLyrics: false, explore: false },
     normalizeSong: raw => raw as UnifiedSong,
     songMetadata: {
         getSongMetadata: () => ({ artists: [], album: { id: 0, name: '' }, durationMs: 11000, aliases: [], translatedNames: [] }),
         getLyricMatchTarget: () => ({ title: 'Fixture song', artist: 'Fixture artist', album: 'Test', durationMs: 11000, autoMatch: match }),
     },
+    ...(subtitles ? { lyrics: { mediaTimed: true, getLyrics: async () => {
+        const response = await fetch('/__video_subtitles');
+        return { lyrics: await response.json(), isPureMusic: false };
+    } } } : {}),
     playback: { getSongDetail: async () => song, getAudioSource: async () => ({ url: new URL('/__automatic_audio.wav', location.href).href, quality: 'standard', fetchedAt: Date.now() }) },
     linkImport: { labelKey: 'probe', placeholderKey: 'probe', descriptionKey: 'probe', resolve: async () => [song] },
 };

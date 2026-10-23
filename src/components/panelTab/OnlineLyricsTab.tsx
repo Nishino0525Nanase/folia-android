@@ -78,6 +78,7 @@ const OnlineLyricsTab: React.FC<OnlineLyricsTabProps> = ({
             onLyricTimelineOffsetChange={onLyricTimelineOffsetChange}
             isDaylight={isDaylight}
         >
+            {activeSource === 'online' && onlineLyricsState?.onlineOverrideLyrics?.mediaSubtitle && <p className="mt-3 text-xs opacity-65">{t('lyricPreparation.videoSubtitles')}</p>}
             {activeSource === 'imported' && onlineLyricsState?.importedLyricsName === AUTOMATIC_SUBTITLES_NAME && <p className="mt-3 text-xs opacity-65">{t('lyricPreparation.automaticSubtitles')}</p>}
             {AudioAlignmentControl ? <Suspense fallback={null}><AudioAlignmentControl key={getPlaybackSongKey(song)} song={song} isDaylight={isDaylight} offset={lyricTimelineOffsetMs}
                 onOffsetChange={onLyricTimelineOffsetChange} onSourceChange={onChangeLyricsSource} /></Suspense>

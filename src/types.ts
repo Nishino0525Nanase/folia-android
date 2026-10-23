@@ -81,6 +81,8 @@ export interface Line {
 }
 
 export interface LyricData {
+  /** Original video subtitle cues, not word alignment inferred from a different recording. */
+  mediaSubtitle?: { language: string; automatic: boolean };
   lines: Line[];
   title?: string;
   artist?: string;

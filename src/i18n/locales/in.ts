@@ -1915,6 +1915,7 @@ export default {
   "lyricPreparation": {
     "recognizing": "Mengenali {{name}}: {{progress}}%",
     "audioQueued": "Menunggu pengenalan audio: {{count}}",
+    "videoSubtitles": "Menggunakan teks dan waktu subtitle video asli. Subtitle otomatis platform mungkin mengandung kesalahan. Ini bukan penyelarasan vokal per kata.",
     "automaticSubtitles": "Subtitel ini dikenali dan disimpan otomatis dari audio ini. Waktunya mengikuti audio, tetapi teks mungkin mengandung kesalahan.",
     "running": "Menyiapkan lirik {{done}} / {{total}}",
     "complete": "Lirik diperiksa {{done}} / {{total}}",

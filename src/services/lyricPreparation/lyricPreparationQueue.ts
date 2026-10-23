@@ -5,18 +5,19 @@ import { getPlaybackSongKey } from '../../utils/appPlaybackGuards';
 export type PreparationResult = 'ready' | 'review' | 'unmatched' | 'failed';
 export type PreparationEntry = { key: string; song: SongResult; groups: string[];
     status: PreparationResult | 'pending' | 'running' | 'audio-pending' | 'recognizing'; updatedAt: number; audioProgress?: number };
-export type PreparationSnapshot = { version: 1 | 2; paused: boolean; entries: PreparationEntry[] };
+export type PreparationSnapshot = { version: 1 | 2 | 3; paused: boolean; entries: PreparationEntry[] };
 type Deps = {
     load: () => Promise<PreparationSnapshot | null>;
     save: (snapshot: PreparationSnapshot) => Promise<void>;
     prepare: (song: SongResult, isCurrent: () => boolean) => Promise<PreparationResult>;
+    retryUnresolved?: (song: SongResult) => boolean;
     recognize?: (song: SongResult, isCurrent: () => boolean, signal: AbortSignal, progress: (percent: number) => void) => Promise<PreparationResult>;
     canRun: () => boolean;
     wait: () => Promise<void>;
 };
 
 export const createLyricPreparationQueue = (deps: Deps) => {
-    let snapshot: PreparationSnapshot = { version: 2, paused: false, entries: [] };
+    let snapshot: PreparationSnapshot = { version: 3, paused: false, entries: [] };
     let initialized: Promise<void> | null = null;
     let writes = Promise.resolve();
     let active = 0;
@@ -76,11 +77,12 @@ export const createLyricPreparationQueue = (deps: Deps) => {
     };
     const initialize = () => initialized ??= (async () => {
         const saved = await deps.load().catch(() => null);
-        if ((saved?.version === 1 || saved?.version === 2) && Array.isArray(saved.entries)) {
-            snapshot = { version: 2, paused: saved.paused === true, entries: saved.entries.filter(entry =>
+        if ((saved?.version === 1 || saved?.version === 2 || saved?.version === 3) && Array.isArray(saved.entries)) {
+            snapshot = { version: 3, paused: saved.paused === true, entries: saved.entries.filter(entry =>
                 entry && typeof entry.key === 'string' && entry.song?.sourceRef?.kind === 'online'
                 && Array.isArray(entry.groups) && ['pending', 'running', 'ready', 'review', 'unmatched', 'failed', 'audio-pending', 'recognizing'].includes(entry.status)
-            ).map(entry => ({ ...entry, audioProgress: undefined, status: entry.status === 'running' ? 'pending'
+            ).map(entry => ({ ...entry, audioProgress: undefined, status: saved.version < 3 && deps.retryUnresolved?.(entry.song) && ['review', 'unmatched', 'failed'].includes(entry.status) ? 'pending'
+                : entry.status === 'running' ? 'pending'
                 : entry.status === 'recognizing' || entry.status === 'audio-pending' ? deps.recognize ? 'audio-pending' : 'pending'
                 : saved.version === 1 && deps.recognize && ['review', 'unmatched', 'failed'].includes(entry.status) ? 'audio-pending' : entry.status })) };
         }

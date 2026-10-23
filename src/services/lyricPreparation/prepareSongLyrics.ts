@@ -9,6 +9,17 @@ import type { PreparationResult } from './lyricPreparationQueue';
 // Explicit cross-source lyric matching changes lyrics only; playback remains the original media.
 export const prepareSongLyrics = async (song: SongResult, isCurrent: () => boolean): Promise<PreparationResult> => {
     if (hasAuthoritativeOnlineLyricsSelection(await loadOnlineLyricsState(song))) return 'ready';
+    if (!isCurrent()) return 'failed';
+    if (omni.hasMediaTimedLyrics(song)) {
+        const original = await omni.getLyrics(song);
+        if (!isCurrent()) return 'failed';
+        if (original.lyrics?.mediaSubtitle) {
+            const saved = await savePreparedOnlineLyrics(song, {
+                lyricsSource: 'online', hasOnlineOverride: true, onlineOverrideLyrics: original.lyrics, matchedIsPureMusic: false,
+            }, isCurrent);
+            return saved || hasAuthoritativeOnlineLyricsSelection(await loadOnlineLyricsState(song)) ? 'ready' : 'failed';
+        }
+    }
     const target = omni.getLyricMatchTarget(song);
     if (target.autoMatch === false) return 'review';
     if (!isCurrent()) return 'failed';

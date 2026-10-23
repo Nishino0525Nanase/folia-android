@@ -11,7 +11,7 @@ import { isPureMusicLyricText } from '../utils/lyrics/pureMusic';
 import { autoMatchBestLyric } from '../utils/lyrics/autoMatchBestLyric';
 import { resolveLyricSourcePreference } from '../utils/lyrics/lyricSourcePreference';
 import { getPlatformLyricSource } from '../utils/lyrics/lyricSources';
-import { hasAuthoritativeOnlineLyricsSelection, loadOnlineLyricsState, markOnlineLyricsPureMusic, resolveOnlineLyrics, resolveOnlineLyricsPureMusic, saveOnlineLyricsState } from '../utils/onlineLyricsState';
+import { hasAuthoritativeOnlineLyricsSelection, loadOnlineLyricsState, markOnlineLyricsPureMusic, resolveOnlineLyrics, resolveOnlineLyricsPureMusic, savePreparedOnlineLyrics } from '../utils/onlineLyricsState';
 import type { AudioQualityPreference, MediaId } from '../types/onlineMusic';
 import { getPlaybackSourceRef } from '../utils/appPlaybackGuards';
 import { nextTransitionSong, queueIndexOf } from '../utils/playbackNeighbors';
@@ -348,7 +348,7 @@ const prefetchSong = async (
                 const autoUseBest = settingsLyricSettings.autoUseBestLyric;
                 const preferredSource = resolveLyricSourcePreference(settingsLyricSettings, song);
                 const matchTarget = omni.getLyricMatchTarget(song);
-                const shouldAutoMatch = autoUseBest && matchTarget.autoMatch !== false && !hasAuthoritativeOnlineLyricsSelection(onlineLyricsState);
+                const shouldAutoMatch = autoUseBest && matchTarget.autoMatch !== false && !hasAuthoritativeOnlineLyricsSelection(onlineLyricsState) && !parsedLyrics?.mediaSubtitle;
 
                 if (shouldAutoMatch) {
                     try {
@@ -385,13 +385,13 @@ const prefetchSong = async (
                                 matchedLyricsSource: bestMatch.source,
                                 matchedLyricsProviderPlatform: bestMatch.matchedLyricsProviderPlatform,
                             };
-                            await saveOnlineLyricsState(song, overrideState);
+                            await savePreparedOnlineLyrics(song, overrideState, () => !signal.aborted);
                             finalLyrics = bestMatch.lyrics;
                         } else if (bestMatch?.isPureMusic) {
                             // Same discriminator fix as in onlinePlayback: a MATCH object carries
                             // `isPureMusic: false`, so the old `'isPureMusic' in bestMatch` also
                             // caught a best match from the track's own provider and discarded it.
-                            await saveOnlineLyricsState(song, markOnlineLyricsPureMusic(onlineLyricsState));
+                            await savePreparedOnlineLyrics(song, markOnlineLyricsPureMusic(onlineLyricsState), () => !signal.aborted);
                             finalLyrics = null;
                             if (data.lyricRaw) data.lyricRaw.isPureMusic = true;
                         }
@@ -409,6 +409,14 @@ const prefetchSong = async (
                     }
                 }
 
+                // An import can finish original subtitles, or the listener can choose lyrics, during this lookup.
+                const latestSelection = await loadOnlineLyricsState(song);
+                if (signal.aborted) return;
+                if (hasAuthoritativeOnlineLyricsSelection(latestSelection)) {
+                    finalLyrics = resolveOnlineLyrics(latestSelection, finalLyrics);
+                    if (data.lyricRaw) data.lyricRaw.isPureMusic = resolveOnlineLyricsPureMusic(latestSelection,
+                        finalLyrics?.lines.map(line => line.fullText).join('\n') ?? '');
+                }
                 data.lyrics = finalLyrics;
                 data.lyricPreferenceSource = autoUseBest ? preferredSource : null;
 

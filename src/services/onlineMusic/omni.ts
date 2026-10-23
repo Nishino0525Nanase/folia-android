@@ -984,6 +984,10 @@ export const omni = {
         await provider.playbackReports.reportPlayback(song, report);
     },
 
+    hasMediaTimedLyrics(song: SongResult): boolean {
+        return getOnlineMusicProviderForSong(song)?.lyrics?.mediaTimed === true;
+    },
+
     async getLyrics(song: SongResult, context?: { userId?: MediaId | null }): Promise<OmniLyricsResult> {
         const provider = providerForSong(song);
         if (!provider.lyrics) return unsupported(provider.id, 'lyrics');

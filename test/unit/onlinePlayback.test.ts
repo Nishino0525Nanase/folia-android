@@ -22,6 +22,7 @@ vi.mock('@/services/onlineMusic/omni', () => ({
     omni: {
         getAudioSource: sourceMock,
         getLyrics: lyricsMock,
+        hasMediaTimedLyrics: (song: SongResult) => song.sourceRef?.kind === 'online' && song.sourceRef.providerId === 'bilibili',
         getLyricMatchTarget: (song: SongResult) => song.sourceRef?.kind === 'online' && song.sourceRef.providerId === 'bilibili'
             ? getBilibiliLyricMatchTarget(song) : ({ title: song.name,
             artist: (song.artists || []).map(artist => artist.name).join(', '),
@@ -400,6 +401,22 @@ describe('online QQ lyric candidate plumbing', () => {
         await pending;
         expect(onLyrics).toHaveBeenLastCalledWith(generated);
         expect(onLyrics).not.toHaveBeenCalledWith(null);
+    });
+
+    it('releases audio before a slow video subtitle request and preserves original timing instead of searching', async () => {
+        const video: SongResult = { ...song, sourceRef: { kind: 'online', providerId: 'bilibili', mediaId: 'BV1FT6dBtEff:123' } };
+        let finish!: (value: unknown) => void;
+        lyricsMock.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+        const onDone = vi.fn(); const onLyrics = vi.fn();
+        const pending = loadOnlineSongLyrics(video, null, null, { isCurrent: () => true, onDone, onLyrics });
+        await vi.waitFor(() => expect(lyricsMock).toHaveBeenCalled());
+        expect(onDone).toHaveBeenCalledOnce();
+        const captions = { mediaSubtitle: { language: 'ja', automatic: false }, isWordByWord: false,
+            lines: [{ startTime: 12.45, endTime: 16.32, fullText: 'Original caption', words: [] }] };
+        finish({ lyrics: captions, isPureMusic: false });
+        await pending;
+        expect(onLyrics).toHaveBeenLastCalledWith(captions); expect(autoMatchMock).not.toHaveBeenCalled();
+        expect(onDone).toHaveBeenCalledOnce();
     });
 
     it('matches video credits and drops a late match after the song changes', async () => {

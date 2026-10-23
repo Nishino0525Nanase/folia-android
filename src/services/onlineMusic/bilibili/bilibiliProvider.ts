@@ -2,6 +2,7 @@ import type { OnlineMusicProvider } from '../../../types/onlineMusic';
 import { OnlineProviderError } from '../../../types/onlineMusic';
 import { createProviderSongMetadata } from '../../../utils/songMetadata';
 import { bilibiliSongPageUrl, bilibiliVideoSongs, normalizeBilibiliSong, parseBilibiliMediaId, normalizeBilibiliUser, normalizeBilibiliFavoriteFolder } from './bilibiliNormalize';
+import { getBilibiliSubtitles } from './bilibiliSubtitleTransport';
 import { bilibiliAuth } from './bilibiliAuth';
 import { getBilibiliFavoriteFolder, getBilibiliFavoriteFolders, getBilibiliFavoriteTracks, importBilibiliFavoriteFolder } from './bilibiliLibrary';
 import { getBilibiliLyricMatchTarget } from './bilibiliLyricMatch';
@@ -19,7 +20,7 @@ export const bilibiliProvider: OnlineMusicProvider = {
         try { getBilibiliApiBase(); return { configured: true }; } catch { return { configured: false, reason: 'not-configured' }; }
     },
     capabilities: {
-        search: false, playback: true, lyrics: false, auth: true, userLibrary: true, playlists: true,
+        search: false, playback: true, lyrics: true, auth: true, userLibrary: true, playlists: true,
         albums: false, artists: false, recommendations: false, mutations: false, wordByWordLyrics: false,
     },
     normalizeSong: normalizeBilibiliSong,
@@ -71,6 +72,7 @@ export const bilibiliProvider: OnlineMusicProvider = {
         },
         getAvailability: () => ({ state: 'unknown' }),
     },
+    lyrics: { mediaTimed: true, getLyrics: getBilibiliSubtitles },
     auth: bilibiliAuth,
     library: { getUserPlaylists: getBilibiliFavoriteFolders },
     catalog: {

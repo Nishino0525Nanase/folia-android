@@ -121,13 +121,18 @@ public class FoliaBilibiliPlugin extends Plugin {
         }
     }
 
-    private JSONObject videoPlayurl(JSObject input, String cookie) throws Exception {
+    private JSONObject signedPlayer(String path, Map<String, String> values, String cookie) throws Exception {
         if (wbiKey.isEmpty() || wbiKeyUntil <= System.currentTimeMillis()) {
             JSONObject nav = get("/x/web-interface/nav", new JSONObject(), cookie, null, cookie.isEmpty());
             JSONObject images = nav.getJSONObject("wbi_img");
             wbiKey = BilibiliVideoRequest.mixinKey(images.getString("img_url"), images.getString("sub_url"));
             wbiKeyUntil = System.currentTimeMillis() + 30000;
         }
+        return get(path, new JSONObject(BilibiliVideoRequest.sign(values, wbiKey,
+                System.currentTimeMillis() / 1000)), cookie, null);
+    }
+
+    private JSONObject videoPlayurl(JSObject input, String cookie) throws Exception {
         Map<String, String> values = new HashMap<>();
         values.put("bvid", input.optString("bvid"));
         values.put("cid", input.optString("cid"));
@@ -138,8 +143,7 @@ public class FoliaBilibiliPlugin extends Plugin {
         values.put("qn", "16");
         values.put("force_host", "2");
         if (progressive) values.put("platform", "html5");
-        return get("/x/player/wbi/playurl", new JSONObject(BilibiliVideoRequest.sign(values, wbiKey,
-                System.currentTimeMillis() / 1000)), cookie, null);
+        return signedPlayer("/x/player/wbi/playurl", values, cookie);
     }
 
     private JSONObject params(JSObject input, String... names) throws Exception {
@@ -275,6 +279,25 @@ public class FoliaBilibiliPlugin extends Plugin {
                         break;
                     case "playurl":
                         data = videoPlayurl(input, handle.isEmpty() ? "" : cookieFor(handle));
+                        break;
+                    case "subtitles": {
+                        if (!input.optString("bvid").matches("BV[0-9A-Za-z]{10}") || !input.optString("cid").matches("[1-9][0-9]{0,15}"))
+                            throw new Failure(400, "invalid-media-id");
+                        Map<String, String> values = new HashMap<>();
+                        values.put("bvid", input.optString("bvid"));
+                        values.put("cid", input.optString("cid"));
+                        JSONObject player = signedPlayer("/x/player/wbi/v2", values, handle.isEmpty() ? "" : cookieFor(handle));
+                        data = new JSONObject().put("subtitle", player.optJSONObject("subtitle"))
+                                .put("need_login_subtitle", player.optBoolean("need_login_subtitle"));
+                        break;
+                    }
+                    case "subtitleBody":
+                        try { data = new JSONObject(new BilibiliSubtitleFile(client).read(input.optString("url"), work::attach)); }
+                        catch (java.io.IOException error) {
+                            String code = error.getMessage();
+                            throw new Failure(502, code != null && code.matches("subtitle-http-[0-9]{3}|invalid-subtitle-host|invalid-subtitle-content|subtitle-redirect-limit")
+                                    ? code : "subtitle-unreachable");
+                        }
                         break;
                     case "audioProbe":
                         try { data = new JSONObject().put("url", new BilibiliAudioProbe(client).verify(input.optString("url"), input.optString("bvid"), work::attach))

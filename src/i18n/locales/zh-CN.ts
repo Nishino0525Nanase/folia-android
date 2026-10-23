@@ -1916,6 +1916,7 @@ export default {
   "lyricPreparation": {
     "recognizing": "正在识别《{{name}}》：{{progress}}%",
     "audioQueued": "等待音频识别 {{count}} 首",
+    "videoSubtitles": "已读取原视频字幕，按字幕自身的时间显示；如果是平台自动字幕，文字可能有误。这不是逐字人声对齐。",
     "automaticSubtitles": "这些字幕已从当前音频自动识别并保存，时间来自音频，文字可能存在识别错误。",
     "running": "正在匹配歌词 {{done}} / {{total}}",
     "complete": "歌词已检查 {{done}} / {{total}}",

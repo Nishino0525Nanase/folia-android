@@ -5,6 +5,7 @@ import { useLyricSettingsStore } from '@/stores/useLyricSettingsStore';
 
 const env = vi.hoisted(() => ({
     state: null as OnlineLyricsState | null,
+    supportsLyrics: false,
     now: 1_000_000,
     audio: vi.fn(), nativeLyrics: vi.fn(), baseLyrics: vi.fn(), autoMatch: vi.fn(),
     idle: [] as Array<() => Promise<void>>,
@@ -15,7 +16,7 @@ vi.mock('@/services/onlineMusic/omni', () => ({ omni: {
     getAudioSource: env.audio,
     getLyrics: env.nativeLyrics,
     getLyricMatchTarget: (song: SongResult) => ({ title: song.name, artist: '', album: '', durationMs: song.durationMs }),
-    getProviderCapabilities: () => ({ lyrics: false }),
+    getProviderCapabilities: () => ({ lyrics: env.supportsLyrics }),
 } }));
 vi.mock('@/services/onlineMusic/resourceCache', () => ({
     hasCachedSongAudio: async () => false,
@@ -24,6 +25,10 @@ vi.mock('@/services/onlineMusic/resourceCache', () => ({
 vi.mock('@/utils/onlineLyricsState', async importOriginal => ({
     ...await importOriginal<typeof import('@/utils/onlineLyricsState')>(),
     loadOnlineLyricsState: async () => structuredClone(env.state),
+    savePreparedOnlineLyrics: async (_song: SongResult, state: OnlineLyricsState, current: () => boolean) => {
+        if (!current() || env.state?.hasOnlineOverride || env.state?.importedLyrics) return false;
+        env.state = structuredClone(state); return true;
+    },
 }));
 vi.mock('@/utils/lyrics/autoMatchBestLyric', () => ({ autoMatchBestLyric: env.autoMatch }));
 vi.mock('@/services/automix/profileService', () => ({
@@ -47,6 +52,7 @@ beforeEach(() => {
     vi.clearAllMocks();
     env.idle.length = 0;
     env.now = 1_000_000;
+    env.supportsLyrics = false;
     env.state = { lyricsSource: 'online', hasOnlineOverride: true, onlineOverrideLyrics: lyrics };
     env.audio.mockImplementation(async () => ({ url: 'https://audio.test/stream.m4a', fetchedAt: env.now, expiresAt: env.now + 1000, quality: 'high' }));
     env.nativeLyrics.mockRejectedValue(new Error('unsupported lyric API'));
@@ -103,4 +109,26 @@ describe('manual lyrics and expiring audio during prefetch', () => {
         expect(getPrefetchedData(target)).toMatchObject({ audioUrl: 'https://audio.test/stream.m4a', lyrics: null, lyricRaw: null });
         expect(getPrefetchedData(current)?.audioUrl).toBe('https://audio.test/current.m4a');
     });
+});
+
+it('preserves native video subtitle cues during prefetch instead of replacing them with catalogue lyrics', async () => {
+    env.state = null; env.supportsLyrics = true; env.baseLyrics.mockResolvedValue(null);
+    const subtitles = { ...lyrics, mediaSubtitle: { language: 'ja', automatic: false } };
+    env.nativeLyrics.mockResolvedValue({ lyrics: subtitles, isPureMusic: false });
+    await runPrefetch();
+    expect(getPrefetchedData(target)?.lyrics).toEqual(subtitles);
+    expect(env.autoMatch).not.toHaveBeenCalled();
+});
+
+it('keeps original subtitles prepared while a slower catalogue prefetch finishes', async () => {
+    env.state = null; env.supportsLyrics = true; env.baseLyrics.mockResolvedValue(null);
+    env.nativeLyrics.mockResolvedValue({ lyrics: null, isPureMusic: false });
+    const subtitles = { ...lyrics, mediaSubtitle: { language: 'ja', automatic: false } };
+    env.autoMatch.mockImplementation(async () => {
+        env.state = { lyricsSource: 'online', hasOnlineOverride: true, onlineOverrideLyrics: subtitles };
+        return { source: 'qq', id: 123, lyrics: { lines: [] }, isPureMusic: false };
+    });
+    await runPrefetch();
+    expect(getPrefetchedData(target)?.lyrics).toEqual(subtitles);
+    expect(env.state).toMatchObject({ onlineOverrideLyrics: subtitles });
 });

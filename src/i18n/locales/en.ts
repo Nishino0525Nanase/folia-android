@@ -1915,6 +1915,7 @@ export default {
   "lyricPreparation": {
     "recognizing": "Recognizing {{name}}: {{progress}}%",
     "audioQueued": "Waiting for audio recognition: {{count}}",
+    "videoSubtitles": "Using the original video subtitle cues and timestamps. Platform-generated captions may contain mistakes. This is not word-level vocal alignment.",
     "automaticSubtitles": "These subtitles were recognized automatically from this audio. They follow the audio timing but may contain transcription errors.",
     "running": "Preparing lyrics {{done}} / {{total}}",
     "complete": "Lyrics checked {{done}} / {{total}}",

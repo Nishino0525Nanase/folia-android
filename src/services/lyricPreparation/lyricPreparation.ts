@@ -12,6 +12,7 @@ export const lyricPreparation = createLyricPreparationQueue({
     load: () => readCacheEntry<PreparationSnapshot>(CACHE_KEY),
     save: state => putCacheEntry(CACHE_KEY, state),
     prepare: prepareSongLyrics,
+    retryUnresolved: song => omni.hasMediaTimedLyrics(song),
     // Import preparation is text-only: no full audio download, decoding or speech model competes with playback.
     canRun: () => (typeof navigator === 'undefined' || navigator.onLine !== false)
         && useLyricSettingsStore.getState().autoUseBestLyric,
@@ -34,6 +35,6 @@ export const enqueueImportedLyrics = (songs: SongResult[], group: string): Promi
 
 // Existing imported/video collections are prepared as their cached and newly loaded pages become available.
 export const enqueueCollectionLyrics = (collection: OmniCollection, songs: SongResult[]): void => {
-    if (!omni.canImportCollection(collection) || omni.getProviderCapabilities(collection.providerId).lyrics) return;
+    if (!omni.canImportCollection(collection) || (omni.getProviderCapabilities(collection.providerId).lyrics && !songs.some(song => omni.hasMediaTimedLyrics(song)))) return;
     void enqueueImportedLyrics(songs, lyricPreparationGroup(collection)).catch(error => console.warn('[LyricPreparation] Could not enqueue collection', error));
 };
