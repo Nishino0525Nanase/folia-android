@@ -25,6 +25,7 @@ vi.mock('@/services/db', () => ({
 vi.mock('@/services/onlineMusic/omni', () => ({
     omni: {
         getProviderCapabilities: () => ({ lyrics: false }),
+        hasMediaTimedLyrics: () => false,
         getLyricMatchTarget: (song: SongResult) => ({ title: song.name, artist: '', album: '', durationMs: song.durationMs }),
         getLyrics: env.nativeLyrics,
     },

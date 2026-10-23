@@ -1303,6 +1303,8 @@ export interface SongResult {
 }
 
 export interface OnlineLyricsState {
+  /** Missing on older records: protect those choices rather than guessing who selected them. */
+  selectionOrigin?: 'manual' | 'automatic';
   lyricsSource: 'online' | 'imported';
   importedLyrics?: LyricData | null;
   importedLyricsName?: string | null;

@@ -1,6 +1,6 @@
 import type { LyricData, SongResult } from '../../../../types';
 import { getPlaybackSongKey } from '../../../../utils/appPlaybackGuards';
-import { loadOnlineLyricsState, resolveOnlineLyrics } from '../../../../utils/onlineLyricsState';
+import { canUpgradeToMediaSubtitles, loadOnlineLyricsState, resolveOnlineLyrics } from '../../../../utils/onlineLyricsState';
 import { hasRenderableLyrics } from '../../../../utils/lyrics/validity';
 import { usePlaybackStore } from '../../../../stores/usePlaybackStore';
 import { readLyricOffset } from '../../../../utils/lyrics/lyricOffsetMemory';
@@ -10,15 +10,20 @@ import { AUTOMATIC_SUBTITLES_NAME } from '../../../../utils/lyrics/automaticSubt
 export const applyPreparedLyricsToPlayback = async (song: SongResult, setLyrics: (lyrics: LyricData) => void,
     persist: (song: SongResult | null, queue: SongResult[]) => Promise<void>, active: () => boolean): Promise<void> => {
     const before = usePlaybackStore.getState();
-    if (!before.currentSong || getPlaybackSongKey(before.currentSong) !== getPlaybackSongKey(song) || hasRenderableLyrics(before.lyrics)) return;
+    if (!before.currentSong || getPlaybackSongKey(before.currentSong) !== getPlaybackSongKey(song)) return;
+    const replacingAutomatic = hasRenderableLyrics(before.lyrics);
+    if (replacingAutomatic && !canUpgradeToMediaSubtitles(before.currentSong.onlineLyricsState)) return;
     const saved = await loadOnlineLyricsState(song);
+    if (replacingAutomatic && (saved?.selectionOrigin !== 'automatic' || !saved.onlineOverrideLyrics?.mediaSubtitle)) return;
     const lyrics = resolveOnlineLyrics(saved, null);
     const now = usePlaybackStore.getState();
     if (!active() || now.currentSong !== before.currentSong || now.lyrics !== before.lyrics || !hasRenderableLyrics(lyrics)) return;
-    const updated = { ...now.currentSong, onlineLyricsState: saved ?? undefined };
+    const updated = { ...now.currentSong, onlineLyricsState: saved ?? undefined, isPureMusic: false };
     now.setCurrentSong(updated);
     setLyrics(lyrics);
-    if (saved?.importedLyricsName === AUTOMATIC_SUBTITLES_NAME) now.setLyricTimelineOffsetMs(readLyricOffset(song.id));
+    if (saved?.onlineOverrideLyrics?.mediaSubtitle || saved?.importedLyricsName === AUTOMATIC_SUBTITLES_NAME) {
+        now.setLyricTimelineOffsetMs(readLyricOffset(song.id));
+    }
     now.setCurrentLineIndex(-1);
     await persist(updated, now.playQueue);
 };

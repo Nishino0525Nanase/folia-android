@@ -26,7 +26,7 @@ describe('advanceLoopPressStreak', () => {
     });
 });
 
-describe('noteLoopButtonPress（按真实按钮的调用顺序：切循环 → 模式 toast → 记一下）', () => {
+describe('noteLoopButtonPress legacy tutorial helper', () => {
     const COUNT_KEY = 'folia_loop_shuffle_hint_count';
     let storage: Map<string, string>;
 
@@ -51,21 +51,15 @@ describe('noteLoopButtonPress（按真实按钮的调用顺序：切循环 → �
         const { useStatusMessageStore } = await import('@/stores/useStatusMessageStore');
         const { usePonderStore } = await import('@/stores/usePonderStore');
         const { useAudioSettingsStore } = await import('@/stores/useAudioSettingsStore');
-        const { resolvePlayerControlSlot } = await import('@/components/floating-player/playerControlSlotActions');
-
-        // 浮动播放器的循环槽位：真实的 handleToggleLoopMode 先弹模式 toast，再记一下。
-        // SoundTiles 的循环那一块的 onClick 是同一个顺序（onToggleLoop(event) 之后 noteLoopButtonPress()）。
-        const slot = resolvePlayerControlSlot('loop', {
-            loopMode: 'off',
-            onToggleLoop: () => useAudioSettingsStore.getState().handleToggleLoopMode(),
-        } as Parameters<typeof resolvePlayerControlSlot>[1]);
+        const { noteLoopButtonPress } = await import('@/services/ponder/loopShuffleHint');
 
         const message = () => useStatusMessageStore.getState().message;
         const isHint = () => message()?.onAction !== undefined;
         /** 先等 gapMs，再按一下循环按钮。 */
         const click = (gapMs = 0) => {
             vi.advanceTimersByTime(gapMs);
-            slot.onActivate();
+            useAudioSettingsStore.getState().handleToggleLoopMode();
+            noteLoopButtonPress();
         };
         const clickTimes = (n: number, gapMs = 200) => {
             for (let k = 0; k < n; k += 1) click(k === 0 ? 0 : gapMs);

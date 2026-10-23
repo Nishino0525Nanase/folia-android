@@ -6,6 +6,8 @@ import { DEFAULT_THEME } from '../../src/services/baseThemes';
 import { PlayerBottomBarLayoutContext } from '../../src/components/floating-player/PlayerBottomBarLayoutContext';
 import { playerBottomBarLiveOffset } from '../../src/stores/motionSignals';
 import { usePlayerBottomBarLayoutStore } from '../../src/stores/usePlayerBottomBarLayoutStore';
+import { useAudioSettingsStore } from '../../src/stores/useAudioSettingsStore';
+import '../../src/components/app/mobile/MobileTouchNavigation.css';
 import { PLAYER_BOTTOM_BAR_BASE_OFFSET_PX } from '../../src/utils/playerBottomBarLayout';
 import { PlayerState } from '../../src/types';
 import type { PlayerControlSlotActionId } from '../../src/components/floating-player/playerControlSlotActions';
@@ -36,6 +38,8 @@ const PILL_ACCOUNT = probeAccountController([{
 const PlayerBottomBarProbe: React.FC = () => {
     const isPositioning = usePlayerBottomBarLayoutStore(state => state.isPositioning);
     const startPositioning = usePlayerBottomBarLayoutStore(state => state.startPositioning);
+    const loopMode = useAudioSettingsStore(state => state.loopMode);
+    const [playToggleCount, setPlayToggleCount] = useState(0);
     const [committedOffset, setCommittedOffset] = useState(PLAYER_BOTTOM_BAR_BASE_OFFSET_PX);
     const [seekCount, setSeekCount] = useState(0);
     const [playerNavigations, setPlayerNavigations] = useState(0);
@@ -56,13 +60,15 @@ const PlayerBottomBarProbe: React.FC = () => {
 
     return (
         <div
-            className="relative h-screen bg-zinc-900"
+            className="folia-app-shell relative h-screen bg-zinc-900"
             data-probe-positioning={isPositioning ? 'on' : 'off'}
             data-probe-offset={offsetMirror}
             data-probe-committed={committedOffset}
             data-probe-seeks={seekCount}
             data-probe-player-navigations={playerNavigations}
             data-probe-slot-hits={slotHits.join(',')}
+            data-probe-loop-mode={loopMode}
+            data-probe-play-toggles={playToggleCount}
         >
             <div className="absolute left-4 top-4 z-[80] flex flex-wrap gap-2">
                 <button type="button" data-probe-action="start" onClick={startPositioning}>start positioning</button>
@@ -106,14 +112,17 @@ const PlayerBottomBarProbe: React.FC = () => {
                 playerState={PlayerState.PLAYING}
                 currentTime={currentTime}
                 duration={200}
-                loopMode="all"
+                loopMode={loopMode}
                 currentView="player"
                 audioSrc="probe://audio"
                 canTogglePlay
                 lyrics={null}
                 onSeek={() => setSeekCount(count => count + 1)}
-                onTogglePlay={() => { }}
-                onToggleLoop={() => setSlotHits(hits => [...hits, 'loop'])}
+                onTogglePlay={() => setPlayToggleCount(count => count + 1)}
+                onToggleLoop={() => {
+                    setSlotHits(hits => [...hits, 'loop']);
+                    useAudioSettingsStore.getState().handleToggleLoopMode();
+                }}
                 onNavigateToPlayer={() => setPlayerNavigations(count => count + 1)}
                 isDaylight={false}
                 slotPrimary={slotPrimary}

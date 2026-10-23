@@ -1913,6 +1913,11 @@ export default {
     "filename": "vocal-aligned.lrc"
 },
   "lyricPreparation": {
+    "noSubtitleTracks": "No separate subtitle track for {{count}} videos; text embedded in the picture cannot be read as a subtitle file",
+    "subtitleLogin": "{{count}} subtitle lookups need login and will retry after sign-in",
+    "subtitleUnavailable": "{{count}} subtitle lookups failed temporarily; retries are limited, then available from the collection",
+    "subtitleRefused": "The platform refused {{count}} subtitle lookups; retries paused. Retry later from the collection",
+    "subtitleInvalid": "Could not parse {{count}} subtitle files; retry from the collection",
     "recognizing": "Recognizing {{name}}: {{progress}}%",
     "audioQueued": "Waiting for audio recognition: {{count}}",
     "videoSubtitles": "Using the original video subtitle cues and timestamps. Platform-generated captions may contain mistakes. This is not word-level vocal alignment.",
@@ -1924,7 +1929,7 @@ export default {
     "results": "Ready {{ready}} · Needs identification {{review}} · Not found / failed {{missed}}",
     "pause": "Pause all matching",
     "resume": "Resume matching",
-    "retry": "Retry unresolved"
+    "retry": "Retry unresolved lyrics and subtitles"
 },
   "lyricProvider": {
     "lrclib": "LRCLIB",
@@ -4583,7 +4588,7 @@ export default {
     },
     "summaries": {
       "bravais_seam": "The gap down the middle of the wall: its three widths, the home tabs and tools, and filtering vs. searching.",
-      "queue_shuffle": "Folia has no shuffle mode; it shuffles the queue instead. Here are the four ways to do it.",
+      "queue_shuffle": "Use Shuffle for continuous random playback, or reshuffle the queue once. Here are the queue controls.",
       "audio_equalizer": "Ten bands and an effect chain \u2014 and one drag rewrites a custom slot.",
       "vis_playground": "Three invisible click regions sit on the preview.",
       "lyric_style": "Each style's own settings, hiding Monet's extras, pairing backgrounds, and the shared subtitle.",
@@ -5215,7 +5220,7 @@ export default {
       "bravaisSeamHomeDock": "Account entry and tool grid",
       "bravaisSeamFilter": "Filtering this page is not searching",
       "bravaisSeamTools": "The wall tools in the corner",
-      "queueShuffleNoMode": "No shuffle mode, just a queue shuffle",
+      "queueShuffleNoMode": "Shuffle mode and reshuffling the queue",
       "queueShuffleCommand": "Shuffle with a command",
       "queueShuffleSlot": "Put it on the control bar",
       "queueShufflePanel": "The button in the queue panel",
@@ -5389,7 +5394,7 @@ export default {
         "toolsAppearance": "At the bottom is the wall appearance: transparency cycles through three levels, plus poster tint and lights on / off. Swipe the button left to open the command palette directly."
       },
       "queueShuffle": {
-        "noMode": "Folia has no traditional shuffle mode, and the loop button never switches to one. To listen in random order, shuffle the current queue.",
+        "noMode": "Shuffle mode keeps playing in random order and reshuffles at the end of the queue. The queue's shuffle button changes the order once without changing your playback mode.",
         "once": "Shuffling is a single action: the current queue is reordered in place and plays in the new order. Shuffle again for a different order.",
         "command": "The quickest way is a command: with the command window closed and no text field focused, press the colon key to open execute mode, then press r. You can also search “Shuffle queue” in the command window.",
         "slot": "If you use it often, choose “Shuffle queue” under “Progress bar buttons” in Settings · Player page to get a shuffle button on the control bar.",
@@ -5545,7 +5550,7 @@ export default {
         "playerCommandArgument": "A command that needs an argument does not run immediately. Type its name, press space, and it folds into a pill in the input line with the cursor waiting behind it. Fill in the argument, then Enter.",
         "playerExecuteCloseFirst": "Execute mode is entered with the command window closed. Press Esc to close it first: with the window open, a colon only lands in the input line.",
         "playerExecuteMode": "Back on the player page, with focus outside any text box, press the colon key: the command window opens straight into execute mode. Inside, one key runs one command: r shuffles the queue, v volume, o settings, h help.",
-        "playerShuffleNoSwitch": "Folia has no shuffle switch. You cannot find one on the control bar because shuffle is not a mode that stays on \u2014 it is a single action: deal the current queue again, in place.",
+        "playerShuffleNoSwitch": "On mobile, tap Shuffle on the player bar to turn random playback on or off. You can also cycle the repeat button to Shuffle. The queue's shuffle action rearranges the queue once.",
         "playerShuffleHow": "The quickest route is to open nothing at all: press the colon key on the player page \u2014 the window opens in execute mode \u2014 then press r. The new order then stands; run it again for another one.",
         "playerShuffleSlot": "If you use it often, put \u201cShuffle queue\u201d in one of the two places on the right of the control bar and it becomes one press.",
         "lattice": "Lattice lays the play queue out as one poster field. Move through the field to inspect the queue, and select a poster to act on that song. Opened from the Explore tab, it lays out that tab's albums, playlists, artists and songs instead.",
@@ -5578,7 +5583,7 @@ export default {
         "heightDrag": "Once repositioning is on, hold the capsule anywhere and drag it up or down. Letting go applies it, and it is remembered.",
         "slotsIntro": "These two buttons to the right of the progress bar are not fixed, and each slot is independent.",
         "slotsWhere": "Choose in settings: loop, shuffle, like, queue, volume, sleep timer and four more, applied the moment you pick.",
-        "shuffleIntro": "This shuffle is not what it is elsewhere - it is not a mode that stays on.",
+        "shuffleIntro": "This queue button reshuffles once. For continuous random playback, turn on Shuffle in the player controls.",
         "shuffleOnce": "Press it and Folia shuffles the current queue in place, once; that order then stands. Want another? Press again.",
         "volumeIntro": "The bottom control bar has no permanent volume slider.",
         "volumeOpens": "Pressing here opens the volume surface inside the command palette, rather than a little slider in place."

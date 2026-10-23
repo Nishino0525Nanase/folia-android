@@ -5,6 +5,7 @@ import type { MigrationResult } from './lyrics/renderHints';
 import { migrateLyricDataRenderHints as migrateLyrics } from './lyrics/renderHints';
 import { isPureMusicLyricText } from './lyrics/pureMusic';
 import { putCacheEntryIf } from '../services/repositories/cacheRepository';
+import { writeLyricOffset } from './lyrics/lyricOffsetMemory';
 
 // src/utils/onlineLyricsState.ts
 
@@ -34,7 +35,7 @@ export const loadOnlineLyricsState = async (song: SongResult): Promise<OnlineLyr
 
 export const saveOnlineLyricsState = async (song: SongResult, state: OnlineLyricsState): Promise<void> => {
     const key = getOnlineLyricsStateCacheKey(song);
-    await saveToCache(key, migrateOnlineLyricsState(state).value);
+    await saveToCache(key, migrateOnlineLyricsState({ ...state, selectionOrigin: 'manual' }).value);
 };
 
 /** A saved manual choice, including "instrumental", must not depend on the source's lyric API. */
@@ -42,11 +43,24 @@ export const hasAuthoritativeOnlineLyricsSelection = (state: OnlineLyricsState |
     Boolean(state?.hasOnlineOverride || (state?.lyricsSource === 'imported' && state.importedLyrics))
 );
 
-/** A background import match fills only an unset selection, including when a manual save races it. */
-export const savePreparedOnlineLyrics = (song: SongResult, state: OnlineLyricsState, isCurrent: () => boolean): Promise<boolean> => (
-    putCacheEntryIf(getOnlineLyricsStateCacheKey(song), migrateOnlineLyricsState(state).value,
-        current => isCurrent() && !hasAuthoritativeOnlineLyricsSelection(current))
+/** Only an explicitly automatic catalogue selection can be upgraded to this video's original cues. */
+export const canUpgradeToMediaSubtitles = (state: OnlineLyricsState | null | undefined): boolean => (
+    state?.selectionOrigin === 'automatic' && state.lyricsSource === 'online' && !state.onlineOverrideLyrics?.mediaSubtitle
 );
+
+/** Atomic background saves never replace manual/legacy choices; native cues can improve an automatic match. */
+export const savePreparedOnlineLyrics = async (song: SongResult, state: OnlineLyricsState, isCurrent: () => boolean): Promise<boolean> => {
+    let resetCatalogueOffset = false;
+    const saved = await putCacheEntryIf(getOnlineLyricsStateCacheKey(song), migrateOnlineLyricsState({ ...state, selectionOrigin: 'automatic' }).value,
+        current => {
+            if (!isCurrent()) return false;
+            resetCatalogueOffset = Boolean(state.onlineOverrideLyrics?.mediaSubtitle && canUpgradeToMediaSubtitles(current));
+            return !hasAuthoritativeOnlineLyricsSelection(current) || resetCatalogueOffset;
+        });
+    // A correction for another recording must not shift this video's own timestamps; device offset stays intact.
+    if (saved && resetCatalogueOffset) writeLyricOffset(song.id, 0);
+    return saved;
+};
 
 export const resolveOnlineLyrics = (
     state: OnlineLyricsState | null | undefined,

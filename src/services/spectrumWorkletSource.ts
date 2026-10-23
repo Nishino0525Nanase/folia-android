@@ -54,8 +54,17 @@ class SpectrumTapProcessor extends AudioWorkletProcessor {
         this.binWidth = sampleRate / n;
         this.bands = BANDS;
         this.alive = true;
+        this.paused = Boolean(given.paused);
         this.port.onmessage = (event) => {
             if (event.data === 'stop') this.alive = false;
+            if (event.data === 'pause') this.paused = true;
+            if (event.data === 'resume' && this.paused) {
+                this.paused = false;
+                this.ring.fill(0);
+                this.smoothed.fill(0);
+                this.write = 0;
+                this.sinceLast = 0;
+            }
         };
     }
 
@@ -159,6 +168,9 @@ class SpectrumTapProcessor extends AudioWorkletProcessor {
     }
 
     process(inputs) {
+        // Only suspend this silent analysis branch; the audible graph keeps running.
+        if (!this.alive) return false;
+        if (this.paused) return true;
         const input = inputs[0];
         if (!input || input.length === 0) return this.alive;
         const channel = input[0];

@@ -32,3 +32,20 @@ it('keeps existing lyrics and discards a late result after a song switch or pane
     usePlaybackStore.setState({ currentSong: song }); mocks.load.mockResolvedValue({ lyricsSource: 'imported', importedLyrics: lyrics });
     await applyPreparedLyricsToPlayback(song, set, persist, () => false); expect(set).not.toHaveBeenCalled();
 });
+it('replaces an automatic catalogue lyric with original video cues without requiring Apply', async () => {
+    const automatic = { ...song, isPureMusic: true, onlineLyricsState: { lyricsSource: 'online' as const, selectionOrigin: 'automatic' as const, hasOnlineOverride: true, onlineOverrideLyrics: lyrics } };
+    usePlaybackStore.setState({ currentSong: automatic, lyrics, lyricTimelineOffsetMs: 2400 });
+    writeLyricOffset(song.id, 0); // The committed source upgrade reset its catalogue-specific correction.
+    const subtitles = { ...lyrics, mediaSubtitle: { language: 'ja', automatic: false } };
+    mocks.load.mockResolvedValue({ lyricsSource: 'online', selectionOrigin: 'automatic', hasOnlineOverride: true, onlineOverrideLyrics: subtitles });
+    const set = vi.fn(), persist = vi.fn();
+    await applyPreparedLyricsToPlayback(song, set, persist, () => true);
+    expect(set).toHaveBeenCalledWith(subtitles); expect(persist).toHaveBeenCalledOnce();
+    expect(usePlaybackStore.getState().lyricTimelineOffsetMs).toBe(0);
+    expect(usePlaybackStore.getState().currentSong?.isPureMusic).toBe(false);
+    usePlaybackStore.setState({ currentSong: automatic, lyrics });
+    mocks.load.mockResolvedValue({ lyricsSource: 'online', selectionOrigin: 'manual', hasOnlineOverride: true, onlineOverrideLyrics: subtitles });
+    set.mockClear();
+    await applyPreparedLyricsToPlayback(song, set, persist, () => true);
+    expect(set).not.toHaveBeenCalled();
+});

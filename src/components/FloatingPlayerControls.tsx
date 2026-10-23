@@ -8,6 +8,7 @@ import { PlayerState, LyricData, Theme } from '../types';
 import LyricsTimelineModal from './modal/LyricsTimelineModal';
 import TrackTitleNavigator from './floating-player/TrackTitleNavigator';
 import PlayerControlSlotButton from './floating-player/PlayerControlSlotButton';
+import ShuffleModeButton from './floating-player/ShuffleModeButton';
 import PlayerBottomBarPositioner from './floating-player/PlayerBottomBarPositioner';
 import { usePlayerBottomBarBottomPx } from '../hooks/usePlayerBottomBarBottomPx';
 import { playerBottomBarLiveOffset } from '../stores/motionSignals';
@@ -585,6 +586,8 @@ const FloatingPlayerControls: React.FC<FloatingPlayerControlsProps> = ({
                                     controlsDisabled={controlsDisabled}
                                     touchControls={isMobileTouch ? {
                                         playing: playerState === PlayerState.PLAYING,
+                                        loopMode,
+                                        canShuffle: slotContext.canShuffle,
                                         canTogglePlay,
                                         onTogglePlay,
                                         onExpand: () => setIsTouchExpanded(true),
@@ -677,11 +680,11 @@ const ExpandedView: React.FC<ExpandedViewProps> = ({
 }) => {
     const { t } = useTranslation();
     return (
-        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+        <div className={`grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2 ${onCollapse ? '' : 'sm:grid-cols-[auto_minmax(0,1fr)_auto]'}`}>
             {/* Desktop Layout - responsive grid positions apply from the sm breakpoint */}
             {/* Mobile Layout - base grid positions apply below the sm breakpoint */}
             {/* Row 1: Centered Title */}
-            <div data-folia-player-bar-title="true" className={`col-span-3 row-start-1 min-w-0 px-2 sm:col-start-2 sm:col-span-1 ${onCollapse ? 'flex items-center gap-1' : ''}`}>
+            <div data-folia-player-bar-title="true" className={`col-span-3 row-start-1 min-w-0 px-2 ${onCollapse ? 'flex items-center gap-1' : 'sm:col-start-2 sm:col-span-1'}`}>
                 {onCollapse && (
                     <button
                         type="button"
@@ -725,7 +728,7 @@ const ExpandedView: React.FC<ExpandedViewProps> = ({
                     onTogglePlay();
                 }}
                 disabled={!canTogglePlay || controlsDisabled}
-                className={`col-start-2 row-start-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-none bg-(--text-primary) text-black shadow-lg transition-transform sm:col-start-1 sm:row-start-1 sm:row-span-2 ${controlsDisabled ? 'cursor-not-allowed opacity-45' : 'hover:scale-105'}`}
+                className={`col-start-2 row-start-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-none bg-(--text-primary) text-black shadow-lg transition-transform ${onCollapse ? '' : 'sm:col-start-1 sm:row-start-1 sm:row-span-2'} ${controlsDisabled ? 'cursor-not-allowed opacity-45' : 'hover:scale-105'}`}
                 style={{ backgroundColor: primaryColor, color: 'var(--bg-color)' }}
             >
                 {playerState === PlayerState.PLAYING ? (
@@ -735,10 +738,19 @@ const ExpandedView: React.FC<ExpandedViewProps> = ({
                 )}
             </button>
 
-            {/* 两个可自定义槽位。默认仍是循环模式 + 歌词时间轴，和改动前一致。 */}
+            {onCollapse && (
+                <ShuffleModeButton
+                    loopMode={slotContext.loopMode}
+                    disabled={controlsDisabled || (!slotContext.canShuffle && slotContext.loopMode !== 'shuffle')}
+                    showLabel
+                    className="col-start-1 row-start-2 justify-self-end"
+                />
+            )}
+
+            {/* 触屏明确显示随机开关；两个已有自定义槽位仍然保留。 */}
             <div
                 data-ponder-slots
-                className="contents sm:col-start-3 sm:row-start-1 sm:row-span-2 sm:flex sm:items-center sm:gap-1"
+                className={onCollapse ? 'col-start-3 row-start-2 flex items-center justify-start gap-1' : 'contents sm:col-start-3 sm:row-start-1 sm:row-span-2 sm:flex sm:items-center sm:gap-1'}
             >
                 <PlayerControlSlotButton
                     actionId={slotPrimary}
@@ -746,7 +758,7 @@ const ExpandedView: React.FC<ExpandedViewProps> = ({
                     primaryColor={primaryColor}
                     isDaylight={isDaylight}
                     controlsDisabled={controlsDisabled}
-                    className="col-start-1 row-start-2 justify-self-end sm:justify-self-auto"
+                    className={onCollapse ? undefined : 'col-start-1 row-start-2 justify-self-end sm:justify-self-auto'}
                 />
 
                 <PlayerControlSlotButton
@@ -755,12 +767,12 @@ const ExpandedView: React.FC<ExpandedViewProps> = ({
                     primaryColor={primaryColor}
                     isDaylight={isDaylight}
                     controlsDisabled={controlsDisabled}
-                    className="col-start-3 row-start-2 justify-self-start sm:justify-self-auto"
+                    className={onCollapse ? undefined : 'col-start-3 row-start-2 justify-self-start sm:justify-self-auto'}
                 />
             </div>
 
             {/* Row 2: Current Time, Progress Bar, Duration */}
-            <div data-folia-player-bar-progress="true" className="col-span-3 row-start-3 w-full px-2 sm:col-start-2 sm:col-span-1 sm:row-start-2">
+            <div data-folia-player-bar-progress="true" className={`col-span-3 row-start-3 w-full px-2 ${onCollapse ? '' : 'sm:col-start-2 sm:col-span-1 sm:row-start-2'}`}>
                 <ProgressBar
                     currentTime={currentTime}
                     duration={duration}
@@ -786,6 +798,8 @@ interface CollapsedViewProps {
     controlsDisabled?: boolean;
     touchControls?: {
         playing: boolean;
+        loopMode: 'off' | 'all' | 'one' | 'shuffle';
+        canShuffle: boolean;
         canTogglePlay: boolean;
         onTogglePlay: () => void;
         onExpand: () => void;
@@ -815,6 +829,12 @@ const CollapsedView: React.FC<CollapsedViewProps> = ({
                 >
                     {touchControls.playing ? <Pause size={19} fill="currentColor" aria-hidden /> : <Play size={19} fill="currentColor" aria-hidden />}
                 </button>
+            )}
+            {touchControls && (
+                <ShuffleModeButton
+                    loopMode={touchControls.loopMode}
+                    disabled={controlsDisabled || (!touchControls.canShuffle && touchControls.loopMode !== 'shuffle')}
+                />
             )}
             <div className="min-w-0 flex-1">
             <ProgressBar

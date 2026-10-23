@@ -131,6 +131,7 @@ import { usePlaybackQueueController } from './components/app/playback/start/useP
 import { usePlaybackTransportController } from './components/app/playback/bridges/usePlaybackTransportController';
 import { useLocalLibraryCatalog } from './hooks/useLocalLibraryCatalog';
 import { usePlaybackVisualizerBridge } from './components/app/playback/bridges/usePlaybackVisualizerBridge';
+import { usePlaybackPositionReaders } from './components/app/playback/bridges/usePlaybackPositionReaders';
 import { useLyricReadHead } from './components/app/playback/bridges/useLyricReadHead';
 import { useRandomVisualizerMode } from './hooks/useRandomVisualizerMode';
 import { useLyricAnimationDirector } from './hooks/useLyricAnimationDirector';
@@ -1513,6 +1514,17 @@ export default function App() {
     // 而且它会随下一次元数据推送自己纠正回来。
     const nativeSongLiked = resolveSongLiked(displaySong, { isLocalSongLiked, starredNavidromeSongIds, likedSongIds });
     const nativeCanLikeSong = !resolveLikeAvailability(displaySong, false, isNowPlayingStageActive).disabled;
+    const isSyntheticLyricsClock = activePlaybackContext === 'stage' && stageActiveEntryKind === 'lyrics'
+        && !!stageLyricsSession && !!lyrics;
+    const { getMediaTime, getLyricTime } = usePlaybackPositionReaders({
+        audioRef,
+        getDisplayElement: automix.getDisplayElement,
+        getFallbackTime: () => currentTime.get(),
+        getExternalTime: isNowPlayingStageActive ? getNowPlayingDisplayTime
+            : isPlayerCapStageActive ? getPlayerCapDisplayTime
+                : isSyntheticLyricsClock ? getSyntheticStageLyricsTime : null,
+        lyricTimelineOffsetMs: isSyntheticLyricsClock ? 0 : effectiveLyricTimelineOffsetMs,
+    });
     useCapacitorPlaybackBridge({
         currentSong: displaySong,
         cachedCoverUrl: displayCoverUrl ?? cachedCoverUrl,
@@ -1521,7 +1533,7 @@ export default function App() {
         mediaSessionPauseRef,
         mediaSessionPrevRef,
         mediaSessionNextRef,
-        getCurrentTime: () => currentTime.get(),
+        getCurrentTime: getMediaTime,
         onSeek: (seconds) => seekMainAudioRef.current(seconds),
         isLiked: nativeSongLiked,
         canLike: nativeCanLikeSong,
@@ -1533,7 +1545,7 @@ export default function App() {
     // 壁纸是另一个组件，读不到 React 状态，只能由这里主动推过去。
     useLyricsWallpaperFeed({
         lyrics,
-        getCurrentTime: () => currentTime.get(),
+        getCurrentTime: getLyricTime,
         title: displaySong?.name ?? null,
         artist: displaySong ? getSongArtistLabel(displaySong) : null,
         coverUrl: displayCoverUrl ?? cachedCoverUrl,
@@ -1561,7 +1573,7 @@ export default function App() {
     // Android 专有：把当前歌曲与歌词推给状态栏歌词（Lyricon）。
     useLyriconFeed({
         lyrics,
-        getCurrentTime: () => currentTime.get(),
+        getCurrentTime: getLyricTime,
         title: displaySong?.name ?? null,
         artist: displaySong ? getSongArtistLabel(displaySong) : null,
         // id 在部分音源上是数字，Lyricon 只用它判断换没换歌，统一成字符串即可。

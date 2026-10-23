@@ -1914,6 +1914,11 @@ export default {
     "filename": "人声校准.lrc"
 },
   "lyricPreparation": {
+    "noSubtitleTracks": "{{count}} 首未提供独立字幕轨；画面里的文字不能直接作为字幕读取",
+    "subtitleLogin": "{{count}} 首字幕需要登录，登录后自动重试",
+    "subtitleUnavailable": "{{count}} 首字幕暂时读取失败，将有限次重试；仍失败时可在歌单重试",
+    "subtitleRefused": "{{count}} 首字幕请求被平台拒绝，已暂停重试；可稍后在歌单重试",
+    "subtitleInvalid": "{{count}} 首字幕内容无法解析，可在歌单重试",
     "recognizing": "正在识别《{{name}}》：{{progress}}%",
     "audioQueued": "等待音频识别 {{count}} 首",
     "videoSubtitles": "已读取原视频字幕，按字幕自身的时间显示；如果是平台自动字幕，文字可能有误。这不是逐字人声对齐。",
@@ -1925,7 +1930,7 @@ export default {
     "results": "已就绪 {{ready}} · 待识别 {{review}} · 未找到或失败 {{missed}}",
     "pause": "暂停全部匹配",
     "resume": "继续匹配",
-    "retry": "重试未匹配歌曲"
+    "retry": "重试未完成的歌词与字幕"
 },
   "lyricProvider": {
     "lrclib": "LRCLIB",
@@ -4584,7 +4589,7 @@ export default {
     },
     "summaries": {
       "bravais_seam": "墙中间那道缝：三档开合、首页的页签与工具格、过滤和搜索的区别。",
-      "queue_shuffle": "Folia 没有随机播放模式，而是打乱队列；以及打乱队列的四个入口。",
+      "queue_shuffle": "开启随机播放可以持续随机听，也可以单次打乱队列。这里介绍队列的操作入口。",
       "audio_equalizer": "十段均衡和效果链；拖动推子会改写自定义槽。",
       "vis_playground": "预览上的三块隐藏点击区。",
       "lyric_style": "每种样式的专属设置、莫奈部件的隐藏、背景搭配和通用副字幕。",
@@ -5216,7 +5221,7 @@ export default {
       "bravaisSeamHomeDock": "账户入口与工具格",
       "bravaisSeamFilter": "过滤当前页，和搜索不是一回事",
       "bravaisSeamTools": "右下角的墙面工具",
-      "queueShuffleNoMode": "没有随机模式，只有打乱队列",
+      "queueShuffleNoMode": "随机播放与打乱队列",
       "queueShuffleCommand": "用命令打乱",
       "queueShuffleSlot": "放进控制条按钮",
       "queueShufflePanel": "队列面板上的按钮",
@@ -5390,7 +5395,7 @@ export default {
         "toolsAppearance": "最下面是墙面外观：透光在三档之间轮换，还有海报叠色和开灯 / 关灯。向左滑这颗按钮，直接打开命令面板。"
       },
       "queueShuffle": {
-        "noMode": "Folia 不提供传统的随机播放模式，循环按钮也不会切到随机。想随机听，就打乱当前队列。",
+        "noMode": "随机播放会持续按随机顺序播放，到队尾后重新打乱。队列里的打乱按钮只重排一次，不改变当前播放模式。",
         "once": "打乱是一次操作：当前队列原地洗一次牌，之后按新顺序播放。想换个顺序，再打乱一次。",
         "command": "最快的是命令：命令窗口关着、焦点不在输入框时按冒号进入执行模式，再按 r。也可以在命令窗口里搜「打乱队列」。",
         "slot": "常用的话，在设置 · 播放页的「进度条右侧按钮」里选「随机队列」，控制条上就多一颗打乱按钮。",
@@ -5546,7 +5551,7 @@ export default {
         "playerCommandArgument": "需要参数的命令不会立刻跑。打完命令名按空格，它收成输入行里的一枚标签，光标留在后面等你补参数，补完再 Enter。",
         "playerExecuteCloseFirst": "执行模式要在命令窗口关闭时进入。先按 Esc 关掉窗口：窗口开着时按冒号，只会把冒号打进输入框。",
         "playerExecuteMode": "回到播放页，焦点不在输入框时按冒号，命令窗口会直接以执行模式打开。进入后按 r/v/o/h 执行命令。",
-        "playerShuffleNoSwitch": "Folia 没有常驻的随机播放开关；它是一次操作，按下后会打乱当前队列。",
+        "playerShuffleNoSwitch": "手机上可以直接点击播放条的随机播放开关，也可以用循环按钮切到随机播放。队列里的打乱操作则只重排一次。",
         "playerShuffleHow": "播放页按冒号进入执行模式，再按 r 打乱队列；再次执行可换顺序。",
         "playerShuffleSlot": "如果你常用它，把「随机队列」放进控制条右边那两个位置之一，以后按一下就行。",
         "lattice": "Lattice 把整条播放队列铺成一面海报墙。你可以在墙上移动查看队列，并选中海报来操作那首歌。从探索页打开时，铺开的是探索页的专辑、歌单、歌手和歌曲。",
@@ -5579,7 +5584,7 @@ export default {
         "heightDrag": "进了拖动调整之后，按住胶囊任意位置上下拖。松手即生效，而且会被记住。",
         "slotsIntro": "进度条右边这两个按钮不是固定的，两个位置各自独立。",
         "slotsWhere": "在设置里挑：循环、随机、喜爱、队列、音量、睡眠定时等十个动作里任选，选完立刻生效。",
-        "shuffleIntro": "这个随机和别处的不一样 —— 它不是一个开着就一直生效的模式。",
+        "shuffleIntro": "这里的队列按钮只打乱一次；想持续随机听，可以在播放控件里开启随机播放。",
         "shuffleOnce": "按一下，Folia 把当前队列原地洗一次牌，洗完这个顺序就定下来了。想换个顺序就再按一次。",
         "volumeIntro": "底部控制条上没有常驻的音量滑块。",
         "volumeOpens": "按这里打开的是命令面板里的音量面板，不是就地弹一个小滑块。"

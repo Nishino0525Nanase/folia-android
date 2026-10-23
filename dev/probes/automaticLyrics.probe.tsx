@@ -5,6 +5,7 @@ import { registerOnlineMusicProvider } from '../../src/services/onlineMusic/prov
 import { omni } from '../../src/services/onlineMusic/omni';
 import { setLyricsState, usePlaybackStore } from '../../src/stores/usePlaybackStore';
 import { useLyricSettingsStore } from '../../src/stores/useLyricSettingsStore';
+import { useOnlineProviderAccountStore } from '../../src/stores/useOnlineProviderAccountStore';
 import { usePreparedLyricsPlayback } from '../../src/components/app/playback/start/usePreparedLyricsPlayback';
 import { useLyricPreparation } from '../../src/library/core/collection/import/useLyricPreparation';
 import { LyricPreparationProgress } from '../../src/library/core/collection/import/LyricPreparationProgress';
@@ -14,7 +15,7 @@ import type { ProbeDefinition } from './definition';
 const id = 'probe-auto-lyrics';
 const subtitles = new URLSearchParams(location.search).has('subtitles');
 const match = new URLSearchParams(location.search).has('match');
-useLyricSettingsStore.setState({ preferredAlternativeLyricSource: 'lrclib', autoUseBestLyric: true });
+useLyricSettingsStore.setState({ preferredAlternativeLyricSource: 'lrclib', autoUseBestLyric: !new URLSearchParams(location.search).has('catalogue-off') });
 const song: UnifiedSong = { id: 'unidentified', name: 'Imported unidentified audio', artists: [], album: { id: 0, name: '' }, durationMs: 11000,
     sourceRef: { kind: 'online', providerId: id, mediaId: 'unidentified' } };
 const provider: OnlineMusicProvider = {
@@ -28,7 +29,9 @@ const provider: OnlineMusicProvider = {
     },
     ...(subtitles ? { lyrics: { mediaTimed: true, getLyrics: async () => {
         const response = await fetch('/__video_subtitles');
-        return { lyrics: await response.json(), isPureMusic: false };
+        if (!response.ok) return { lyrics: null, isPureMusic: false, mediaSubtitleStatus: response.status === 401 ? 'login-required' as const : 'unavailable' as const };
+        const lyrics = await response.json();
+        return { lyrics, isPureMusic: false, mediaSubtitleStatus: lyrics ? 'available' as const : 'none' as const };
     } } } : {}),
     playback: { getSongDetail: async () => song, getAudioSource: async () => ({ url: new URL('/__automatic_audio.wav', location.href).href, quality: 'standard', fetchedAt: Date.now() }) },
     linkImport: { labelKey: 'probe', placeholderKey: 'probe', descriptionKey: 'probe', resolve: async () => [song] },
@@ -49,6 +52,7 @@ const Probe = () => {
         <p data-import-returned>{String(imported)}</p>
         <p data-preparation-complete>{String(Boolean(progress?.total && progress.done === progress.total))}</p>
         <LyricPreparationProgress model={progress} />
+        <button onClick={() => useOnlineProviderAccountStore.getState().updateAccount(id, { status: 'authenticated', user: { id: 'fixture-account', nickname: 'Fixture' } })}>Sign in fixture</button>
         <div data-automatic-lyrics>{lyrics?.lines.map((line, i) => <p key={i}>{line.startTime.toFixed(2)} {line.fullText}</p>)}</div>
         <output data-saved-source>{playing?.onlineLyricsState?.matchedLyricsSource ?? playing?.onlineLyricsState?.importedLyricsName ?? ''}</output>
     </div>;

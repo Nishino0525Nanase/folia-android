@@ -145,7 +145,11 @@ export interface ChorusRange {
     endTime: number;
 }
 
+export type MediaSubtitleStatus = 'available' | 'none' | 'login-required' | 'unavailable' | 'refused' | 'invalid' | 'unsupported';
+
 export interface ProviderLyricsResult {
+    /** Distinguishes an absent subtitle track from a failed/unauthenticated lookup. */
+    mediaSubtitleStatus?: MediaSubtitleStatus;
     lyrics: LyricData | null;
     mainText?: string | null;
     wordByWordText?: string | null;

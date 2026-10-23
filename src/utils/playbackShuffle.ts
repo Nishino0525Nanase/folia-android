@@ -1,5 +1,5 @@
 import { getPlaybackSongKey } from './appPlaybackGuards';
-import type { SongResult } from '../types';
+import type { SongResult, StageLoopMode } from '../types';
 
 // src/utils/playbackShuffle.ts
 // 随机播放的排序。
@@ -36,4 +36,19 @@ export const buildShuffledQueue = (
     }
 
     return first ? [first, ...pool] : pool;
+};
+
+/** Shuffle a newly opened playlist, while Next, Previous and queue-panel copies keep their order. */
+export const shuffleNewPlaybackQueue = (
+    queue: SongResult[],
+    previousQueue: SongResult[],
+    requestedSongKey: string,
+    loopMode: StageLoopMode,
+    isFmMode: boolean,
+): SongResult[] => {
+    if (loopMode !== 'shuffle' || isFmMode || queue.length <= 1) return queue;
+    const sameOrder = queue.length === previousQueue.length && queue.every((song, index) => (
+        getPlaybackSongKey(song) === getPlaybackSongKey(previousQueue[index])
+    ));
+    return sameOrder ? queue : buildShuffledQueue(queue, requestedSongKey);
 };

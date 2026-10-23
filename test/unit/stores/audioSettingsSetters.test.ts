@@ -21,6 +21,8 @@ const storage = vi.hoisted(() => {
 import i18n from '@/i18n/config';
 import { useAudioSettingsStore } from '@/stores/useAudioSettingsStore';
 import { useStatusMessageStore } from '@/stores/useStatusMessageStore';
+import { Shuffle } from 'lucide-react';
+import { resolvePlayerControlSlot, type PlayerControlSlotContext } from '@/components/floating-player/playerControlSlotActions';
 
 // test/unit/stores/audioSettingsSetters.test.ts
 // The set-to-a-value forms of mute and repeat mode (Folium's playback.setMuted /
@@ -62,6 +64,22 @@ describe('handleSetMuted', () => {
 });
 
 describe('handleSetLoopMode', () => {
+    it('the player slot shows and persists shuffle without changing other audio settings', () => {
+        useAudioSettingsStore.setState({ loopMode: 'one', volume: 0.37, isMuted: true });
+        const context = (): PlayerControlSlotContext => ({
+            loopMode: useAudioSettingsStore.getState().loopMode,
+            onToggleLoop: () => useAudioSettingsStore.getState().handleToggleLoopMode(),
+        } as PlayerControlSlotContext);
+        resolvePlayerControlSlot('loop', context()).onActivate();
+        expect(useAudioSettingsStore.getState()).toMatchObject({ loopMode: 'shuffle', volume: 0.37, isMuted: true });
+        expect(storage.get('player_loop_mode')).toBe('shuffle');
+        expect(resolvePlayerControlSlot('loop', context())).toMatchObject({
+            icon: Shuffle,
+            active: true,
+            labelKey: 'player.loopShuffle',
+        });
+    });
+
     it('sets, persists and toasts the new mode', () => {
         useAudioSettingsStore.setState({ loopMode: 'off' });
         useAudioSettingsStore.getState().handleSetLoopMode('one');

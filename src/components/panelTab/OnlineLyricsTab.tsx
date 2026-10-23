@@ -6,6 +6,7 @@ import { omni } from '../../services/onlineMusic/omni';
 import { getPlaybackSongKey } from '../../utils/appPlaybackGuards';
 import { AUTOMATIC_SUBTITLES_NAME } from '../../utils/lyrics/automaticSubtitleIdentity';
 import { RestoreAlignedLyricsControl } from './audioAlignment/RestoreAlignedLyricsControl';
+import { PreparedSubtitleStatus } from './PreparedSubtitleStatus';
 import SourceTab from './SourceTab';
 
 // src/components/panelTab/OnlineLyricsTab.tsx
@@ -79,6 +80,7 @@ const OnlineLyricsTab: React.FC<OnlineLyricsTabProps> = ({
             isDaylight={isDaylight}
         >
             {activeSource === 'online' && onlineLyricsState?.onlineOverrideLyrics?.mediaSubtitle && <p className="mt-3 text-xs opacity-65">{t('lyricPreparation.videoSubtitles')}</p>}
+            {activeSource === 'online' && !onlineLyricsState?.onlineOverrideLyrics?.mediaSubtitle && <PreparedSubtitleStatus song={song} />}
             {activeSource === 'imported' && onlineLyricsState?.importedLyricsName === AUTOMATIC_SUBTITLES_NAME && <p className="mt-3 text-xs opacity-65">{t('lyricPreparation.automaticSubtitles')}</p>}
             {AudioAlignmentControl ? <Suspense fallback={null}><AudioAlignmentControl key={getPlaybackSongKey(song)} song={song} isDaylight={isDaylight} offset={lyricTimelineOffsetMs}
                 onOffsetChange={onLyricTimelineOffsetChange} onSourceChange={onChangeLyricsSource} /></Suspense>

@@ -343,6 +343,7 @@ export async function loadOnlineSongLyrics(
             if (!isCurrent()) return;
             if (bestMatch && 'lyrics' in bestMatch && bestMatch.source !== ownProviderId) {
                 const overrideState: OnlineLyricsState = {
+                    selectionOrigin: 'automatic',
                     lyricsSource: 'online',
                     matchedSongId: bestMatch.id,
                     hasOnlineOverride: true,
@@ -362,7 +363,7 @@ export async function loadOnlineSongLyrics(
                 // `isPureMusic: false`, so `'isPureMusic' in bestMatch` was true for it too - and
                 // a best match from the track's own provider (which fails the branch above) then
                 // landed here and had its perfectly good lyrics thrown away as instrumental.
-                const pureMusic = markOnlineLyricsPureMusic(onlineLyricsState);
+                const pureMusic = { ...markOnlineLyricsPureMusic(onlineLyricsState), selectionOrigin: 'automatic' as const };
                 const saved = await savePreparedOnlineLyrics(song, pureMusic, isCurrent);
                 if (!isCurrent()) return;
                 if (saved) {

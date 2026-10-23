@@ -38,7 +38,7 @@ import {
     queueLoopMode,
     resolvePlaybackNeighbors,
 } from '../../../../utils/playbackNeighbors';
-import { buildShuffledQueue } from '../../../../utils/playbackShuffle';
+import { buildShuffledQueue, shuffleNewPlaybackQueue } from '../../../../utils/playbackShuffle';
 import { freshFmSongs } from '../../../../utils/fmQueue';
 import { applyQueueAddBehavior } from '../../../../utils/queueAddBehavior';
 import { moveQueueItem } from '../../../../utils/queueReorder';
@@ -541,7 +541,16 @@ export function usePlaybackQueueController({
                 URL.revokeObjectURL(preloadedOnlineAudioResult.blobUrl);
             }
         };
-        const queueContext = queue.length > 0 ? queue : playQueue.length === 0 ? [song] : playQueue;
+        const sourceQueue = queue.length > 0 ? queue : playQueue.length === 0 ? [song] : playQueue;
+        // A persistent shuffle selection applies when opening another playlist too. Next/Previous,
+        // edits already written to the store and display-only copies keep the visible queue order.
+        const queueContext = queueFollowsStore ? sourceQueue : shuffleNewPlaybackQueue(
+            sourceQueue,
+            usePlaybackStore.getState().playQueue,
+            getPlaybackSongKey(song),
+            useAudioSettingsStore.getState().loopMode,
+            isFmCall,
+        );
         const newQueue = getPlayableOnlineQueue(queueContext);
         const skipCount = options.unavailableSkipCount ?? 0;
         playbackAutoSkipCountRef.current = skipCount;
@@ -1537,22 +1546,7 @@ export function usePlaybackQueueController({
         if (!playQueue || !canShuffleQueue(playQueue.length, isFmMode, isNowPlayingStageActive)) return;
 
         const currentSongKey = currentSong ? getPlaybackSongKey(currentSong) : null;
-        let songsToShuffle: SongResult[] = [];
-        let firstSong: SongResult | null = null;
-
-        if (currentSongKey) {
-            firstSong = playQueue.find(song => getPlaybackSongKey(song) === currentSongKey) || null;
-            songsToShuffle = playQueue.filter(song => getPlaybackSongKey(song) !== currentSongKey);
-        } else {
-            songsToShuffle = [...playQueue];
-        }
-
-        for (let index = songsToShuffle.length - 1; index > 0; index -= 1) {
-            const randomIndex = Math.floor(Math.random() * (index + 1));
-            [songsToShuffle[index], songsToShuffle[randomIndex]] = [songsToShuffle[randomIndex], songsToShuffle[index]];
-        }
-
-        const nextQueue = firstSong ? [firstSong, ...songsToShuffle] : songsToShuffle;
+        const nextQueue = buildShuffledQueue(playQueue, currentSongKey);
 
         setPlayQueue(nextQueue);
         setStatusMsg({ type: 'success', text: t('status.queueShuffled') || 'Queue Shuffled' });
@@ -1576,14 +1570,14 @@ export function usePlaybackQueueController({
         const previousLoopMode = previousLoopModeRef.current;
         previousLoopModeRef.current = loopMode;
         if (loopMode !== 'shuffle' || previousLoopMode === 'shuffle') return;
-        if (isNowPlayingStageActive || playQueue.length <= 1) return;
+        if (!canShuffleQueue(playQueue.length, isFmMode, isNowPlayingStageActive)) return;
 
         const nextQueue = buildShuffledQueue(playQueue, currentSong ? getPlaybackSongKey(currentSong) : null);
         setPlayQueue(nextQueue);
         if (currentSong && nextQueue.length > 1) {
             invalidateAndRefetch(currentSong, nextQueue, audioQuality, userId);
         }
-    }, [audioQuality, currentSong, isNowPlayingStageActive, loopMode, playQueue, setPlayQueue, userId]);
+    }, [audioQuality, currentSong, isFmMode, isNowPlayingStageActive, loopMode, playQueue, setPlayQueue, userId]);
 
     const clearQueue = useCallback(() => {
         if (isNowPlayingStageActive) return;

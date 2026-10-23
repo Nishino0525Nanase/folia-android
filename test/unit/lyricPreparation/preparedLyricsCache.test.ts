@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { SongResult, OnlineLyricsState } from '@/types';
 import { appDatabase } from '@/services/appDatabase';
 import { clearBrowserCacheByCategory, putCacheEntry, readCacheEntry } from '@/services/repositories/cacheRepository';
-import { getOnlineLyricsStateCacheKey, savePreparedOnlineLyrics } from '@/utils/onlineLyricsState';
+import { getOnlineLyricsStateCacheKey, saveOnlineLyricsState, savePreparedOnlineLyrics } from '@/utils/onlineLyricsState';
+import { readLyricOffset, writeLyricOffset } from '@/utils/lyrics/lyricOffsetMemory';
 
 // Real IndexedDB transactions verify that manual selections win over background writes.
 const song: SongResult = { id: 'video:1', name: 'Fixture', artists: [], album: { id: 0, name: '' }, durationMs: 200_000,
@@ -33,4 +34,24 @@ it('clears durable jobs together with the lyric cache', async () => {
     expect(await appDatabase.metadata_cache.get('lyricPreparation_jobs_v1')).toBeTruthy();
     await clearBrowserCacheByCategory('lyrics');
     expect(await readCacheEntry('lyricPreparation_jobs_v1')).toBeNull();
+});
+it('upgrades only an explicitly automatic selection to original video subtitles', async () => {
+    const subtitles: OnlineLyricsState = { lyricsSource: 'online', hasOnlineOverride: true, onlineOverrideLyrics: {
+        mediaSubtitle: { language: 'ja', automatic: false }, lines: [{ startTime: 1, endTime: 3, fullText: '字幕', words: [] }],
+    } };
+    await putCacheEntry(key, automatic);
+    writeLyricOffset(song.id, 2400);
+    expect(await savePreparedOnlineLyrics(song, subtitles, () => true)).toBe(false);
+    expect(readLyricOffset(song.id)).toBe(2400);
+    await appDatabase.metadata_cache.clear();
+    expect(await savePreparedOnlineLyrics(song, automatic, () => true)).toBe(true);
+    expect(await readCacheEntry(key)).toMatchObject({ selectionOrigin: 'automatic' });
+    expect(await savePreparedOnlineLyrics(song, subtitles, () => true)).toBe(true);
+    expect(readLyricOffset(song.id)).toBe(0);
+    expect(await readCacheEntry(key)).toMatchObject({ onlineOverrideLyrics: { mediaSubtitle: { language: 'ja' } } });
+    await saveOnlineLyricsState(song, { ...automatic, selectionOrigin: 'automatic' });
+    writeLyricOffset(song.id, 1700);
+    expect(await readCacheEntry(key)).toMatchObject({ selectionOrigin: 'manual' });
+    expect(await savePreparedOnlineLyrics(song, subtitles, () => true)).toBe(false);
+    expect(readLyricOffset(song.id)).toBe(1700);
 });

@@ -1,4 +1,5 @@
 import { noteSpectrumSource } from '../utils/mediaDiagnostics';
+import { isBackgroundRenderSuspended, subscribeBackgroundRenderSuspended } from '../utils/backgroundRenderGate';
 import { SPECTRUM_WORKLET_NAME, SPECTRUM_WORKLET_SOURCE } from './spectrumWorkletSource';
 
 // src/services/spectrumTap.ts
@@ -102,6 +103,7 @@ export const createSpectrumTap = async (
     let url: string | null = null;
     let node: AudioWorkletNode | null = null;
     let mute: GainNode | null = null;
+    let unsubscribeBackground: (() => void) | undefined;
     try {
         // Blob 而不是打包出来的文件：addModule 要的是加载时就能跑的脚本，走打包器那条路在
         // 安卓 WebView 上拿到的经常是没编译过的 URL。见 spectrumWorkletSource 的注释。
@@ -116,6 +118,7 @@ export const createSpectrumTap = async (
                 fftSize: options?.fftSize ?? 2048,
                 smoothingTimeConstant: options?.smoothingTimeConstant ?? 0.6,
                 hop: options?.hop ?? 1024,
+                paused: isBackgroundRenderSuspended(),
             },
         });
         // processor 本来就不写输出（静音），再串一个零增益是双保险：这一路只抽频谱。
@@ -127,6 +130,7 @@ export const createSpectrumTap = async (
 
         const tap: Tap = { latest: null, dispose: () => undefined };
         node.port.onmessage = (event: MessageEvent) => {
+            if (isBackgroundRenderSuspended()) return;
             const data = event.data as { spectrum?: ArrayBuffer; bands?: ArrayBuffer } | null;
             if (!data?.spectrum || !data.bands) return;
             const bands = new Float32Array(data.bands);
@@ -140,9 +144,16 @@ export const createSpectrumTap = async (
                 at: Date.now(),
             };
         };
+        unsubscribeBackground = subscribeBackgroundRenderSuspended((background) => {
+            tap.latest = null;
+            node?.port.postMessage(background ? 'pause' : 'resume');
+        });
         tap.dispose = () => {
+            unsubscribeBackground?.();
+            unsubscribeBackground = undefined;
             try {
                 node?.port.postMessage('stop');
+                if (node) source.disconnect(node);
             } catch {
                 // 音频线程已经不在了。
             }
@@ -167,6 +178,12 @@ export const createSpectrumTap = async (
         // 记进诊断再 warn：这一条决定了播放页是不是会掉帧，光靠日志看不出来。
         noteSpectrumSource('analyser', error);
         console.warn('[SpectrumTap] 音频线程取频谱这条路没走通，退回 AnalyserNode：', error);
+        unsubscribeBackground?.();
+        try {
+            if (node) source.disconnect(node);
+        } catch {
+            // 创建中途失败时，source 可能还没有连上。
+        }
         node?.disconnect();
         mute?.disconnect();
         return false;

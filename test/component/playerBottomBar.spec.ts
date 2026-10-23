@@ -181,12 +181,18 @@ test.describe('capsule navigation', () => {
         await expect(page.locator(ROOT)).toHaveAttribute('data-probe-player-navigations', '0');
     });
 
-    test('clicking the capsule hot area activates its configured destination', async ({ page }) => {
+    test('clicking the expanded capsule hot area activates its configured destination', async ({ page }) => {
         const capsule = page.locator(CAPSULE).first();
         await expect(capsule).toBeVisible();
+        // A collapsed capsule's first click expands it and intentionally consumes the trailing click.
+        // Navigation belongs to the expanded state; wait for the hover spring before choosing a point.
+        await capsule.hover();
+        await expect(capsule).toHaveAttribute('data-folia-player-bar-expanded', 'true');
+        await settleCapsule(page);
+        const box = (await capsule.boundingBox())!;
 
-        // Hit the capsule padding rather than the transparent range input.
-        await capsule.click({ position: { x: 20, y: 2 } });
+        // The top-centre padding stays inside the rounded pill, clear of controls and the seek input.
+        await capsule.click({ position: { x: box.width / 2, y: 2 } });
 
         await expect(page.locator(ROOT)).toHaveAttribute('data-probe-player-navigations', '1');
     });
@@ -209,7 +215,12 @@ test.describe('bottom subtitle', () => {
         expect(await subtitleBottom(page)).toBeCloseTo(112 + 120, 0);
     });
 
-    test('eases to the baseline when the control bar leaves, rather than jumping', async ({ page }) => {
+    test('eases to the baseline when the control bar leaves, rather than jumping', async ({ page, mount }) => {
+        // This scenario keeps subtitles visible. The default instead fades and unmounts them with
+        // the controls, so sampling that detached element after 240 ms would read an empty bottom.
+        await page.addInitScript(() => localStorage.setItem('hide_subtitle_when_chrome_hidden', 'false'));
+        await page.reload();
+        await mount('playerBottomBar');
         // 回归：bottom 从 animate 挪到 style 时丢过 spring，让位变成瞬间跳变
         await page.locator('[data-probe-action="toggle-chrome"]').click();
 
@@ -281,5 +292,36 @@ test.describe('player control slots', () => {
         await page.locator(CAPSULE).first().hover();
         await page.getByRole('button', { name: /play queue|播放队列/i }).click();
         expect(await page.locator(ROOT).getAttribute('data-probe-slot-hits')).toBe('cmd:queue');
+    });
+});
+
+test.describe('mobile shuffle control', () => {
+    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+    test('toggles persistent shuffle without opening the capsule or pausing, with a visible label when expanded', async ({ page }, testInfo) => {
+        const shuffle = page.locator('[data-folia-shuffle-mode]');
+        const capsule = page.locator('[data-folia-player-bar-expanded]');
+        await expect(capsule).toHaveAttribute('data-folia-player-bar-expanded', 'false');
+        await shuffle.tap();
+        await expect(shuffle).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator(ROOT)).toHaveAttribute('data-probe-loop-mode', 'shuffle');
+        expect(await page.evaluate(() => localStorage.getItem('player_loop_mode'))).toBe('shuffle');
+        await expect(capsule).toHaveAttribute('data-folia-player-bar-expanded', 'false');
+        await expect(page.locator(ROOT)).toHaveAttribute('data-probe-play-toggles', '0');
+        await expect(page.locator(ROOT)).toHaveAttribute('data-probe-player-navigations', '0');
+
+        await page.getByRole('button', { name: 'Expand playback controls' }).tap();
+        await expect(shuffle).toHaveText('Shuffle');
+        await expect(shuffle).toHaveAttribute('aria-pressed', 'true');
+        // Both custom slots must remain tappable beside the new explicit switch.
+        await page.locator('[data-ponder-slot="loop"]').tap();
+        await expect(shuffle).toHaveAttribute('aria-pressed', 'false');
+        await shuffle.tap();
+        await expect(shuffle).toHaveAttribute('aria-pressed', 'true');
+        await shuffle.tap();
+        await expect(page.locator(ROOT)).toHaveAttribute('data-probe-loop-mode', 'off');
+        expect(await page.evaluate(() => localStorage.getItem('player_loop_mode'))).toBe('off');
+        await expect(page.locator(ROOT)).toHaveAttribute('data-probe-play-toggles', '0');
+        await page.screenshot({ path: testInfo.outputPath('player-shuffle-mobile.png') });
     });
 });

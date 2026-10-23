@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { SongResult } from '@/types';
 import { getPlaybackSongKey } from '@/utils/appPlaybackGuards';
-import { buildShuffledQueue } from '@/utils/playbackShuffle';
+import { buildShuffledQueue, shuffleNewPlaybackQueue } from '@/utils/playbackShuffle';
 
 // test/unit/utils/playbackShuffle.test.ts
 // 随机播放的排序：当前这首留首位，其余打乱；走到队尾再调一次就是「后面重新打乱一遍」。
@@ -55,5 +55,41 @@ describe('buildShuffledQueue', () => {
         }
         // 全随机下 30 次都撞成同一个排列的概率可以忽略；这里只要求「不是永远一样」。
         expect(orders.size).toBeGreaterThan(1);
+    });
+});
+
+describe('shuffleNewPlaybackQueue', () => {
+    it('applies the saved shuffle mode to a new playlist and keeps the selected song first', () => {
+        const queue = [song(10), song(11), song(12), song(13)];
+        const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+        try {
+            const shuffled = shuffleNewPlaybackQueue(queue, [song(1)], getPlaybackSongKey(queue[1]), 'shuffle', false);
+            expect(shuffled[0]).toBe(queue[1]);
+            expect(keys(shuffled)).not.toEqual(keys(queue));
+            expect([...keys(shuffled)].sort()).toEqual([...keys(queue)].sort());
+            expect(random).toHaveBeenCalled();
+        } finally {
+            random.mockRestore();
+        }
+    });
+
+    it('preserves queue-panel copies and already committed edits so selecting an item does not reshuffle again', () => {
+        const queue = [song(7), song(1), song(7), song(2)];
+        const displayCopy = queue.map(item => ({ ...item, name: `display: ${item.name}` }));
+        const random = vi.spyOn(Math, 'random');
+        try {
+            expect(shuffleNewPlaybackQueue(displayCopy, queue, getPlaybackSongKey(queue[3]), 'shuffle', false)).toBe(displayCopy);
+            expect(random).not.toHaveBeenCalled();
+        } finally {
+            random.mockRestore();
+        }
+    });
+
+    it('leaves FM and other playback modes in their given order', () => {
+        const queue = [song(1), song(2), song(3)];
+        for (const mode of ['off', 'all', 'one'] as const) {
+            expect(shuffleNewPlaybackQueue(queue, [], getPlaybackSongKey(queue[1]), mode, false)).toBe(queue);
+        }
+        expect(shuffleNewPlaybackQueue(queue, [], getPlaybackSongKey(queue[1]), 'shuffle', true)).toBe(queue);
     });
 });

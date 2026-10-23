@@ -11,12 +11,15 @@ import { isBackgroundRenderSuspended } from '@/utils/backgroundRenderGate';
 let root: Root;
 let host: HTMLDivElement;
 let background: (payload: { background: boolean }) => void;
+let frames: Map<number, FrameRequestCallback>;
 const Probe = () => { useBackgroundRenderPause(); return null; };
 
 beforeEach(() => {
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    frames = new Map();
+    let nextFrame = 0;
+    vi.stubGlobal('requestAnimationFrame', vi.fn(callback => { frames.set(++nextFrame, callback); return nextFrame; }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn(handle => { frames.delete(handle); }));
     vi.stubGlobal('Capacitor', {
         getPlatform: () => 'android',
         Plugins: { FoliaNative: { addListener: (_event: string, listener: typeof background) => {
@@ -59,6 +62,9 @@ describe('native background audio continuation boundary', () => {
 
         act(() => background({ background: false }));
         expect(isBackgroundRenderSuspended()).toBe(false);
+        expect(document.documentElement.hasAttribute('data-folia-background')).toBe(false);
+        expect(draw).not.toHaveBeenCalled();
+        for (const callback of frames.values()) callback(100);
         expect(draw).toHaveBeenCalledTimes(1);
         expect(playVideo).toHaveBeenCalledTimes(1);
         expect(pauseAudio).not.toHaveBeenCalled();

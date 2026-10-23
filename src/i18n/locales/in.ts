@@ -1913,6 +1913,11 @@ export default {
     "filename": "vokal-selaras.lrc"
 },
   "lyricPreparation": {
+    "noSubtitleTracks": "{{count}} video tidak menyediakan trek subtitel terpisah; teks dalam gambar tidak dapat dibaca sebagai berkas subtitel",
+    "subtitleLogin": "{{count}} subtitel memerlukan login dan akan dicoba lagi setelah masuk",
+    "subtitleUnavailable": "{{count}} subtitel gagal dimuat sementara; percobaan ulang dibatasi, lalu dapat diulang dari koleksi",
+    "subtitleRefused": "Platform menolak {{count}} permintaan subtitel; percobaan ulang dijeda. Coba lagi nanti dari koleksi",
+    "subtitleInvalid": "{{count}} berkas subtitel tidak dapat dibaca; coba lagi dari koleksi",
     "recognizing": "Mengenali {{name}}: {{progress}}%",
     "audioQueued": "Menunggu pengenalan audio: {{count}}",
     "videoSubtitles": "Menggunakan teks dan waktu subtitle video asli. Subtitle otomatis platform mungkin mengandung kesalahan. Ini bukan penyelarasan vokal per kata.",
@@ -1924,7 +1929,7 @@ export default {
     "results": "Siap {{ready}} · Perlu identifikasi {{review}} · Tidak ditemukan / gagal {{missed}}",
     "pause": "Jeda semua pencocokan",
     "resume": "Lanjutkan pencocokan",
-    "retry": "Coba ulang yang belum cocok"
+    "retry": "Coba ulang lirik dan subtitel yang belum selesai"
 },
   "lyricProvider": {
     "lrclib": "LRCLIB",
@@ -4583,7 +4588,7 @@ export default {
     },
     "summaries": {
       "bravais_seam": "Celah di tengah dinding: tiga lebarnya, tab dan alat di beranda, serta beda menyaring dan mencari.",
-      "queue_shuffle": "Folia tidak punya mode acak; yang ada adalah mengacak antrean. Ini empat cara melakukannya.",
+      "queue_shuffle": "Gunakan mode Acak untuk pemutaran acak berkelanjutan, atau acak antrean sekali. Berikut kontrol antreannya.",
       "audio_equalizer": "Sepuluh pita dan satu rantai efek \u2014 dan satu tarikan menimpa slot kustom.",
       "vis_playground": "Ada tiga area klik tak terlihat di atas pratinjau.",
       "lyric_style": "Pengaturan khusus tiap gaya, menyembunyikan elemen Monet, memadukan latar, dan subtitel bersama.",
@@ -5215,7 +5220,7 @@ export default {
       "bravaisSeamHomeDock": "Akun dan kisi alat",
       "bravaisSeamFilter": "Menyaring halaman ini bukan mencari",
       "bravaisSeamTools": "Alat dinding di pojok",
-      "queueShuffleNoMode": "Tanpa mode acak, hanya acak antrean",
+      "queueShuffleNoMode": "Mode acak dan mengacak antrean",
       "queueShuffleCommand": "Acak lewat perintah",
       "queueShuffleSlot": "Taruh di bilah kontrol",
       "queueShufflePanel": "Tombol di panel antrean",
@@ -5389,7 +5394,7 @@ export default {
         "toolsAppearance": "Paling bawah adalah tampilan dinding: transparansi bergiliran di tiga tingkat, ditambah warna poster dan lampu nyala / mati. Geser tombol ini ke kiri untuk langsung membuka palet perintah."
       },
       "queueShuffle": {
-        "noMode": "Folia tidak menyediakan mode putar acak tradisional, dan tombol ulang tidak akan beralih ke acak. Untuk mendengar secara acak, acak antrean saat ini.",
+        "noMode": "Mode Acak terus memutar dalam urutan acak dan mengacak ulang di akhir antrean. Tombol acak antrean hanya mengubah urutan sekali tanpa mengganti mode pemutaran.",
         "once": "Mengacak adalah satu tindakan: antrean saat ini diacak di tempat lalu diputar dengan urutan baru. Acak lagi untuk urutan lain.",
         "command": "Cara tercepat adalah perintah: saat jendela perintah tertutup dan tidak ada kolom teks yang fokus, tekan titik dua untuk masuk mode eksekusi, lalu tekan r. Kamu juga bisa mencari “Acak antrean” di jendela perintah.",
         "slot": "Kalau sering dipakai, pilih “Acak antrean” di “Tombol bilah progres” pada Pengaturan · Halaman pemutar, maka bilah kontrol mendapat tombol acak.",
@@ -5545,7 +5550,7 @@ export default {
         "playerCommandArgument": "Perintah yang butuh argumen tidak langsung jalan. Ketik namanya, tekan spasi, dan ia melipat jadi satu label di baris masukan sementara kursor menunggu di belakangnya. Isi argumennya, lalu Enter.",
         "playerExecuteCloseFirst": "Mode eksekusi dimasuki saat jendela perintah tertutup. Tekan Esc untuk menutupnya dulu: saat jendela terbuka, titik dua hanya masuk ke baris masukan.",
         "playerExecuteMode": "Kembali di halaman pemutar, dengan fokus di luar kotak teks, tekan tombol titik dua: jendela perintah langsung terbuka di mode eksekusi. Di dalamnya satu tombol menjalankan satu perintah: r mengacak antrean, v volume, o pengaturan, h bantuan.",
-        "playerShuffleNoSwitch": "Folia tidak punya sakelar acak. Kamu tidak menemukannya di bilah kontrol karena acak bukan mode yang menyala terus \u2014 ia satu tindakan: mengocok ulang antrean saat ini di tempat.",
+        "playerShuffleNoSwitch": "Di ponsel, ketuk Acak di bilah pemutar untuk menyalakan atau mematikan mode acak. Kamu juga bisa mengganti mode lewat tombol ulang. Tombol acak antrean mengubah urutan sekali.",
         "playerShuffleHow": "Cara tercepat justru tanpa membuka apa pun: tekan tombol titik dua di halaman pemutar \u2014 jendelanya terbuka di mode eksekusi \u2014 lalu tekan r. Urutan barunya langsung berlaku; jalankan lagi untuk urutan lain.",
         "playerShuffleSlot": "Kalau sering dipakai, taruh \u201cAcak antrean\u201d di salah satu dari dua posisi kanan bilah kontrol, dan ia jadi satu tekanan saja.",
         "lattice": "Lattice menyusun seluruh antrean putar sebagai satu bidang poster. Bergeraklah di bidang itu untuk melihat antrean dan pilih poster untuk bertindak pada lagu tersebut. Jika dibuka dari tab Jelajahi, yang disusun adalah album, playlist, artis, dan lagu dari tab itu.",
@@ -5578,7 +5583,7 @@ export default {
         "heightDrag": "Setelah mode atur posisi aktif, tahan kapsul di mana saja lalu seret ke atas atau bawah. Lepaskan untuk menerapkan, dan pengaturannya diingat.",
         "slotsIntro": "Dua tombol di kanan bilah progres ini tidak tetap, dan tiap slot berdiri sendiri.",
         "slotsWhere": "Pilih di pengaturan: ulang, acak, suka, antrean, volume, pengatur waktu tidur, dan empat lainnya; langsung berlaku.",
-        "shuffleIntro": "Acak di sini tidak seperti di tempat lain - ia bukan mode yang terus menyala.",
+        "shuffleIntro": "Tombol antrean ini mengacak sekali. Untuk pemutaran acak berkelanjutan, nyalakan Acak di kontrol pemutar.",
         "shuffleOnce": "Tekan dan Folia mengacak antrean saat ini di tempat, sekali; urutan itulah yang berlaku. Ingin lain? Tekan lagi.",
         "volumeIntro": "Bilah kontrol bawah tidak punya penggeser volume permanen.",
         "volumeOpens": "Menekan di sini membuka panel volume di dalam command palette, bukan penggeser kecil di tempat."

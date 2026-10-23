@@ -48,10 +48,12 @@ it('resolves a favourite entry with first-part identity before reading its subti
     expect((await getBilibiliSubtitles(song('BV1FT6dBtEff:first'))).lyrics).not.toBeNull();
     expect(mock.request.mock.calls[1][0].params).toEqual({ bvid: 'BV1FT6dBtEff', cid: '987' });
 });
-it('treats missing subtitles as unknown, not instrumental, and downloads no media', async () => {
+it('distinguishes login-required subtitles from a video with no independent caption track', async () => {
     mock.request.mockResolvedValueOnce({ ok: true, data: { subtitle: { subtitles: [] }, need_login_subtitle: true } });
-    expect(await getBilibiliSubtitles(song())).toMatchObject({ lyrics: null, isPureMusic: false });
-    expect(mock.request).toHaveBeenCalledOnce();
+    expect(await getBilibiliSubtitles(song())).toMatchObject({ lyrics: null, isPureMusic: false, mediaSubtitleStatus: 'login-required' });
+    mock.request.mockResolvedValueOnce({ ok: true, data: { subtitle: { subtitles: [] } } });
+    expect(await getBilibiliSubtitles(song('BV1FT6dBtEff:456'))).toMatchObject({ lyrics: null, isPureMusic: false, mediaSubtitleStatus: 'none' });
+    expect(mock.request).toHaveBeenCalledTimes(2);
 });
 it('does not return a subtitle request from an account that was signed out while reading', async () => {
     mock.request.mockResolvedValueOnce(metadata).mockImplementationOnce(async () => { mock.generation++; mock.session = ''; return body; });
@@ -61,8 +63,24 @@ it('bounds native work and cancels a stalled lookup', async () => {
     vi.useFakeTimers(); mock.request.mockImplementation(() => new Promise(() => {}));
     const result = getBilibiliSubtitles(song());
     await vi.advanceTimersByTimeAsync(20_000);
-    expect((await result).lyrics).toBeNull(); expect(mock.cancel).toHaveBeenCalledOnce();
+    expect(await result).toMatchObject({ lyrics: null, mediaSubtitleStatus: 'unavailable' }); expect(mock.cancel).toHaveBeenCalledOnce();
 });
 it('leaves unsupported web deployments on the existing text search path', async () => {
-    mock.native = false; expect((await getBilibiliSubtitles(song())).lyrics).toBeNull(); expect(mock.request).not.toHaveBeenCalled();
+    mock.native = false; expect(await getBilibiliSubtitles(song())).toMatchObject({ lyrics: null, mediaSubtitleStatus: 'unsupported' }); expect(mock.request).not.toHaveBeenCalled();
+});
+it('reports malformed subtitle content separately from absent captions', async () => {
+    mock.request.mockResolvedValueOnce(metadata).mockResolvedValueOnce({ ok: true, data: { body: [] } });
+    expect(await getBilibiliSubtitles(song())).toMatchObject({ lyrics: null, mediaSubtitleStatus: 'invalid' });
+});
+it('backs off a provider-wide refusal instead of requesting every song, and clears the cooldown after login changes', async () => {
+    mock.request.mockResolvedValueOnce({ ok: false, status: 403, code: 'upstream-http' });
+    expect(await getBilibiliSubtitles(song())).toMatchObject({ mediaSubtitleStatus: 'refused' });
+    expect(await getBilibiliSubtitles(song('BV1FT6dBtEff:456'))).toMatchObject({ mediaSubtitleStatus: 'refused' });
+    expect(mock.request).toHaveBeenCalledOnce();
+    mock.generation++; mock.request.mockResolvedValueOnce(metadata).mockResolvedValueOnce(body);
+    expect(await getBilibiliSubtitles(song('BV1FT6dBtEff:456'))).toMatchObject({ mediaSubtitleStatus: 'available' });
+});
+it('recognizes subtitle CDN refusals wrapped by the native transport', async () => {
+    mock.request.mockResolvedValueOnce(metadata).mockResolvedValueOnce({ ok: false, status: 502, code: 'subtitle-http-403' });
+    expect(await getBilibiliSubtitles(song())).toMatchObject({ mediaSubtitleStatus: 'refused' });
 });

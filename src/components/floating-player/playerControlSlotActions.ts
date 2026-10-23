@@ -1,7 +1,6 @@
 import { ChartBar, Crosshair, Heart, ListMusic, PanelsTopLeft, Repeat, Shuffle, SkipBack, SkipForward, Timer, Volume2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { PlayerControlSlotActionId } from '../../types/playerControlSlots';
-import { noteLoopButtonPress } from '../../services/ponder/loopShuffleHint';
 import { loopModeIcon, loopModeLabelName } from '../shared/loopModeDisplay';
 
 // src/components/floating-player/playerControlSlotActions.ts
@@ -79,16 +78,12 @@ export const resolvePlayerControlSlot = (
     switch (id) {
         case 'loop':
             return {
-                // 循环按钮的图标和提示文本反映当前模式，是这批动作里唯一的三态图标。
+                // 循环按钮的图标和提示文本反映当前四种播放模式。
                 icon: loopModeIcon(context.loopMode),
                 filled: false,
                 active: context.loopMode !== 'off',
                 disabled: false,
-                onActivate: () => {
-                    // 切循环本身会弹一条模式提示，这一条要在它之后才盖得住。
-                    context.onToggleLoop();
-                    noteLoopButtonPress();
-                },
+                onActivate: context.onToggleLoop,
                 labelKey: `player.${loopModeLabelName(context.loopMode)}`,
             };
         case 'prev':

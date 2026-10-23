@@ -44,10 +44,37 @@ test('reads existing video subtitles on import without searching a catalogue and
         return route.fulfill({ json: { mediaSubtitle: { language: 'ja', automatic: false }, isWordByWord: false,
             lines: [{ startTime: 2.45, endTime: 5.12, fullText: 'Original caption', words: [{ text: 'Original caption', startTime: 2.45, endTime: 5.12 }] }] } });
     });
-    await page.goto('/dev-probe.html?probe=automaticLyrics&subtitles');
+    await page.goto('/dev-probe.html?probe=automaticLyrics&subtitles&catalogue-off');
     await expect(page.locator('[data-import-returned]')).toHaveText('true');
     await expect(page.locator('[data-automatic-lyrics]')).toContainText('2.45 Original caption');
     await page.reload();
     await expect(page.locator('[data-automatic-lyrics]')).toContainText('2.45 Original caption');
     expect(requests).toBe(1); expect(searches).toEqual([]);
+});
+
+test('keeps original subtitle lookup active with catalogue matching off and explains absent tracks', async ({ page }) => {
+    let requests = 0;
+    const searches: string[] = [];
+    page.on('request', request => { if (/https:\/\/lrclib\.net\/api/.test(request.url())) searches.push(request.url()); });
+    await page.route('**/__video_subtitles', route => { requests++; return route.fulfill({ json: null }); });
+    await page.goto('/dev-probe.html?probe=automaticLyrics&subtitles&catalogue-off&match');
+    await expect(page.locator('[data-preparation-complete]')).toHaveText('true');
+    await expect(page.getByText(/No separate subtitle track/)).toBeVisible();
+    expect(requests).toBe(1); expect(searches).toEqual([]);
+});
+
+test('retries login-required captions automatically after sign-in without manual lyric matching', async ({ page }) => {
+    let requests = 0;
+    await page.route('**/__video_subtitles', route => {
+        requests++;
+        return requests === 1 ? route.fulfill({ status: 401, json: {} })
+            : route.fulfill({ json: { mediaSubtitle: { language: 'ja', automatic: false }, isWordByWord: false,
+                lines: [{ startTime: 2.45, endTime: 5.12, fullText: 'Original caption', words: [] }] } });
+    });
+    await page.goto('/dev-probe.html?probe=automaticLyrics&subtitles&catalogue-off');
+    await expect(page.locator('[data-preparation-complete]')).toHaveText('true');
+    await expect(page.getByText(/subtitle lookups need login/)).toBeVisible();
+    await page.getByRole('button', { name: 'Sign in fixture' }).click();
+    await expect(page.locator('[data-automatic-lyrics]')).toContainText('2.45 Original caption');
+    expect(requests).toBe(2);
 });

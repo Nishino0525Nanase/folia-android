@@ -18,7 +18,7 @@ import type { PonderSceneScript, PonderTargetDefinition } from '../../../../type
 
 const QUEUE_TAB_X = sidePanelTabCenterX('queue');
 
-/** 第一章：没有随机模式，只有打乱队列这一下。 */
+/** 第一章：持续随机播放与单次打乱队列的区别。 */
 const noShuffleMode: PonderSceneScript = {
     id: 'queue-shuffle-no-mode',
     titleKey: 'ponder.scenes.queueShuffleNoMode',
