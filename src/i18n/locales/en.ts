@@ -1881,7 +1881,18 @@ export default {
     "ponderDescription": "Learn Folia's basic controls and operating model",
     "version": "Version"
   },
+  "lyricPreparation": {
+    "running": "Preparing lyrics {{done}} / {{total}}",
+    "complete": "Lyrics checked {{done}} / {{total}}",
+    "paused": "Lyric preparation paused {{done}} / {{total}}",
+    "disabled": "Automatic lyrics disabled",
+    "results": "Ready {{ready}} · Needs identification {{review}} · Not found / failed {{missed}}",
+    "pause": "Pause all matching",
+    "resume": "Resume matching",
+    "retry": "Retry unresolved"
+},
   "lyricProvider": {
+    "lrclib": "LRCLIB",
     "netease": "NetEase Cloud Music",
     "qq": "QQ Music",
     "kugou": "Kugou Music",
@@ -2451,8 +2462,8 @@ export default {
     "disableHomeDynamicBackgroundDesc": "The home page stops its background animation to lower GPU use",
     "autoUseBestLyric": "Auto Use Best Lyric",
     "settingsHeadingLyricSource": "Lyric sources",
-    "autoUseBestLyricDesc": "Automatically search NetEase, AMLLDB, QQ, and Kugou lyrics, prioritizing word-by-word lyrics with perfect timing matches.",
-    "autoUseBestLyricDescSpotify": "Automatically search NetEase, AMLLDB, QQ, Kugou, and Spotify lyrics, prioritizing word-by-word lyrics with perfect timing matches.",
+    "autoUseBestLyricDesc": "Search NetEase, AMLLDB, QQ, Kugou and LRCLIB. Prepare imported video lyrics in the background and keep existing manual choices.",
+    "autoUseBestLyricDescSpotify": "Search NetEase, AMLLDB, QQ, Kugou and LRCLIB. Prepare imported video lyrics in the background and keep existing manual choices. Spotify requires sign-in.",
     "lyricMatchPriority": "Lyric match priority",
     "lyricMatchPriorityDesc": "When multiple lyric sources have high-confidence matches, prefer this source first.",
     "localLyricsPriority": "Local song lyrics priority",

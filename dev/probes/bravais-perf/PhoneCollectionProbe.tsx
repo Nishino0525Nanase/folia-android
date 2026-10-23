@@ -15,7 +15,8 @@ export default function PhoneCollectionProbe() {
         const base = buildCollectionLayers(5000, []).all;
         return { ...base, seam: { ...base.seam, title: '好听的歌', meta: '5000 首',
             onPlayScope: () => setPlayed(value => value + 1), onEnqueueScope: () => setEnqueued(value => value + 1),
-            collection: { moreLabel: 'More', sync: { state: 'interrupted' as const, label: '120 / 141 · Resume', title: 'Incomplete collection', onResume: () => setAction('resume') },
+            collection: { moreLabel: 'More', lyrics: { label: 'Preparing lyrics 20 / 141', detail: 'Ready 18 · Needs identification 2 · Not found / failed 0', done: 20, total: 141,
+                    toggle: { label: 'Pause all matching', run: () => setAction('pause-lyrics') }, retry: { label: 'Retry unresolved', run: () => setAction('retry-lyrics') } }, sync: { state: 'interrupted' as const, label: '120 / 141 · Resume', title: 'Incomplete collection', onResume: () => setAction('resume') },
                 menu: [{ id: 'reload', label: 'Refresh', run: () => setAction('reload') }] } },
             onPlayItem: () => setPlayed(value => value + 1), onEnqueueItem: () => setEnqueued(value => value + 1),
             onDone: () => setBack(value => value + 1),

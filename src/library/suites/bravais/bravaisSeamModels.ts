@@ -1,3 +1,4 @@
+import type { LyricPreparationModel } from '../../core/collection/import/useLyricPreparation';
 import type { BravaisFormState } from './bravaisFormModel';
 import type { SongSortDirection, SongSortField } from '../../../utils/songSorting';
 import type { SongSortPreset } from '../../core/collection/songSortOptions';
@@ -103,6 +104,7 @@ export type BravaisSeamCollection = {
     description?: string;
     subscribe?: BravaisSeamSubscribe;
     importCollection?: { label: string; hint: string; pending: boolean; disabled: boolean; run: () => void };
+    lyrics?: LyricPreparationModel;
     sync?: BravaisSeamSync;
     status?: BravaisSeamStatus;
     notice?: BravaisSeamNotice | null;

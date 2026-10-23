@@ -541,7 +541,10 @@ export const omni = {
     async importProviderSongs(providerId: OmniProviderId, input: string): Promise<UnifiedSong[]> {
         const provider = requireOnlineMusicProvider(providerId);
         if (!provider.linkImport) return unsupported(providerId, 'link-import');
-        return runRequest(provider, 'collection', () => provider.linkImport!.resolve(input));
+        const songs = await runRequest(provider, 'collection', () => provider.linkImport!.resolve(input));
+        void import('../lyricPreparation/lyricPreparation').then(service => service.enqueueImportedLyrics(songs, `import:${providerId}`))
+            .catch(error => console.warn('[LyricPreparation] Could not enqueue import', error));
+        return songs;
     },
 
     async getImportedProviderSongs(providerId: OmniProviderId): Promise<UnifiedSong[]> {
@@ -559,7 +562,10 @@ export const omni = {
     async importCollectionSongs(collection: OmniCollection): Promise<UnifiedSong[]> {
         const provider = requireOnlineMusicProvider(collection.providerId);
         if (!provider.linkImport?.importCollection) return unsupported(provider.id, 'collection-import');
-        return runRequest(provider, 'collection', () => provider.linkImport!.importCollection!(collection));
+        const songs = await runRequest(provider, 'collection', () => provider.linkImport!.importCollection!(collection));
+        void import('../lyricPreparation/lyricPreparation').then(service => service.enqueueImportedLyrics(songs, service.lyricPreparationGroup(collection)))
+            .catch(error => console.warn('[LyricPreparation] Could not enqueue import', error));
+        return songs;
     },
 
     async searchSongs(query: string, page: PageInput): Promise<OmniPage<UnifiedSong>> {

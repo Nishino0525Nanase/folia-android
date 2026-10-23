@@ -11,6 +11,7 @@ import { hasRenderableLyrics } from './validity';
 import { LYRIC_SOURCE_IDS, getLyricSource } from './lyricSources';
 import { canonicalLyricArtist } from './artistAliases';
 import { compactLyricSearchQuery } from './searchQuery';
+import { lrclibAccess } from './providers/lrclibProvider';
 
 // src/utils/lyrics/lyricMatchSources.ts
 // How each lyric source of lyricSources.ts is searched and fetched: for the match windows, for
@@ -128,6 +129,7 @@ const platformAccess = (providerId: LyricProviderSource): LyricSourceAccess => (
 
 // Where a source differs from that. A source with no entry here is reached as its platform alone.
 const OWN_ACCESS: Partial<Record<LyricProviderSource, Partial<LyricSourceAccess>>> = {
+    lrclib: lrclibAccess,
     netease: {
         knownById: (songId) => {
             const numericId = typeof songId === 'number' ? songId : Number(songId);

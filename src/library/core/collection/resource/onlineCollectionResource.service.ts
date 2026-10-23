@@ -33,6 +33,7 @@ import {
 
 export type OnlineCollectionResourceDeps = {
     getCollectionTracks: (collection: OmniCollection, page: { limit: number; offset: number }) => Promise<OmniPage<SongResult>>;
+    prepareLyrics?: (collection: OmniCollection, songs: SongResult[]) => void;
     getCollectionDetail: (collection: OmniCollection) => Promise<ProviderCollection | null>;
     getPersonalFm: () => Promise<SongResult[]>;
     getDailySongs: () => Promise<SongResult[]>;
@@ -137,6 +138,7 @@ export const createOnlineCollectionResource = (key: string, deps: OnlineCollecti
                 const visible = withoutTombstones(nextTracks);
                 upstreamOffset = nextOffset;
                 state.set({ tracks: visible }, 'background');
+                deps.prepareLyrics?.(collection, visible);
                 void deps.writeCache(cacheKey(), visible, tombstones.size ? 0 : targetTime, { nextOffset, hasMore, total: totalTracks });
             },
             ...(deps.wait ? { wait: deps.wait } : {}),
@@ -190,6 +192,7 @@ export const createOnlineCollectionResource = (key: string, deps: OnlineCollecti
                 upstreamOffset = cached.nextOffset!;
                 loading = false;
                 state.set({ status: 'ready', tracks }, 'urgent');
+                deps.prepareLyrics?.(collection, tracks);
                 if (cached.hasMore) {
                     void startSync(tracks, targetTime, cached.total ?? collection.trackCount, upstreamOffset);
                 }
@@ -233,6 +236,7 @@ export const createOnlineCollectionResource = (key: string, deps: OnlineCollecti
             const tracks = withoutTombstones(responseTracks);
             upstreamOffset = nextOffset || responseTracks.length;
             state.set({ status: 'ready', tracks }, 'background');
+            deps.prepareLyrics?.(collection, tracks);
             void deps.writeCache(cacheKey(), tracks, targetTime, { nextOffset: upstreamOffset, hasMore, total });
             if (hasMore) {
                 void startSync(tracks, targetTime, total, upstreamOffset, likedListRead);

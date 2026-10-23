@@ -5,7 +5,8 @@ import { fetchAmllDbLyrics, getAmllDbMusicIds } from './providers/amllDbProvider
 import { applyChorusRangesByTime } from './chorusEffects';
 import type { ChorusRange } from './chorusEffects';
 import { normalizeLyricMatchDurationMs } from './duration';
-import { calculateMatchScoreDetails } from './matchScore';
+import { calculateMatchScoreDetails, normalizeLyricMatchText } from './matchScore';
+import { canonicalLyricArtist } from './artistAliases';
 import { buildLyricSearchQuery, compactLyricSearchQuery } from './searchQuery';
 import { buildLyricSourceOrder } from './sourcePriority';
 import { resolveProviderLyricsChorus } from './chorusResolver';
@@ -42,6 +43,9 @@ export interface AutoMatchProviderCandidate {
 export interface AutoMatchBestLyricOptions {
     album?: string;
     durationToleranceMs?: number;
+    requireUniqueTitleMatch?: boolean;
+    /** Import preparation keeps the first reliable timed lyric instead of waiting for a word-level upgrade. */
+    acceptLineByLine?: boolean;
     isCurrent?: () => boolean;
     preferredSource?: LyricProviderSource;
     metadataCandidate?: LocalSongMetadataLyricCandidate;
@@ -91,7 +95,7 @@ const isSelectedMetadataCandidate = (
 function selectBestCandidate(
     source: LyricProviderSource,
     songs: SongResult[],
-    target: { title: string; artist: string; durationMs: number; album?: string }
+    target: { title: string; artist: string; durationMs: number; album?: string; requireUniqueTitleMatch?: boolean }
 ): SongResult | null {
     const isReliableCandidate = (details: ReturnType<typeof calculateMatchScoreDetails>) =>
         details.titleMatched && (details.artistMatched || details.albumMatched === true);
@@ -115,6 +119,15 @@ function selectBestCandidate(
         }
     }
 
+    if (target.requireUniqueTitleMatch) {
+        const exact = scored.filter(item => item.details.titleSimilarity === 1 && target.durationMs > 0
+            && item.song.durationMs > 0 && Math.abs(target.durationMs - item.song.durationMs) <= 3000
+            && !/\b(?:live|cover|remix|karaoke|instrumental)\b|翻唱|伴奏|现场/iu.test(item.song.name));
+        const artists = new Set(exact.map(item => normalizeLyricMatchText(canonicalLyricArtist(
+            item.song.artists?.map(artist => artist.name).join(', ') || '',
+        ))));
+        return exact.length && artists.size === 1 && !artists.has('') ? exact[0].song : null;
+    }
     const best = scored.find(item => isReliableCandidate(item.details)) ?? scored[0];
     if (!best) {
         return null;
@@ -169,7 +182,7 @@ async function matchUnderArtist(
     const normalizedDurationMs = normalizeLyricMatchDurationMs(durationMs);
     console.log(`[autoMatchBestLyric] Initiating best lyric auto-match for "${searchQuery}" (Duration: ${normalizedDurationMs}ms)`);
     const targetSong = { title, artist, album: options.album, durationMs: normalizedDurationMs,
-        durationToleranceMs: options.durationToleranceMs };
+        durationToleranceMs: options.durationToleranceMs, requireUniqueTitleMatch: options.requireUniqueTitleMatch };
     const providerCandidate = options.providerCandidate ?? (options.neteaseCandidate ? {
         providerId: 'netease' as const,
         song: {
@@ -373,7 +386,7 @@ async function matchUnderArtist(
         };
         const acceptsExactNonWordByWord = options.exactMatchOnly
             && isSelectedMetadataCandidate(source, song, options.metadataCandidate);
-        if (!linesOnly && (processed.lyrics.isWordByWord || acceptsExactNonWordByWord)) {
+        if (options.acceptLineByLine || !linesOnly && (processed.lyrics.isWordByWord || acceptsExactNonWordByWord)) {
             console.log(`[autoMatchBestLyric] Found accepted ${source} lyric match!`);
             return match;
         }
@@ -390,7 +403,7 @@ async function matchUnderArtist(
             if (qqCandidate && isSelectedMetadataCandidate('qq', qqCandidate, options.metadataCandidate)) {
                 const result = await tryAmllDbCandidate('qq', qqCandidate);
                 if (result) {
-                    if (result.lyrics.isWordByWord) {
+                    if (options.acceptLineByLine || result.lyrics.isWordByWord) {
                         return result;
                     }
                     lineByLineFallback ??= result;
@@ -398,7 +411,7 @@ async function matchUnderArtist(
             }
         }
 
-        const neteaseCandidate = await getBestCandidate('netease');
+        const neteaseCandidate = await getBestCandidate('netease').catch(() => null);
         if (!neteaseCandidate) {
             console.log('[autoMatchBestLyric] Searching AMLLDB directly without a catalogue id.');
             return tryPlatformSource('amll');
@@ -406,24 +419,19 @@ async function matchUnderArtist(
 
         const result = await tryAmllDbCandidate('ncm', neteaseCandidate);
         if (result) {
-            if (result.lyrics.isWordByWord) {
+            if (options.acceptLineByLine || result.lyrics.isWordByWord) {
                 return result;
             }
             lineByLineFallback ??= result;
         }
-        console.log('[autoMatchBestLyric] AMLLDB auto probe finished after NCM miss; QQ AMLLDB probing is reserved for manual matching.');
-        return null;
+        // A different catalogue id can still have a database entry. Search AMLL itself after an id miss.
+        return tryPlatformSource('amll');
     };
 
     for (const source of searchOrder) {
         if (options.isCurrent?.() === false) return null;
         try {
-            // AMLL DB is the one source that is not a platform: it has no songs of its own to search,
-            // and a step of its own here. Another source that is not a platform has none yet and is
-            // passed over.
-            const settled = getLyricSource(source).platform
-                ? await tryPlatformSource(source)
-                : source === 'amll' ? await tryAmllDb() : null;
+            const settled = source === 'amll' ? await tryAmllDb() : await tryPlatformSource(source);
             if (settled) return settled;
         } catch (error) {
             console.error(`[autoMatchBestLyric] ${source} search/fetch failed:`, error);

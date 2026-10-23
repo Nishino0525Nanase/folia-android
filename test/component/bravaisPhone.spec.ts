@@ -25,7 +25,13 @@ test('phone collections stay virtual and preserve actions without mounting the w
     await scroll.evaluate(node => { node.scrollTop = 7200; node.dispatchEvent(new Event('scroll')); });
     await expect.poll(() => scroll.evaluate(node => node.scrollTop)).toBe(7200);
     await root.locator('[data-bravais-seam-action="hide"]').tap();
-    await page.screenshot({ path: '/tmp/folia-build/phone-details-14.png' });
+    await expect(root.locator('[data-lyric-preparation]')).toBeVisible();
+    await root.getByRole('button', { name: 'Pause all matching', exact: true }).tap();
+    await expect(stats).toHaveAttribute('data-action', 'pause-lyrics');
+    await root.getByRole('button', { name: 'Retry unresolved', exact: true }).tap();
+    await expect(stats).toHaveAttribute('data-action', 'retry-lyrics');
+    await expect(root.getByRole('progressbar')).toHaveAttribute('max', '141');
+    await page.screenshot({ path: '/tmp/folia-build/phone-details-19.png' });
     await root.locator('[data-bravais-phone-back]').tap();
     expect(await scroll.evaluate(node => node.scrollTop)).toBe(7200);
     expect(await rows.count()).toBeLessThan(30);

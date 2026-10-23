@@ -1,3 +1,4 @@
+import { useLyricPreparation } from './useLyricPreparation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { omni } from '../../../../services/onlineMusic/omni';
@@ -14,6 +15,7 @@ export const useCollectionImport = (descriptor: LibraryCollectionDescriptor | nu
     const collection = toImportCollection(descriptor);
     const supported = Boolean(collection && omni.canImportCollection(collection));
     const key = descriptor ? collectionKey(descriptor) : '';
+    const lyrics = useLyricPreparation(key);
     const latest = useRef({ target: null as CollectionImportTarget | null, t });
     latest.current = { target: supported && enabled && collection ? { key, collection } : null, t };
     const [pendingKeys, setPendingKeys] = useState<ReadonlySet<string>>(() => new Set());
@@ -34,7 +36,7 @@ export const useCollectionImport = (descriptor: LibraryCollectionDescriptor | nu
     }), []);
     useEffect(() => { runner.activate(); return () => runner.dispose(); }, [runner]);
     const pending = pendingKeys.has(key);
-    return { supported, pending, run: runner.run, enabled: supported && enabled && !pending };
+    return { supported, pending, lyrics, run: runner.run, enabled: supported && enabled && !pending };
 };
 
 export type CollectionImportAction = ReturnType<typeof useCollectionImport>;

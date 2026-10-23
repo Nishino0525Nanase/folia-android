@@ -42,7 +42,7 @@ export const saveLocalSongMatch = async ({ song, source, selectedResult, choice,
         buildLocalSongMetadataSearchTarget(song),
     );
     const selection = resolveLyricMatchMetadataSelection(source, candidate, choice);
-    if (selection.metadata === 'online') {
+    if (candidate && selection.metadata === 'online') {
         const assignment = await getLocalLibraryAssignment(song.id);
         const protectedOrigins = new Set(['manual', 'split']);
         const replacesProtectedArtist = Boolean(

@@ -48,10 +48,10 @@ export interface ApplyLocalSongMatchSelectionResult {
 // 否则别名会被当成多位歌手写进本地库，没有封面的候选还会清掉已缓存的在线封面。
 export const resolveLyricMatchMetadataSelection = (
   source: LyricProviderSource,
-  candidate: OnlineMetadataCandidate,
+  candidate: OnlineMetadataCandidate | null,
   toggles: { useOnlineMetadata: boolean; useOnlineCover: boolean },
 ): Pick<ApplyLocalSongMatchSelectionInput, 'candidate' | 'metadata' | 'cover'> => {
-  if (!sourceProvidesSongMetadata(source)) {
+  if (!candidate || !sourceProvidesSongMetadata(source)) {
     return { candidate: undefined, metadata: 'keep', cover: 'keep' };
   }
   return {

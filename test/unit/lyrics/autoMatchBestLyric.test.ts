@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { lrclibAccess } from '@/utils/lyrics/providers/lrclibProvider';
 import { autoMatchBestLyric } from '@/utils/lyrics/autoMatchBestLyric';
 import { neteaseApi } from '@/services/onlineMusic/netease/netease';
 import { processNeteaseLyrics } from '@/utils/lyrics/neteaseProcessing';
@@ -10,6 +11,8 @@ import { useOnlineProviderAccountStore } from '@/stores/useOnlineProviderAccount
 
 // test/unit/lyrics/autoMatchBestLyric.test.ts
 // Unit tests for the best lyric auto-matcher.
+
+vi.mock('@/utils/lyrics/providers/lrclibProvider', () => ({ lrclibAccess: { search: vi.fn(), fetch: vi.fn(), songKey: (song: { id: unknown }) => String(song.id) } }));
 
 vi.mock('@/services/onlineMusic/netease/netease', () => ({
     neteaseApi: {
@@ -63,8 +66,39 @@ describe('autoMatchBestLyric', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        vi.mocked(lrclibAccess.search).mockResolvedValue([]);
         fetchAmllDbLyricsMock.mockResolvedValue(null);
         vi.mocked(searchAmllDbSongs).mockResolvedValue([]);
+    });
+
+
+    it('accepts timed LRCLIB lyrics for a uniquely identified title with the same duration', async () => {
+        vi.mocked(lrclibAccess.search).mockResolvedValue([{ id: 19, name: '晴る', artists: [{ id: 0, name: 'ヨルシカ' }], album: { id: 0, name: '' }, durationMs: 255_000 }]);
+        vi.mocked(lrclibAccess.fetch).mockResolvedValue({ lyrics: createLyrics(false), isPureMusic: false });
+        expect(await autoMatchBestLyric('晴る', '', 255_000, { preferredSource: 'lrclib', requireUniqueTitleMatch: true, acceptLineByLine: true }))
+            .toMatchObject({ source: 'lrclib', id: 19, lyrics: { isWordByWord: false } });
+        expect(searchQQLyricsMock).not.toHaveBeenCalled();
+    });
+
+    it.each(['different-artist', 'missing-duration', 'wrong-duration'])('rejects unsafe title-only matching: %s', async scenario => {
+        const song = { id: 19, name: '晴る', artists: [{ id: 0, name: 'ヨルシカ' }], album: { id: 0, name: '' }, durationMs: 255_000 };
+        vi.mocked(lrclibAccess.search).mockResolvedValue(scenario === 'different-artist' ? [song, { ...song, id: 20, artists: [{ id: 2, name: 'Another Artist' }] }]
+            : [{ ...song, durationMs: scenario === 'missing-duration' ? 0 : 240_000 }]);
+        cloudSearchMock.mockResolvedValue({ result: { songs: [] } });
+        searchQQLyricsMock.mockResolvedValue([]); searchKugouLyricsMock.mockResolvedValue([]);
+        expect(await autoMatchBestLyric('晴る', '', 255_000, { preferredSource: 'lrclib', requireUniqueTitleMatch: true, acceptLineByLine: true })).toBeNull();
+        expect(lrclibAccess.fetch).not.toHaveBeenCalled();
+    });
+
+    it('searches AMLL directly after a catalogue id has no lyric entry', async () => {
+        cloudSearchMock.mockResolvedValue({ result: { songs: [{ id: 101, name: '晴る', ar: [{ id: 1, name: 'ヨルシカ' }], al: { id: 1, name: '' }, dt: 255_000 }] } });
+        vi.mocked(searchAmllDbSongs).mockResolvedValue([{
+            id: 1, filename: 'fixture.ttml', createdAt: 1, musicNames: ['晴る'], artistNames: ['ヨルシカ'], albumNames: [], ncmMusicIds: ['123'], qqMusicIds: [],
+            appleMusicIds: [], spotifyIds: [], isrcs: [], authorIds: [], authorUsernames: [],
+        }]);
+        fetchAmllDbLyricsMock.mockResolvedValueOnce(null).mockResolvedValue(createLyrics(true));
+        expect(await autoMatchBestLyric('晴る', 'ヨルシカ', 255_000, { preferredSource: 'amll', acceptLineByLine: true })).toMatchObject({ source: 'amll', id: 123 });
+        expect(searchAmllDbSongs).toHaveBeenCalled();
     });
 
     it('searches the lyric database directly when the music catalogue cannot identify a video', async () => {

@@ -7,9 +7,8 @@
 // To add a source: add its entry here, and its name to each locale file under its `labelKey`.
 // A source that is an online platform is searched and fetched through that platform's registered
 // provider; lyricMatchSources.ts needs an entry only for a source that is reached another way.
-// A source that is not a platform (as AMLL DB) needs two more things: that entry in
-// lyricMatchSources.ts, and a step of its own in autoMatchBestLyric.ts, where the automatic pick
-// passes it over until it has one.
+// A lyric-only catalogue needs its own search/fetch entry in lyricMatchSources.ts.
+// The automatic matcher uses that same entry; AMLL also supports lookup by music-platform id.
 
 interface LyricSourceEntry {
     /** Stored as text with the preferred-source setting and with a song's lyric choice: never rename one. */
@@ -40,6 +39,7 @@ const ENTRIES = [
     { id: 'amll', labelKey: 'lyricProvider.amll', platform: false },
     { id: 'qq', labelKey: 'lyricProvider.qq', platform: true },
     { id: 'kugou', labelKey: 'lyricProvider.kugou', platform: true },
+    { id: 'lrclib', labelKey: 'lyricProvider.lrclib', platform: false, linesOnly: true },
     { id: 'spotify', labelKey: 'lyricProvider.spotify', platform: true, needsAccount: true, linesOnly: true },
 ] as const satisfies readonly LyricSourceEntry[];
 

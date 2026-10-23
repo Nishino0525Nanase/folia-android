@@ -356,6 +356,7 @@ const prefetchSong = async (
                         const bestMatch = await autoMatchBestLyric(matchTarget.title, matchTarget.artist, matchTarget.durationMs, {
                             album: matchTarget.album,
                             durationToleranceMs: matchTarget.durationToleranceMs,
+                            requireUniqueTitleMatch: matchTarget.requireUniqueTitleMatch,
                             isCurrent: () => !signal.aborted,
                             preferredSource,
                             alternateArtist: () => omni.getAlternateArtistName(song),

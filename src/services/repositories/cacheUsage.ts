@@ -36,7 +36,7 @@ export const getEntrySize = (entry: StoredCacheEntry): number => {
 
 export const matchesCategory = (key: string, category: CacheCategory): boolean => {
   if (category === 'playlist') return key === 'user_playlists' || key.startsWith('playlist_') || (key.startsWith('online_provider_') && key.includes('_playlist'));
-  if (category === 'lyrics') return key.startsWith('lyric_');
+  if (category === 'lyrics') return key.startsWith('lyric_') || key.startsWith('lyricPreparation_');
   if (category === 'cover') return key.startsWith('cover_');
   // Automix's measurement of a track: tempo, bar line, silence edges, loudness. Its own category
   // rather than riding with the audio, because the two are not thrown away for the same reasons.

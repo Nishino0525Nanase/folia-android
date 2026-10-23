@@ -87,6 +87,26 @@ const harness = (
 };
 
 describe('online collection resource: loading', () => {
+    it('prepares cached and newly paged songs without waiting for lyric matching', async () => {
+        const all = songs(141);
+        const prepareLyrics = vi.fn();
+        const h = harness(all, { prepareLyrics }, { tracks: all.slice(0, 120), snapshotTime: TARGET_TIME, schemaVersion: ONLINE_TRACKS_CACHE_SCHEMA_VERSION, nextOffset: 120, hasMore: true, total: 141 });
+        const resource = createOnlineCollectionResource('k', h.deps);
+        resource.ensure(playlist({ trackCount: 141 }), {});
+        await settle();
+        expect(prepareLyrics.mock.calls.map(call => call[1].length)).toEqual([120, 141]);
+        expect(resource.getSnapshot().tracks).toHaveLength(141);
+    });
+
+    it('prepares the first page of a newly imported collection', async () => {
+        const prepareLyrics = vi.fn();
+        const h = harness(songs(3), { prepareLyrics });
+        const resource = createOnlineCollectionResource('k', h.deps);
+        resource.ensure(playlist({ trackCount: 3 }), {});
+        await settle();
+        expect(prepareLyrics.mock.calls[0][1]).toHaveLength(3);
+    });
+
     it('uses a valid cache without asking for the first page, then fills the rest from the cached cursor', async () => {
         const all = songs(300);
         const h = harness(all, {}, { tracks: all.slice(0, 200), snapshotTime: TARGET_TIME, schemaVersion: ONLINE_TRACKS_CACHE_SCHEMA_VERSION, nextOffset: 200, hasMore: true, total: 300 });

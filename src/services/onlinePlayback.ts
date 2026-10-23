@@ -301,6 +301,7 @@ export async function loadOnlineSongLyrics(
             const bestMatch = await autoMatchBestLyric(matchTarget.title, matchTarget.artist, matchTarget.durationMs, {
                 album: matchTarget.album,
                 durationToleranceMs: matchTarget.durationToleranceMs,
+                requireUniqueTitleMatch: matchTarget.requireUniqueTitleMatch,
                 isCurrent,
                 preferredSource: resolveLyricSourcePreference(settingsLyricSettings, song),
                 alternateArtist: () => omni.getAlternateArtistName(song),

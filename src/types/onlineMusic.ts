@@ -453,6 +453,8 @@ export interface ProviderLyricMatchTarget {
     durationMs: number;
     /** Video intros/outros may differ from the recording; only exact identities receive this tolerance. */
     durationToleranceMs?: number;
+    /** With no artist credit, require an exact title, close duration and one unambiguous artist. */
+    requireUniqueTitleMatch?: boolean;
     /** Ambiguous titles can still be searched by hand without saving an automatic guess. */
     autoMatch?: boolean;
 }

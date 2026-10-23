@@ -1,3 +1,4 @@
+import { LyricPreparationProgress } from '../../core/collection/import/LyricPreparationProgress';
 import React, { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -167,6 +168,7 @@ export const BravaisSeamCollectionMenu: React.FC<{
                 )}
             </div>
             {collection?.importCollection && <p className="mt-1 text-[10px] leading-relaxed opacity-55">{collection.importCollection.hint}</p>}
+            <LyricPreparationProgress model={collection?.lyrics} />
             <AnimatePresence>
                 {isOpen && (
                     <motion.div key="menu" className="bravais-seam-menu" role="menu" data-bravais-seam-menu {...pop}>

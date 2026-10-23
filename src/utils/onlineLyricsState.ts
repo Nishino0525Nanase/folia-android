@@ -4,6 +4,7 @@ import type { OnlineLyricsState, SongResult } from '../types';
 import type { MigrationResult } from './lyrics/renderHints';
 import { migrateLyricDataRenderHints as migrateLyrics } from './lyrics/renderHints';
 import { isPureMusicLyricText } from './lyrics/pureMusic';
+import { putCacheEntryIf } from '../services/repositories/cacheRepository';
 
 // src/utils/onlineLyricsState.ts
 
@@ -39,6 +40,12 @@ export const saveOnlineLyricsState = async (song: SongResult, state: OnlineLyric
 /** A saved manual choice, including "instrumental", must not depend on the source's lyric API. */
 export const hasAuthoritativeOnlineLyricsSelection = (state: OnlineLyricsState | null | undefined): boolean => (
     Boolean(state?.hasOnlineOverride || (state?.lyricsSource === 'imported' && state.importedLyrics))
+);
+
+/** A background import match fills only an unset selection, including when a manual save races it. */
+export const savePreparedOnlineLyrics = (song: SongResult, state: OnlineLyricsState, isCurrent: () => boolean): Promise<boolean> => (
+    putCacheEntryIf(getOnlineLyricsStateCacheKey(song), migrateOnlineLyricsState(state).value,
+        current => isCurrent() && !hasAuthoritativeOnlineLyricsSelection(current))
 );
 
 export const resolveOnlineLyrics = (

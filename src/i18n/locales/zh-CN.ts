@@ -1882,7 +1882,18 @@ export default {
     "ponderDescription": "了解 Folia 的基本操作与运行逻辑",
     "version": "版本"
   },
+  "lyricPreparation": {
+    "running": "正在匹配歌词 {{done}} / {{total}}",
+    "complete": "歌词已检查 {{done}} / {{total}}",
+    "paused": "歌词匹配已暂停 {{done}} / {{total}}",
+    "disabled": "自动匹配歌词已关闭",
+    "results": "已就绪 {{ready}} · 待识别 {{review}} · 未找到或失败 {{missed}}",
+    "pause": "暂停全部匹配",
+    "resume": "继续匹配",
+    "retry": "重试未匹配歌曲"
+},
   "lyricProvider": {
+    "lrclib": "LRCLIB",
     "netease": "网易云音乐",
     "qq": "QQ 音乐",
     "kugou": "酷狗音乐",
@@ -2452,8 +2463,8 @@ export default {
     "disableHomeDynamicBackgroundDesc": "主页不再播放背景动画，降低 GPU 占用",
     "autoUseBestLyric": "自动使用最佳歌词",
     "settingsHeadingLyricSource": "歌词来源",
-    "autoUseBestLyricDesc": "自动检索网易云、AMLLDB、QQ 和酷狗歌词，若存在完美匹配的逐字歌词则自动优先采用。",
-    "autoUseBestLyricDescSpotify": "自动检索网易云、AMLLDB、QQ、酷狗和 Spotify 歌词，若存在完美匹配的逐字歌词则自动优先采用。",
+    "autoUseBestLyricDesc": "检索网易云、AMLLDB、QQ、酷狗和 LRCLIB。导入视频后在后台提前匹配歌词，保留手动选择的结果。",
+    "autoUseBestLyricDescSpotify": "检索网易云、AMLLDB、QQ、酷狗和 LRCLIB。导入视频后在后台提前匹配歌词，保留手动选择的结果。 Spotify 需登录后使用。",
     "lyricMatchPriority": "歌词匹配优先级",
     "lyricMatchPriorityDesc": "在多个歌词源都存在匹配度满足要求的歌词时，优先选择该歌词源的结果。",
     "localLyricsPriority": "本地歌曲歌词优先级",

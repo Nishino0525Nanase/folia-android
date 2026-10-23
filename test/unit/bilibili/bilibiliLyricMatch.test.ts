@@ -33,7 +33,7 @@ describe('video lyric search hints', () => {
     });
 
     it('does not use the uploader or video title as music artist/album', () => {
-        expect(getBilibiliLyricMatchTarget(video('花に亡霊'))).toMatchObject({ title: '花に亡霊', artist: '', album: '', autoMatch: false });
+        expect(getBilibiliLyricMatchTarget(video('花に亡霊'))).toMatchObject({ title: '花に亡霊', artist: '', album: '', autoMatch: true, requireUniqueTitleMatch: true });
     });
 
     it('accepts exact music credits despite video padding, but rejects a different identity or long cut', () => {

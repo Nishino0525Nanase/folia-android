@@ -1,6 +1,7 @@
 import type { LocalSong, LyricProviderSource, SongResult } from '../types';
 import type { LocalSongMetadataSource } from '../types/localLibrary';
 import { getProviderSongMetadata } from './onlineMusic/songMetadata';
+import { getPlatformLyricSource } from '../utils/lyrics/lyricSources';
 import { getLyricSourceAccess } from '../utils/lyrics/lyricMatchSources';
 import { calculateMatchScoreDetails } from '../utils/lyrics/matchScore';
 import { buildLyricSearchQuery } from '../utils/lyrics/searchQuery';
@@ -87,10 +88,10 @@ export const normalizeLyricMatchMetadataCandidate = (
     lyricSource: LyricProviderSource,
     result: SongResult,
     target: OnlineMetadataSearchTarget,
-): OnlineMetadataCandidate => {
-    const source: OnlineMetadataSource = lyricSource === 'amll'
-        ? result.amllDbPlatform === 'qq' ? 'qq' : 'netease'
-        : lyricSource;
+): OnlineMetadataCandidate | null => {
+    const platform = getPlatformLyricSource(lyricSource);
+    if (!platform) return null;
+    const source: OnlineMetadataSource = platform.id;
     return normalizeOnlineMetadataCandidate(source, result, target);
 };
 

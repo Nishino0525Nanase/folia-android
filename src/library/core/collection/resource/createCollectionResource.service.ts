@@ -2,6 +2,7 @@ import type { MediaId } from '../../../../types/onlineMusic';
 import type { LibraryCollectionDescriptor } from '../collection.contract';
 import type { CollectionResource } from '../../shared/resource.contract';
 import { collectionKey, isCloudDriveCollection } from '../collectionIdentity';
+import { enqueueCollectionLyrics } from '../../../../services/lyricPreparation/lyricPreparation';
 import { omni } from '../../../../services/onlineMusic/omni';
 import { readOnlineTracksCache, writeOnlineTracksCache } from './onlineCollectionCache.service';
 import { createOnlineCollectionResource, type OnlineCollectionResourceDeps } from './onlineCollectionResource.service';
@@ -16,6 +17,7 @@ import { createStaticCollectionResource } from './staticCollectionResource.servi
 // 不经过这里，所以不需要 mock 整个 omni。
 
 const onlineDeps: OnlineCollectionResourceDeps = {
+    prepareLyrics: enqueueCollectionLyrics,
     getCollectionTracks: (collection, page) => omni.getCollectionTracks(collection, page),
     getCollectionDetail: collection => omni.getCollectionDetail(collection),
     getPersonalFm: () => omni.getPersonalFm(),

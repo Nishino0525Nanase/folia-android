@@ -1433,6 +1433,10 @@ export async function matchLyrics(song: LocalSong): Promise<LyricData | null> {
                             durationMs: matchContext.durationMs,
                         },
                     );
+                    if (!matchedMetadata) {
+                        await applyMatchedMetadata(song.id, {}, { lyricsOnly: true, songPatch: song, skipIfMarkedPureMusic: true });
+                        return bestMatch.lyrics;
+                    }
                     const coverUrl = matchedMetadata.coverUrl;
                     await applyMatchedMetadata(song.id, {
                         source: matchedMetadata.source,

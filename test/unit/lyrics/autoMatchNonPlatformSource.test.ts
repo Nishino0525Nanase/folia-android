@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getOnlineMusicProvider } from '@/services/onlineMusic/providerRegistry';
 import { autoMatchBestLyric } from '@/utils/lyrics/autoMatchBestLyric';
-import { fetchAmllDbLyrics } from '@/utils/lyrics/providers/amllDbProvider';
+import { fetchAmllDbLyrics, searchAmllDbSongs } from '@/utils/lyrics/providers/amllDbProvider';
 
 // test/unit/lyrics/autoMatchNonPlatformSource.test.ts
 // The table of lyric sources with one more source that is not an online platform, as someone
-// adding a source would write it. No such source exists today, so nobody can see this by using
-// the app: the automatic pick must pass it over, not ask AMLL DB a second time in its place.
+// adding a source would write it. An entry without an adapter must never be routed to AMLL DB.
 
 vi.mock('@/services/onlineMusic/netease/netease', () => ({
     neteaseApi: { cloudSearch: vi.fn(), getLyric: vi.fn(), getSongDetail: vi.fn(), getChorus: vi.fn() },
@@ -17,6 +16,7 @@ vi.mock('@/services/onlineMusic/kugou/kugouLyricProvider', () => ({ searchKugouL
 vi.mock('@/utils/lyrics/providers/amllDbProvider', async (importOriginal) => ({
     ...await importOriginal<typeof import('@/utils/lyrics/providers/amllDbProvider')>(),
     fetchAmllDbLyrics: vi.fn(),
+    searchAmllDbSongs: vi.fn(),
 }));
 vi.mock('@/utils/lyrics/lyricSources', async (importOriginal) => {
     const table = await importOriginal<typeof import('@/utils/lyrics/lyricSources')>();
@@ -32,6 +32,7 @@ describe('a lyric source that is not a platform and is not AMLL DB', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         vi.mocked(fetchAmllDbLyrics).mockResolvedValue(null);
+        vi.mocked(searchAmllDbSongs).mockResolvedValue([]);
     });
 
     it('is passed over by the automatic pick: AMLL DB is asked once, for its own turn', async () => {

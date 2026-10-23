@@ -1881,7 +1881,18 @@ export default {
     "ponderDescription": "Pelajari kontrol dasar dan cara kerja Folia",
     "version": "Versi"
   },
+  "lyricPreparation": {
+    "running": "Menyiapkan lirik {{done}} / {{total}}",
+    "complete": "Lirik diperiksa {{done}} / {{total}}",
+    "paused": "Pencocokan lirik dijeda {{done}} / {{total}}",
+    "disabled": "Lirik otomatis dinonaktifkan",
+    "results": "Siap {{ready}} · Perlu identifikasi {{review}} · Tidak ditemukan / gagal {{missed}}",
+    "pause": "Jeda semua pencocokan",
+    "resume": "Lanjutkan pencocokan",
+    "retry": "Coba ulang yang belum cocok"
+},
   "lyricProvider": {
+    "lrclib": "LRCLIB",
     "netease": "NetEase Cloud Music",
     "qq": "QQ Music",
     "kugou": "Kugou Music",
@@ -2451,8 +2462,8 @@ export default {
     "disableHomeDynamicBackgroundDesc": "Halaman beranda menghentikan animasi latarnya untuk mengurangi penggunaan GPU",
     "autoUseBestLyric": "Gunakan Lirik Terbaik Otomatis",
     "settingsHeadingLyricSource": "Sumber lirik",
-    "autoUseBestLyricDesc": "Secara otomatis mencari lirik NetEase, AMLLDB, QQ, dan Kugou, mengutamakan lirik per kata dengan kecocokan waktu sempurna.",
-    "autoUseBestLyricDescSpotify": "Secara otomatis mencari lirik NetEase, AMLLDB, QQ, Kugou, dan Spotify, mengutamakan lirik per kata dengan kecocokan waktu sempurna.",
+    "autoUseBestLyricDesc": "Cari NetEase, AMLLDB, QQ, Kugou dan LRCLIB. Siapkan lirik video yang diimpor di latar belakang dan pertahankan pilihan manual.",
+    "autoUseBestLyricDescSpotify": "Cari NetEase, AMLLDB, QQ, Kugou dan LRCLIB. Siapkan lirik video yang diimpor di latar belakang dan pertahankan pilihan manual. Spotify memerlukan login.",
     "lyricMatchPriority": "Prioritas pencocokan lirik",
     "lyricMatchPriorityDesc": "Saat beberapa sumber lirik memiliki kecocokan berkualitas tinggi, utamakan sumber ini terlebih dahulu.",
     "localLyricsPriority": "Prioritas lirik lagu lokal",

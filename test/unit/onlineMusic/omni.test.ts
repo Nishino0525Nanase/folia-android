@@ -8,6 +8,12 @@ import type { OnlineMusicProvider, ProviderCapabilities, ProviderCollection } fr
 import { onlineFailureOf } from '@/services/onlineMusic/failure/onlineFailureCase';
 import { installOmniResultHooks } from '@/services/hostExtensionHooks';
 
+const lyricJobs = vi.hoisted(() => ({ enqueue: vi.fn(() => new Promise<void>(() => {})) }));
+vi.mock('@/services/lyricPreparation/lyricPreparation', () => ({
+    enqueueImportedLyrics: lyricJobs.enqueue,
+    lyricPreparationGroup: (collection: { providerId: string; type: string; id: string }) => `online:${collection.providerId}:${collection.type}:${collection.id}`,
+}));
+
 // test/unit/onlineMusic/omni.test.ts
 
 vi.mock('@/services/onlineMusic/providerAccountCache', async importOriginal => ({
@@ -51,6 +57,7 @@ const provider = (id: string, search: OnlineMusicProvider['search']): OnlineMusi
 });
 
 afterEach(() => {
+    lyricJobs.enqueue.mockClear();
     unregisterOnlineMusicProvider(providerId);
     unregisterOnlineMusicProvider(otherProviderId);
     useOnlineProviderAccountStore.getState().setActiveProviderId('netease');
@@ -70,6 +77,7 @@ describe('omni routing', () => {
         expect(omni.canImportCollection(target)).toBe(true);
         await expect(omni.importCollectionSongs(target)).resolves.toMatchObject([{ id: 'video:first' }]);
         expect(importCollection).toHaveBeenCalledWith(target);
+        await vi.waitFor(() => expect(lyricJobs.enqueue).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ id: 'video:first' })]), `online:${providerId}:playlist:favorite-1`));
         const unsupported = { ...target, providerId: otherProviderId };
         expect(omni.canImportCollection(unsupported)).toBe(false);
         await expect(omni.importCollectionSongs(unsupported)).rejects.toMatchObject({ code: 'unsupported' });
@@ -85,6 +93,7 @@ describe('omni routing', () => {
         expect(omni.getProviderLinkImportInfo(providerId)?.placeholderKey).toBe('import.placeholder');
         await expect(omni.importProviderSongs(providerId, 'shared link')).resolves.toMatchObject([{ id: 'stable:part' }]);
         expect(resolve).toHaveBeenCalledWith('shared link');
+        await vi.waitFor(() => expect(lyricJobs.enqueue).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ id: 'stable:part' })]), `import:${providerId}`));
         expect(searchSongs).not.toHaveBeenCalled();
     });
     it('falls back from a persisted provider missing in the current build', () => {

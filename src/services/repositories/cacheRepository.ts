@@ -36,6 +36,7 @@ export const getCacheTableName = (key: string): CacheTableName => {
     isBeatGridKey(key) ||
     isDrumHitsKey(key) ||
     key.startsWith('lyric_') ||
+    key.startsWith('lyricPreparation_') ||
     key.startsWith('theme_') ||
     key.startsWith('replayGain_') ||
     key.startsWith('audioLevel_') ||
@@ -60,6 +61,17 @@ const getTable = (name: CacheTableName): Table<StoredCacheEntry, string> => appD
 
 export const putCacheEntry = async (key: string, data: unknown): Promise<void> => {
   await getTable(getCacheTableName(key)).put({ key, data, timestamp: Date.now() });
+};
+
+/** Atomic conditional writes keep a late background result from replacing a newer manual selection. */
+export const putCacheEntryIf = async <T>(key: string, data: T, accept: (current: T | null) => boolean): Promise<boolean> => {
+  const table = getTable(getCacheTableName(key));
+  return appDatabase.transaction('rw', table, async () => {
+    const current = await table.get(key);
+    if (!accept(current?.data as T ?? null)) return false;
+    await table.put({ key, data, timestamp: Date.now() });
+    return true;
+  });
 };
 
 export const readCacheEntry = async <T>(key: string): Promise<T | null> => {

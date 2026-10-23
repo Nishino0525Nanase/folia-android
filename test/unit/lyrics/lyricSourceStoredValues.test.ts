@@ -10,7 +10,7 @@ import { fetchQQLyrics } from '@/services/onlineMusic/qq/qqLyricProvider';
 // test/unit/lyrics/lyricSourceStoredValues.test.ts
 // Pins what is stored about lyric sources: the preferred-source setting (its key and its values)
 // and the source name, song id and AMLL DB platform kept with a song's lyric choice. A source's
-// name is stored as text, so none of the five may ever read as another or stop being known.
+// name is stored as text, so none of the sources may ever read as another or stop being known.
 // The other ids a match hands over are pinned in autoMatchBestLyric.test.ts.
 
 vi.mock('@/utils/lyrics/providers/amllDbProvider', async (importOriginal) => ({
@@ -19,7 +19,7 @@ vi.mock('@/utils/lyrics/providers/amllDbProvider', async (importOriginal) => ({
 }));
 vi.mock('@/services/onlineMusic/qq/qqLyricProvider', () => ({ searchQQLyrics: vi.fn(), fetchQQLyrics: vi.fn() }));
 
-const STORED_NAMES = ['netease', 'amll', 'qq', 'kugou', 'spotify'] as const;
+const STORED_NAMES = ['netease', 'amll', 'qq', 'kugou', 'lrclib', 'spotify'] as const;
 const SETTING_KEY = 'preferred_alternative_lyric_source_v2';
 const LEGACY_SETTING_KEY = 'preferred_alternative_lyric_source';
 
@@ -91,7 +91,7 @@ describe('the source name stored with a song\'s lyric choice', () => {
         expect(getLyricProviderLabel(name)).toBe(i18n.t(`lyricProvider.${name}`));
     });
 
-    it('keeps the five names apart', () => {
+    it('keeps the source names apart', () => {
         expect(new Set(STORED_NAMES.map(name => getLyricProviderLabel(name))).size).toBe(STORED_NAMES.length);
     });
 

@@ -249,6 +249,7 @@ export const useBravaisCollectionSeam = (input: BravaisCollectionSeamInput) => {
             disabled: !input.collectionImport.enabled,
             run: () => void latest.current.collectionImport.run(),
         } : undefined,
+        lyrics: input.collectionImport.lyrics,
         sync: syncLine,
         status,
         notice: notice.notice,
@@ -259,7 +260,7 @@ export const useBravaisCollectionSeam = (input: BravaisCollectionSeamInput) => {
         form,
     // status / syncLine 是每次渲染新算的小对象：按它们的文案比较，免得层描述白换身份。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }), [daily, declares, description, form, input.collectionImport.enabled, input.collectionImport.pending, input.collectionImport.supported, menu, notice.notice, status?.tone, status?.text, subscribe, syncLine?.state, syncLine?.label, t]);
+    }), [daily, declares, description, form, input.collectionImport.lyrics, input.collectionImport.enabled, input.collectionImport.pending, input.collectionImport.supported, menu, notice.notice, status?.tone, status?.text, subscribe, syncLine?.state, syncLine?.label, t]);
 
     // 墙的内容规则：补页期间的循环周期（新页只翻新 slot）、有限拼贴的规划条目数、过滤身份、首屏呼吸。
     const periodCount = resolveWallPeriodCount({ itemCount: input.itemCount, totalCount, sync });

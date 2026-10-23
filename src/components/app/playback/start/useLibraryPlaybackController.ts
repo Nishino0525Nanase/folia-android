@@ -1500,6 +1500,7 @@ export function useLibraryPlaybackController({
             const bestMatch = matchTarget.autoMatch === false ? null : await autoMatchBestLyric(matchTarget.title, matchTarget.artist, matchTarget.durationMs, {
                 album: matchTarget.album,
                 durationToleranceMs: matchTarget.durationToleranceMs,
+                requireUniqueTitleMatch: matchTarget.requireUniqueTitleMatch,
                 isCurrent: () => isStillPlaying(currentSong),
                 preferredSource: resolveLyricSourcePreference(settingsLyricSettings, currentSong),
                 alternateArtist: () => omni.getAlternateArtistName(currentSong),
