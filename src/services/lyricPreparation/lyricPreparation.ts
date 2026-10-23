@@ -5,7 +5,6 @@ import { putCacheEntry, readCacheEntry } from '../repositories/cacheRepository';
 import { useLyricSettingsStore } from '../../stores/useLyricSettingsStore';
 import { createLyricPreparationQueue, type PreparationSnapshot } from './lyricPreparationQueue';
 import { prepareSongLyrics } from './prepareSongLyrics';
-import { recognizeMissingLyrics } from './automaticAudioLyrics';
 
 // Shared background preparation is outside adapters: songs are matched through Omni and the lyric-source registry.
 const CACHE_KEY = 'lyricPreparation_jobs_v1';
@@ -13,7 +12,7 @@ export const lyricPreparation = createLyricPreparationQueue({
     load: () => readCacheEntry<PreparationSnapshot>(CACHE_KEY),
     save: state => putCacheEntry(CACHE_KEY, state),
     prepare: prepareSongLyrics,
-    recognize: recognizeMissingLyrics,
+    // Import preparation is text-only: no full audio download, decoding or speech model competes with playback.
     canRun: () => (typeof navigator === 'undefined' || navigator.onLine !== false)
         && useLyricSettingsStore.getState().autoUseBestLyric,
     wait: () => new Promise(resolve => setTimeout(resolve, 500)),

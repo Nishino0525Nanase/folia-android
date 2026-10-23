@@ -285,7 +285,7 @@ export default async function viteConfig(_config: ConfigEnv): Promise<UserConfig
       },
     },
     plugins: [
-      whisperRuntimePlugin({ modelRoot: process.env.FOLIA_ALIGNMENT_MODEL_ROOT }),
+      whisperRuntimePlugin({ modelRoot: isCapacitorBuild ? undefined : process.env.FOLIA_ALIGNMENT_MODEL_ROOT }),
       devLyricProxyPlugin(),
       commandPinyinPlugin(),
       traditionalLocalePlugin(),
@@ -344,7 +344,8 @@ export default async function viteConfig(_config: ConfigEnv): Promise<UserConfig
       })])
     ],
     define: {
-      'import.meta.env.FOLIA_ALIGNMENT_BUNDLED': JSON.stringify(Boolean(process.env.FOLIA_ALIGNMENT_MODEL_ROOT)),
+      'import.meta.env.FOLIA_LOCAL_ALIGNMENT': JSON.stringify(!isCapacitorBuild),
+      'import.meta.env.FOLIA_ALIGNMENT_BUNDLED': JSON.stringify(!isCapacitorBuild && Boolean(process.env.FOLIA_ALIGNMENT_MODEL_ROOT)),
       '__COMMIT_HASH__': JSON.stringify(commitHash + commitSuffix),
       '__GIT_BRANCH__': JSON.stringify(gitBranch),
       '__BUILD_REPO__': JSON.stringify(buildRepo),

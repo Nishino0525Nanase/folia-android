@@ -6,9 +6,10 @@ import { omni } from '../onlineMusic/omni';
 import { readAlignmentAudio } from '../lyricAlignment/alignmentAudio';
 import { inferAlignment } from '../lyricAlignment/alignmentService';
 import type { PreparationResult } from './lyricPreparationQueue';
+import { AUTOMATIC_SUBTITLES_NAME } from '../../utils/lyrics/automaticSubtitleIdentity';
+export { AUTOMATIC_SUBTITLES_NAME } from '../../utils/lyrics/automaticSubtitleIdentity';
 
 // Import fallback reads the original media, creates timed subtitles, and commits only to an unset lyric selection.
-export const AUTOMATIC_SUBTITLES_NAME = 'folia-auto-subtitles.lrc';
 export const usableAutomaticSubtitles = (lyrics: LyricData, duration: number): boolean => {
     const lines = lyrics.lines;
     if (lines.length < 2 || !Number.isFinite(duration) || duration <= 0) return false;

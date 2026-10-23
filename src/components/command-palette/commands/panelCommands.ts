@@ -18,6 +18,7 @@ export const panelCommands: CommandPaletteCommand[] = [
     // Opening the controls leaves the model download and audio recognition as an explicit choice.
     defineCommand({ ...createPanelCommand('onlineLyrics', 'Align lyrics to audio', 'Review local recognition and lyric alignment',
         ['speech recognition', 'subtitle timing', '识别人声', '歌词校准', '自动字幕']), id: 'align-lyrics-to-audio',
-        isAvailable: context => Boolean(context?.shared.currentSong && getPlaybackSourceRef(context.shared.currentSong).kind === 'online') }),
+        isAvailable: context => import.meta.env.FOLIA_LOCAL_ALIGNMENT !== false
+            && Boolean(context?.shared.currentSong && getPlaybackSourceRef(context.shared.currentSong).kind === 'online') }),
     createPanelCommand('aiDirector', 'Panel: AI director', 'Open the AI lyric animation director tab', ['ai director', 'ai 导演', '动画导演'], Sparkles),
 ];

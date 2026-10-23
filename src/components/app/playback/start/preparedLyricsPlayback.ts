@@ -4,7 +4,7 @@ import { loadOnlineLyricsState, resolveOnlineLyrics } from '../../../../utils/on
 import { hasRenderableLyrics } from '../../../../utils/lyrics/validity';
 import { usePlaybackStore } from '../../../../stores/usePlaybackStore';
 import { readLyricOffset } from '../../../../utils/lyrics/lyricOffsetMemory';
-import { AUTOMATIC_SUBTITLES_NAME } from '../../../../services/lyricPreparation/automaticAudioLyrics';
+import { AUTOMATIC_SUBTITLES_NAME } from '../../../../utils/lyrics/automaticSubtitleIdentity';
 
 // A finished import task can fill the currently empty player without a track restart or a manual Apply action.
 export const applyPreparedLyricsToPlayback = async (song: SongResult, setLyrics: (lyrics: LyricData) => void,

@@ -81,7 +81,7 @@ export const createLyricPreparationQueue = (deps: Deps) => {
                 entry && typeof entry.key === 'string' && entry.song?.sourceRef?.kind === 'online'
                 && Array.isArray(entry.groups) && ['pending', 'running', 'ready', 'review', 'unmatched', 'failed', 'audio-pending', 'recognizing'].includes(entry.status)
             ).map(entry => ({ ...entry, audioProgress: undefined, status: entry.status === 'running' ? 'pending'
-                : entry.status === 'recognizing' ? 'audio-pending'
+                : entry.status === 'recognizing' || entry.status === 'audio-pending' ? deps.recognize ? 'audio-pending' : 'pending'
                 : saved.version === 1 && deps.recognize && ['review', 'unmatched', 'failed'].includes(entry.status) ? 'audio-pending' : entry.status })) };
         }
         emit();

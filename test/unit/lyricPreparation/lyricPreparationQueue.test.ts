@@ -17,6 +17,17 @@ const harness = (saved: PreparationSnapshot | null = null) => {
 };
 
 describe('durable lyric preparation', () => {
+    it('migrates queued and interrupted speech jobs to text search when recognition has been removed', async () => {
+        const h = harness({ version: 2, paused: true, entries: ['audio-pending', 'recognizing', 'ready'].map((status, i) => ({
+            key: String(i), song: song(i), groups: ['a'], status: status as PreparationSnapshot['entries'][number]['status'], updatedAt: 0, audioProgress: 55,
+        })) });
+        await h.queue.initialize();
+        expect(h.queue.getSnapshot().entries.map(entry => entry.status)).toEqual(['pending', 'pending', 'ready']);
+        expect(h.queue.getSnapshot().entries.every(entry => entry.audioProgress === undefined)).toBe(true);
+        h.queue.togglePause();
+        h.pending[0].resolve('unmatched'); h.pending[1].resolve('review'); await settle();
+        expect(h.queue.getSnapshot().entries.map(entry => entry.status)).toEqual(['unmatched', 'review', 'ready']);
+    });
     it('starts two jobs without blocking import and deduplicates repeated pages and collection memberships', async () => {
         const h = harness();
         await h.queue.enqueue([song(1), song(2), song(3)], 'a');

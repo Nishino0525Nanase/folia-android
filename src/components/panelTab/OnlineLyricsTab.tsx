@@ -1,15 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { lazy, Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OnlineLyricsState, ReplayGainMode, SongResult } from '../../types';
 import { getOnlineLyricSourceLabel } from '../../utils/lyrics/lyricSourceLabels';
 import { omni } from '../../services/onlineMusic/omni';
-import { AudioAlignmentControl } from './audioAlignment/AudioAlignmentControl';
 import { getPlaybackSongKey } from '../../utils/appPlaybackGuards';
-import { AUTOMATIC_SUBTITLES_NAME } from '../../services/lyricPreparation/automaticAudioLyrics';
+import { AUTOMATIC_SUBTITLES_NAME } from '../../utils/lyrics/automaticSubtitleIdentity';
+import { RestoreAlignedLyricsControl } from './audioAlignment/RestoreAlignedLyricsControl';
 import SourceTab from './SourceTab';
 
 // src/components/panelTab/OnlineLyricsTab.tsx
 // The song's tab for a song of an online platform: hands SourceTab what it shows for it.
+// Mobile builds remove this branch and its model worker entirely; desktop controls load only on demand.
+const AudioAlignmentControl = import.meta.env.FOLIA_LOCAL_ALIGNMENT
+    ? lazy(() => import('./audioAlignment/AudioAlignmentControl').then(module => ({ default: module.AudioAlignmentControl }))) : null;
 
 interface OnlineLyricsTabProps {
     song: SongResult;
@@ -76,8 +79,10 @@ const OnlineLyricsTab: React.FC<OnlineLyricsTabProps> = ({
             isDaylight={isDaylight}
         >
             {activeSource === 'imported' && onlineLyricsState?.importedLyricsName === AUTOMATIC_SUBTITLES_NAME && <p className="mt-3 text-xs opacity-65">{t('lyricPreparation.automaticSubtitles')}</p>}
-            <AudioAlignmentControl key={getPlaybackSongKey(song)} song={song} isDaylight={isDaylight} offset={lyricTimelineOffsetMs}
-                onOffsetChange={onLyricTimelineOffsetChange} onSourceChange={onChangeLyricsSource} />
+            {AudioAlignmentControl ? <Suspense fallback={null}><AudioAlignmentControl key={getPlaybackSongKey(song)} song={song} isDaylight={isDaylight} offset={lyricTimelineOffsetMs}
+                onOffsetChange={onLyricTimelineOffsetChange} onSourceChange={onChangeLyricsSource} /></Suspense>
+                : <RestoreAlignedLyricsControl key={getPlaybackSongKey(song)} song={song}
+                    onOffsetChange={onLyricTimelineOffsetChange} onSourceChange={onChangeLyricsSource} />}
         </SourceTab>
     );
 };
