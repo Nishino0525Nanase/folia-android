@@ -216,6 +216,7 @@ exports[`command palette registry contract > keeps the registered command order 
   "panel-local",
   "panel-navi",
   "panel-onlineLyrics",
+  "align-lyrics-to-audio",
   "panel-aiDirector",
   "mods",
   "lyric-segmentation",

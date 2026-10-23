@@ -10,6 +10,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { execSync } from 'child_process';
 import { createHash } from 'crypto';
 import fs from 'fs';
+import { whisperRuntimePlugin } from './dev/build/whisperRuntimePlugin.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -221,13 +222,14 @@ export default async function viteConfig(_config: ConfigEnv): Promise<UserConfig
   return {
     base: process.env.ELECTRON === 'true' || isCapacitorBuild ? './' : '/',
     worker: {
+      plugins: () => [whisperRuntimePlugin()],
       format: 'es'
     },
     optimizeDeps: {
       // Only metadataParser.worker.ts imports music-metadata, and the startup dep scan does not
       // follow worker entries. Left out, the first local import discovers it at runtime, Vite
       // re-optimizes, and every open page is force-reloaded ("optimized dependencies changed").
-      include: ['music-metadata'],
+      include: ['music-metadata', '@huggingface/transformers'],
     },
     build: {
       rollupOptions: {
@@ -283,6 +285,7 @@ export default async function viteConfig(_config: ConfigEnv): Promise<UserConfig
       },
     },
     plugins: [
+      whisperRuntimePlugin({ modelRoot: process.env.FOLIA_ALIGNMENT_MODEL_ROOT }),
       devLyricProxyPlugin(),
       commandPinyinPlugin(),
       traditionalLocalePlugin(),
@@ -301,6 +304,8 @@ export default async function viteConfig(_config: ConfigEnv): Promise<UserConfig
           // The cover route is stored with the worker script itself, so precaching it is redundant.
           // folia-cover-sw-standalone.js 只有 Capacitor 打包会注册，Web 端别把它算进预缓存。
           globIgnores: [
+            '**/models/**',
+            '**/ort-wasm-*.wasm',
             '**/runtime-config.js',
             '**/assets/folium-icons/**',
             '**/folia-cover-sw.js',
@@ -339,6 +344,7 @@ export default async function viteConfig(_config: ConfigEnv): Promise<UserConfig
       })])
     ],
     define: {
+      'import.meta.env.FOLIA_ALIGNMENT_BUNDLED': JSON.stringify(Boolean(process.env.FOLIA_ALIGNMENT_MODEL_ROOT)),
       '__COMMIT_HASH__': JSON.stringify(commitHash + commitSuffix),
       '__GIT_BRANCH__': JSON.stringify(gitBranch),
       '__BUILD_REPO__': JSON.stringify(buildRepo),

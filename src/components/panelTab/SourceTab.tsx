@@ -40,6 +40,7 @@ type SourceTabProps<K extends string> = {
     onLyricTimelineOffsetChange: (offsetMs: number) => void;
     /** What is known about the song's file or its copy on a server. */
     facts?: ReadonlyArray<Fact>;
+    children?: React.ReactNode;
     isDaylight: boolean;
 };
 
@@ -56,6 +57,7 @@ export const SourceTab = <K extends string>({
     lyricTimelineOffsetMs,
     onLyricTimelineOffsetChange,
     facts,
+    children,
     isDaylight,
 }: SourceTabProps<K>): React.ReactElement => {
     const { t } = useTranslation();
@@ -94,6 +96,7 @@ export const SourceTab = <K extends string>({
                 <LyricFileButton isDaylight={isDaylight} onImportLyrics={onImportLyrics} />
             </div>
 
+            {children}
             <GroupLine />
 
             <ReplayGainControl values={gainValues} mode={replayGainMode} onChangeMode={onChangeReplayGainMode} />

@@ -1,7 +1,8 @@
 import { ListMusic, Sparkles } from 'lucide-react';
 import type { CommandPaletteCommand } from '../types';
-import { createPanelCommand } from '../commandFactories';
+import { createPanelCommand, defineCommand } from '../commandFactories';
 import { LOCAL_MUSIC_COMMAND_PLATFORMS } from '../../../platform/runtime';
+import { getPlaybackSourceRef } from '../../../utils/appPlaybackGuards';
 
 // src/components/command-palette/commands/panelCommands.ts
 // Commands in the `panel` group: opening the unified side panel on a given tab.
@@ -14,5 +15,9 @@ export const panelCommands: CommandPaletteCommand[] = [
     createPanelCommand('local', 'Panel: local', 'Open the local panel tab', ['local panel', '本地面板'], undefined, {}, [...LOCAL_MUSIC_COMMAND_PLATFORMS]),
     createPanelCommand('navi', 'Panel: Navidrome', 'Open the Navidrome panel tab', ['panel navi', 'navi panel', 'navidrome 面板', '服务器面板']),
     createPanelCommand('onlineLyrics', 'Panel: lyrics', 'Open the online lyrics panel tab', ['lyrics panel', '歌词面板']),
+    // Opening the controls leaves the model download and audio recognition as an explicit choice.
+    defineCommand({ ...createPanelCommand('onlineLyrics', 'Align lyrics to audio', 'Review local recognition and lyric alignment',
+        ['speech recognition', 'subtitle timing', '识别人声', '歌词校准', '自动字幕']), id: 'align-lyrics-to-audio',
+        isAvailable: context => Boolean(context?.shared.currentSong && getPlaybackSourceRef(context.shared.currentSong).kind === 'online') }),
     createPanelCommand('aiDirector', 'Panel: AI director', 'Open the AI lyric animation director tab', ['ai director', 'ai 导演', '动画导演'], Sparkles),
 ];

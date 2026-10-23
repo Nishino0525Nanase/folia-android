@@ -1,0 +1,11 @@
+Folia local audio recognition
+
+Transformers.js 3.8.1, Hugging Face, Apache-2.0
+https://github.com/huggingface/transformers.js
+
+Xenova/whisper-base ONNX model, Apache-2.0 per model card
+https://huggingface.co/Xenova/whisper-base
+Revision: 64da57285918e20ea79ea5c88eed7197933abaa8
+Based on openai/whisper-base. Weights are bundled unchanged.
+
+Whisper by OpenAI uses the MIT license; see whisper-MIT.txt.

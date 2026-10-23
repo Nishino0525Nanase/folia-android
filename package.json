@@ -8,7 +8,7 @@
     "email": "hjm184563@gmail.com"
   },
   "private": true,
-  "version": "0.7.21.19",
+  "version": "0.7.21.20",
   "license": "AGPL-3.0",
   "type": "module",
   "main": "electron/main.cjs",
@@ -239,6 +239,7 @@
     "@capacitor/splash-screen": "8.0.2",
     "@capacitor/status-bar": "8.0.3",
     "@google/genai": "^2.24.0",
+    "@huggingface/transformers": "3.8.1",
     "@neteasecloudmusicapienhanced/api": "4.41.1",
     "@xhayper/discord-rpc": "^1.5.1",
     "@yakult-green-tea/qq-music-api": "3.3.3",
@@ -259,9 +260,9 @@
     "youtubei.js": "18.1.0"
   },
   "devDependencies": {
+    "@applemusic-like-lyrics/ttml": "^1.0.1",
     "@capacitor/assets": "3.0.5",
     "@capacitor/cli": "8.4.2",
-    "@applemusic-like-lyrics/ttml": "^1.0.1",
     "@chenglou/pretext": "^0.0.9",
     "@emnapi/core": "1.11.3",
     "@emnapi/runtime": "1.11.3",

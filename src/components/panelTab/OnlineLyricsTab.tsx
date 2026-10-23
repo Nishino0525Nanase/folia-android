@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import type { OnlineLyricsState, ReplayGainMode, SongResult } from '../../types';
 import { getOnlineLyricSourceLabel } from '../../utils/lyrics/lyricSourceLabels';
 import { omni } from '../../services/onlineMusic/omni';
+import { AudioAlignmentControl } from './audioAlignment/AudioAlignmentControl';
+import { getPlaybackSongKey } from '../../utils/appPlaybackGuards';
 import SourceTab from './SourceTab';
 
 // src/components/panelTab/OnlineLyricsTab.tsx
@@ -71,7 +73,10 @@ const OnlineLyricsTab: React.FC<OnlineLyricsTabProps> = ({
             lyricTimelineOffsetMs={lyricTimelineOffsetMs}
             onLyricTimelineOffsetChange={onLyricTimelineOffsetChange}
             isDaylight={isDaylight}
-        />
+        >
+            <AudioAlignmentControl key={getPlaybackSongKey(song)} song={song} isDaylight={isDaylight} offset={lyricTimelineOffsetMs}
+                onOffsetChange={onLyricTimelineOffsetChange} onSourceChange={onChangeLyricsSource} />
+        </SourceTab>
     );
 };
 

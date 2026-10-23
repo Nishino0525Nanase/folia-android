@@ -64,11 +64,13 @@ export const putCacheEntry = async (key: string, data: unknown): Promise<void> =
 };
 
 /** Atomic conditional writes keep a late background result from replacing a newer manual selection. */
-export const putCacheEntryIf = async <T>(key: string, data: T, accept: (current: T | null) => boolean): Promise<boolean> => {
+export const putCacheEntryIf = async <T>(key: string, data: T, accept: (current: T | null) => boolean, companions: Array<{ key: string; data: unknown }> = []): Promise<boolean> => {
   const table = getTable(getCacheTableName(key));
-  return appDatabase.transaction('rw', table, async () => {
+  const tables = [...new Set([key, ...companions.map(entry => entry.key)].map(getCacheTableName))].map(getTable);
+  return appDatabase.transaction('rw', tables, async () => {
     const current = await table.get(key);
     if (!accept(current?.data as T ?? null)) return false;
+    for (const entry of companions) await getTable(getCacheTableName(entry.key)).put({ ...entry, timestamp: Date.now() });
     await table.put({ key, data, timestamp: Date.now() });
     return true;
   });
