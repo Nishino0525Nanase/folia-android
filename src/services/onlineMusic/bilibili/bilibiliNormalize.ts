@@ -162,15 +162,17 @@ export const normalizeBilibiliFavoriteVideo = (value: unknown): UnifiedSong => {
     const owner = record(raw.owner);
     const bvid = text(raw.bvid);
     const ownerId = numericId(owner.id);
-    if (!bvidPattern.test(bvid) || !positive(raw.aid) || !text(raw.title) || !ownerId || !text(owner.name)
-        || typeof raw.durationSec !== 'number' || !Number.isFinite(raw.durationSec) || raw.durationSec < 0) {
+    if (!bvidPattern.test(bvid) || !positive(raw.aid)) {
         throw new OnlineProviderError('invalid-response', 'The favorite video response is incomplete', 'bilibili');
     }
+    // Display metadata can be absent for a still-accessible video. Its stable identity is enough to try playback.
+    const title = text(raw.title) || bvid;
+    const duration = typeof raw.durationSec === 'number' && Number.isFinite(raw.durationSec) && raw.durationSec >= 0 ? raw.durationSec : 0;
     return {
-        id: `${bvid}:first`, name: text(raw.title), artists: [{ id: ownerId, name: text(owner.name) }],
-        album: { id: bvid, name: text(raw.title), coverUrl: coverUrl(raw.coverUrl) },
+        id: `${bvid}:first`, name: title, artists: text(owner.name) ? [{ id: ownerId || 0, name: text(owner.name) }] : [],
+        album: { id: bvid, name: title, coverUrl: coverUrl(raw.coverUrl) },
         // A multipart video's aggregate duration is not the duration of the part that will play.
-        durationMs: raw.pageCount === 1 ? Math.round(raw.durationSec * 1000) : 0,
+        durationMs: raw.pageCount === 1 ? Math.round(duration * 1000) : 0,
         sourceRef: { kind: 'online', providerId: 'bilibili', mediaId: `${bvid}:first`,
             providerData: { bvid, aid: raw.aid, page: 1, firstPart: true } },
     };

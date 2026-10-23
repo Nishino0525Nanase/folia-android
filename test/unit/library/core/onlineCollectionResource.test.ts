@@ -201,6 +201,29 @@ describe('online collection resource: loading', () => {
 });
 
 describe('online collection resource: background sync', () => {
+    it('keeps a failed 120/141 collection resumable and loads its last 21 rows', async () => {
+        const all = songs(141);
+        let failed = true;
+        const writeCache = vi.fn<OnlineCollectionResourceDeps['writeCache']>(async () => {});
+        const h = harness(all, {
+            writeCache,
+            getCollectionTracks: vi.fn(async (_collection, page) => {
+                if (page.offset === 120 && failed) throw new Error('page temporarily unavailable');
+                return pageOf(all, 20, page.offset);
+            }),
+        });
+        const resource = createOnlineCollectionResource('141-tracks', h.deps);
+        resource.ensure(playlist({ trackCount: 141 }), {});
+        await settle(); await settle();
+        expect(resource.getSnapshot().tracks).toHaveLength(120);
+        expect(resource.getSnapshot().sync).toMatchObject({ status: 'interrupted', offset: 120 });
+        expect(writeCache.mock.calls.at(-1)?.[3]).toMatchObject({ nextOffset: 120, hasMore: true, total: 141 });
+        failed = false;
+        resource.resumeSync(); await settle();
+        expect(resource.getSnapshot().tracks).toHaveLength(141);
+        expect(resource.getSnapshot().sync).toEqual({ status: 'none' });
+    });
+
     it('stops at a failed page and resumes from that offset', async () => {
         const all = songs(400);
         let failures = 4;

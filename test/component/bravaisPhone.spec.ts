@@ -8,6 +8,8 @@ test('phone collections stay virtual and preserve actions without mounting the w
     const rows = root.locator('[data-bravais-list-row]');
     const stats = page.locator('[data-phone-stats]');
     await expect(rows.first()).toBeVisible();
+    await root.locator('[data-bravais-sync="interrupted"]').tap();
+    await expect(stats).toHaveAttribute('data-action', 'resume');
     expect(await rows.count()).toBeLessThan(30);
     await expect(page.locator('.bravais-tile')).toHaveCount(0);
     await rows.first().locator('.bravais-list-text').tap();

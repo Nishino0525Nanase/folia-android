@@ -21,6 +21,24 @@ const baseOptions = {
 };
 
 describe('syncRemainingCollectionPages', () => {
+    it.each([undefined, 141])('continues past an entirely filtered page using the raw cursor (total=%s)', async total => {
+        const fetchPage = vi.fn(async (offset: number) => offset === 120
+            ? { items: [], nextOffset: 140, hasMore: true, total }
+            : { items: [{ id: 'last-video' }], nextOffset: 141, hasMore: false, total });
+        const result = await syncRemainingCollectionPages({ ...baseOptions, initialItems: [{ id: 'first-video' }],
+            startOffset: 120, total, fetchPage });
+        expect(result).toMatchObject({ status: 'complete', whole: true, offset: 141 });
+        expect(result.items.map(item => item.id)).toEqual(['first-video', 'last-video']);
+        expect(fetchPage.mock.calls.map(([offset]) => offset)).toEqual([120, 140]);
+    });
+
+    it('reports an interrupted cursor instead of a complete list when an empty page cannot advance', async () => {
+        const result = await syncRemainingCollectionPages({ ...baseOptions, initialItems: [{ id: 'kept' }],
+            startOffset: 120, total: 141,
+            fetchPage: async () => ({ items: [], nextOffset: 120, hasMore: true }) });
+        expect(result).toMatchObject({ status: 'failed', offset: 120, items: [{ id: 'kept' }] });
+    });
+
     it('reaches the upstream total even when duplicates keep the unique count below it', async () => {
         const ids = Array.from({ length: 250 }, (_, index) => `s${index}`);
         ids[120] = 's5';

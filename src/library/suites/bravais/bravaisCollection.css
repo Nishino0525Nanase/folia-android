@@ -120,7 +120,8 @@
 /* fb10：星标在「播放全部 / 加入队列」那一行的末尾（靠右），不再单独占一行。 */
 .bravais-seam-actions .bravais-seam-star { margin-left: auto; }
 
-.bravais-seam .bravais-seam-sync {
+.bravais-seam .bravais-seam-sync,
+.bravais-seam-panel .bravais-seam-sync {
     display: inline-flex;
     align-items: center;
     gap: 6px;

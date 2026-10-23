@@ -99,7 +99,6 @@ export const syncRemainingCollectionPages = async <T>(
         }
         if (options.isCancelled()) return { status: 'cancelled', items, offset };
         whole = !page.hasMore;
-        if (page.items.length === 0) break;
 
         const previousLength = items.length;
         const previousOffset = offset;
@@ -107,9 +106,12 @@ export const syncRemainingCollectionPages = async <T>(
         offset = Math.max(offset, page.nextOffset);
         options.onPage(items, offset, page.hasMore);
 
-        if (!page.hasMore || offset <= previousOffset) break;
+        if (!page.hasMore) break;
+        if (offset <= previousOffset) return { status: 'failed', items, offset, error: new Error('collection-page-not-advancing') };
+        // A filtered page may contain no visible rows while its raw cursor advances past resources.
+        // Continue to the next page instead of caching this partial collection as complete.
         // 没有 total 时，一整页都是旧条目通常说明上游忽略了 offset，继续翻只会原地打转。
-        if (total === undefined && items.length === previousLength) break;
+        if (total === undefined && page.items.length > 0 && items.length === previousLength) break;
     }
 
     return { status: 'complete', items, offset, whole };

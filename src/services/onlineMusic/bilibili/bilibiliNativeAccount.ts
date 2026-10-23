@@ -73,10 +73,14 @@ export const requestNativeBilibiliAccount = async (path: string, init: RequestIn
                     owner: { id: record(item.upper).mid, name: record(item.upper).name },
                     durationSec: item.duration, pageCount: item.page }));
             const nextOffset = offset + consumed.length;
-            const hasMore = offset % 20 + consumed.length < all.length || Boolean(data.has_more);
-            if (hasMore && !consumed.length) invalid();
             const total = record(data.info).media_count;
-            return Response.json({ items, nextOffset, hasMore, ...(Number.isSafeInteger(total) && total >= 0 ? { total } : {}) });
+            const hasTotal = Number.isSafeInteger(total) && total >= 0;
+            const hasMore = offset % 20 + consumed.length < all.length || Boolean(data.has_more) || hasTotal && nextOffset < total;
+            if (hasMore && !consumed.length) invalid();
+            console.info('[BilibiliLibrary] Favorite page read', { folderId: folder[1], offset, nextOffset,
+                received: consumed.length, videos: items.length, skipped: consumed.length - items.length,
+                hasMore, ...(hasTotal ? { total } : {}) });
+            return Response.json({ items, nextOffset, hasMore, ...(hasTotal ? { total } : {}) });
         }
         throw new BilibiliNativeError(400, 'unsupported-operation');
     } catch (error) { return nativeBilibiliErrorResponse(error); }

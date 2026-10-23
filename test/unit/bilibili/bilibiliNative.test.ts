@@ -136,6 +136,40 @@ describe('Android QR account flow', () => {
 });
 
 describe('Android authenticated reads', () => {
+    it('reads all 141 favorites across eight pages despite incomplete display metadata and an early false has_more', async () => {
+        mock.session = 'native:kept';
+        const videos = Array.from({ length: 141 }, (_, index) => ({
+            bvid: `BV${String(index + 1).padStart(10, '0')}`, type: 2, id: index + 1,
+            title: index === 120 ? '' : `Original video ${index + 1}`,
+            upper: index === 120 ? {} : { mid: 123, name: 'Uploader' },
+            duration: index === 120 ? undefined : 99, page: 1,
+        }));
+        mock.request.mockImplementation(({ operation, params }) => {
+            expect(operation).toBe('tracks');
+            const start = (Number(params.pn) - 1) * 20;
+            return Promise.resolve({ ok: true, data: { medias: videos.slice(start, start + 20),
+                info: { media_count: 141 }, has_more: start < 100 } });
+        });
+        const songs = [];
+        let offset = 0;
+        let hasMore = true;
+        while (hasMore) {
+            const page = await getBilibiliFavoriteTracks('fav:9', 1000, offset);
+            songs.push(...page.items); offset = page.nextOffset; hasMore = page.hasMore;
+        }
+        expect(songs).toHaveLength(141);
+        expect(new Set(songs.map(song => song.sourceRef.mediaId)).size).toBe(141);
+        expect(songs[120]).toMatchObject({ name: 'BV0000000121', artists: [], durationMs: 0 });
+        expect(mock.request.mock.calls.map(([call]) => call.params.pn)).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('does not mark an empty response before the reported total as a complete favorite folder', async () => {
+        mock.session = 'native:kept';
+        mock.request.mockResolvedValueOnce({ ok: true, data: { medias: [], info: { media_count: 141 }, has_more: false } });
+        await expect(getBilibiliFavoriteTracks('fav:9', 20, 120)).rejects.toThrow();
+    });
+
     it('normalizes the signed-in user folders', async () => {
         mock.session = 'native:kept';
         mock.request.mockResolvedValueOnce({ ok: true, data: { ownerId: '123', list: [{ id: 9, title: 'Favorites', media_count: 2 }] } });

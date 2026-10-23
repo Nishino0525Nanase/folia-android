@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useBravaisPhoneLocate } from './useBravaisPhoneLocate';
 import { getSizedCoverUrl } from '../../../utils/coverUrl';
 import type { BravaisItem, BravaisLayer } from './bravaisLayer';
-import { BravaisSeamStatusLine } from './BravaisSeamCollection';
+import { BravaisSeamStatusLine, BravaisSeamCollectionMeta } from './BravaisSeamCollection';
 import BravaisSeamFilterField from './BravaisSeamFilterField';
 import { setBravaisLinkedKey, useBravaisUiStore } from './bravaisUiStore';
 import BravaisSeamCrumbs from './BravaisSeamCrumbs';
@@ -124,6 +124,7 @@ const BravaisListPanel: React.FC<{ layer: BravaisLayer; depth: number; actions: 
             {layer.seam.filter && <BravaisSeamFilterField filter={layer.seam.filter} variant="panel" />}
             <h2 className="bravais-panel-title" data-bravais-seam-title>{seam.title}</h2>
             <div className="bravais-seam-meta">{seam.meta}</div>
+            {collection && <BravaisSeamCollectionMeta collection={collection} />}
             {sort && (
                 <div className="bravais-panel-tools" data-bravais-list-sort>
                     {/* 与网格侧栏同一个控件：网页自己画菜单，不弹浏览器 / 系统那套 spinner 弹窗。 */}

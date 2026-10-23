@@ -54,6 +54,14 @@ responses and FLV are not silently truncated or treated as complete MP4. API acc
 before a format fallback. Session changes, cancellation, account rights and video-part identity remain
 in force. Logs record stream kind, BV/CID and hostname, never cookies or signed URL query strings.
 
+Android 0.7.21.16 repairs favorite-list completeness separately from media access. A video with valid
+BV/AV identity remains in the list when its title, uploader or duration is absent; optional display
+metadata no longer fails an entire 20-resource page. Native paging checks the reported total as well
+as `has_more`; an empty response before that total is an incomplete read, not a complete folder.
+Page logs distinguish consumed resources, visible videos and skipped resources. A fully filtered
+page advances the shared collection cursor and does not stop later pages. A stalled cursor is an
+interrupted sync. Phone lists now expose the existing sync-progress/resume controls.
+
 Web builds retain the Worker's sealed bearer and encrypted server-side cookies. An old web bearer
 in an Android installation requires a new local login; it is never sent to the platform. Local sign-out
 removes local access and invalidates pending client generations, without claiming platform revocation.
@@ -93,3 +101,12 @@ returned HTTP 206 and 65,536 valid MP4 bytes. BV14z376fEfd also returned a singl
 HTTP 206 and a valid MP4 header. These are public test videos, not an identified reproduction of the
 user's failing videos. Authenticated playback and lock-screen continuity on the user's phone remain
 unverified; this release does not claim all CDN refusals are resolved.
+
+0.7.21.16 validation covers 141 video references over eight native-account pages, including missing
+uploader/title/duration at offset 120 and an early false `has_more`; all 141 stable identities survive.
+A resource test interrupts at 120/141 and resumes the last 21 rows. A filtered empty page no longer
+discards the next page. The phone component test taps the visible resume control, then verifies
+single-tap playback, queue actions and scroll preservation. These reproduce code defects, not the
+contents of the user's private folder. Audio remains the original video's source; music-catalog
+distribution and lyric matching do not decide video playability. The user's failing BV IDs are still
+needed to reproduce the remaining media refusal.
