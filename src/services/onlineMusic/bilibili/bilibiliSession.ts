@@ -1,7 +1,7 @@
 import { readProviderSessionValue, removeProviderSessionValue, writeProviderSessionValue } from '../providerStorage';
 
 // src/services/onlineMusic/bilibili/bilibiliSession.ts
-// Only a sealed backend bearer is kept here. Platform cookies never enter the renderer.
+// Keep only a sealed web bearer or an opaque Android handle. Platform cookies never enter the renderer.
 const SESSION_KEY = 'sealed_session_v1';
 let generation = 0;
 

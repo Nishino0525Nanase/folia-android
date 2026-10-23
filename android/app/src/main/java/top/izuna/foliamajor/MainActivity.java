@@ -193,6 +193,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(top.izuna.foliamajor.coloros.FoliaColorOsLyricsPlugin.class);
         // 本地登录（内置接口代码 + Cookie/OkHttp）与返回键都在这个插件上。
         registerPlugin(FoliaNativePlugin.class);
+        registerPlugin(top.izuna.foliamajor.bilibili.FoliaBilibiliPlugin.class);
         registerPlugin(StatusBarPlugin.class);
         registerPlugin(SplashScreenPlugin.class);
         registerPlugin(BrowserPlugin.class);

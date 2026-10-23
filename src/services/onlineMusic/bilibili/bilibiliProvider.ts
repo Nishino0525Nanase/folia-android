@@ -5,6 +5,7 @@ import { bilibiliSongPageUrl, bilibiliVideoSongs, normalizeBilibiliSong, parseBi
 import { bilibiliAuth } from './bilibiliAuth';
 import { getBilibiliFavoriteFolders, getBilibiliFavoriteTracks, importBilibiliFavoriteFolder } from './bilibiliLibrary';
 import { bilibiliInputPageUrl } from './bilibiliInput';
+import { usesNativeBilibili } from './bilibiliNative';
 import { getBilibiliApiBase, getBilibiliAudioSource, resolveBilibiliVideo } from './bilibiliTransport';
 import { bilibiliPage, BILIBILI_IMPORTED_COLLECTION_ID, getBilibiliImportedCollection, keepBilibiliImports, loadBilibiliImports } from './bilibiliImports';
 
@@ -13,6 +14,7 @@ import { bilibiliPage, BILIBILI_IMPORTED_COLLECTION_ID, getBilibiliImportedColle
 export const bilibiliProvider: OnlineMusicProvider = {
     id: 'bilibili', displayName: 'Bilibili', shortName: 'B站', mark: { letter: '哔', color: '#fb7299' },
     getAvailability() {
+        if (usesNativeBilibili()) return { configured: true };
         try { getBilibiliApiBase(); return { configured: true }; } catch { return { configured: false, reason: 'not-configured' }; }
     },
     capabilities: {

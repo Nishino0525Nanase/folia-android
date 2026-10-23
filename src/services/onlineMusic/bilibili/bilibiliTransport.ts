@@ -6,6 +6,9 @@ import { withLoginRequestLimit } from '../login/loginRequestLimit';
 import { parseBilibiliMediaId, readBilibiliResolvedVideo } from './bilibiliNormalize';
 import type { BilibiliResolvedVideo } from './bilibiliNormalize';
 import { clearBilibiliSessionIfSent, getBilibiliSession, getBilibiliSessionGeneration } from './bilibiliSession';
+import { usesNativeBilibili } from './bilibiliNative';
+import { requestNativeBilibiliAccount } from './bilibiliNativeAccount';
+import { getNativeBilibiliAudio, nativeMediaError, nativeVideoParams, resolveNativeBilibiliVideo } from './bilibiliNativeMedia';
 
 // src/services/onlineMusic/bilibili/bilibiliTransport.ts
 // Anonymous imports never receive account credentials; account APIs use only a sealed backend bearer.
@@ -65,9 +68,11 @@ const request = async <T>(path: string, init: RequestInit, consume: (response: R
         const headers = new Headers(init.headers);
         if (sentSession) headers.set(BILIBILI_SESSION_HEADER, sentSession);
         try {
-            response = await fetch(`${getBilibiliApiBase()}${path}`, {
+            response = usesNativeBilibili() && options.account
+                ? await requestNativeBilibiliAccount(path, init, sentSession)
+                : await fetch(`${getBilibiliApiBase()}${path}`, {
                 ...init, headers, signal, credentials: 'omit', cache: 'no-store',
-            });
+                });
         } catch (error) {
             if (error instanceof OnlineProviderError) throw error;
             throw new OnlineProviderError('network', i18n.t('importSource.serviceUnavailable'), 'bilibili', error);
@@ -102,6 +107,11 @@ export const resolveBilibiliVideo = async (input: string): Promise<BilibiliResol
     if (!input.trim() || input.length > 4096) {
         throw new OnlineProviderError('unsupported', i18n.t('importSource.bilibiliPlaceholder'), 'bilibili');
     }
+    const params = usesNativeBilibili() ? nativeVideoParams(input) : null;
+    if (params) {
+        try { return await withOnlineRequestLimit(() => resolveNativeBilibiliVideo(params), BILIBILI_REQUEST_LIMIT_MS); }
+        catch (error) { throw nativeMediaError(error); }
+    }
     return request('/resolve', bilibiliJsonPost({ input: input.trim() }), async response => {
         let raw: unknown;
         try { raw = await response.json(); } catch {
@@ -133,6 +143,10 @@ const checkedTicketSource = (raw: unknown): ProviderAudioSource => {
 };
 
 export const getBilibiliAudioSource = async (mediaId: string): Promise<ProviderAudioSource> => {
+    if (usesNativeBilibili()) {
+        try { return await withOnlineRequestLimit(() => getNativeBilibiliAudio(mediaId), BILIBILI_REQUEST_LIMIT_MS); }
+        catch (error) { throw nativeMediaError(error); }
+    }
     const identity = parseBilibiliMediaId(mediaId);
     if (!identity) throw new OnlineProviderError('unsupported', i18n.t('importSource.videoUnavailable'), 'bilibili');
     if (getBilibiliSession() || identity.first) {

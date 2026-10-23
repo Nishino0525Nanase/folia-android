@@ -9,10 +9,17 @@ A user report from Android 0.7.21.8 also confirmed upstream HTTP 412 at QR creat
 (backend HTTP 403), before scanning. The login adapter preserves both codes and
 classifies this refusal explicitly; that diagnostic fix does not unblock login.
 
-Only the Worker's sealed session bearer is stored in the provider namespace. Raw platform cookies
-stay encrypted on the server side, and are sent only to fixed platform API paths. No ambient browser
-cookie is used. Local sign-out drops the bearer and invalidates pending client generations; it does
-not claim to revoke the platform session or an already issued playback ticket on the server.
+Android 0.7.21.11 uses `bilibiliNativeAccount.ts` and the `FoliaBilibili` native plugin instead of the
+Worker for QR login, status, favorites and playback. QR generation and polling go directly from the
+phone to the platform. The QR image is rendered locally. The plugin keeps platform cookies in the
+app's private no-backup directory; only an opaque `native:` handle enters provider storage. It uses
+fixed API paths, no ambient WebView cookies and no redirects. A successful poll is verified against
+the account API before the handle is returned. Cancelled or superseded polls cannot revive a login;
+overlapping successful polls retain the same handle. Expired sessions require scanning again.
+
+Web builds retain the Worker's sealed bearer and encrypted server-side cookies. An old web bearer
+in an Android installation requires a new local login; it is never sent to the platform. Local sign-out
+removes local access and invalidates pending client generations, without claiming platform revocation.
 
 The account library contains the signed-in user's own created favorite folders. Opening a folder
 reads pages without resolving every video's metadata. Import collection saves media references to
@@ -20,7 +27,14 @@ the existing local import list after all pages succeed; it does not download aud
 use the explicit `BV:first` identity and resolve their first part only at playback. A link imported
 with a concrete part keeps the existing `BV:cid` identity.
 
-Authenticated playback preparation returns a bounded ticket for one video part, separate from the
-long-lived account bearer. See `worker/bilibili/NOTICE.md` for the supported audio and access limits.
+Web playback preparation returns a bounded ticket for one video part. Android obtains the same
+account's available DASH audio and passes its platform CDN URL to the existing local audio server
+with a Referer header; account cookies are not passed to the CDN. Direct BV/AV metadata is fetched
+locally; short-link metadata resolution still uses the existing anonymous web adapter.
 Manual lyric matching and lyric-file imports use the shared online lyric state keyed to the original
 playback identity, without changing the video audio source. Keyword search is not supported.
+
+Validation: the direct QR-generation endpoint returned HTTP 200/code 0 on 2026-10-23. Focused tests
+cover Android routing, QR states, missing credentials, cancellation, refusal, old-bearer migration,
+status, logout, favorites pagination and audio host checks. A real account scan, favorites read and
+playback on the user's phone remain necessary; a successful QR request alone is not proof of login.
