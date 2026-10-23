@@ -211,6 +211,15 @@ public class FoliaBilibiliPlugin extends Plugin {
                     case "playurl":
                         data = get("/x/player/playurl", params(input, "bvid", "cid", "fnval", "fnver", "fourk"), handle.isEmpty() ? "" : cookieFor(handle), null);
                         break;
+                    case "audioProbe":
+                        try { new BilibiliAudioProbe(client).verify(input.optString("url")); }
+                        catch (java.io.IOException error) {
+                            String code = error.getMessage();
+                            // Only fixed diagnostic codes cross the bridge, never a signed URL from an I/O exception.
+                            throw new Failure(502, code != null && code.matches("audio-http-[0-9]{3}|invalid-audio-host|invalid-audio-content") ? code : "audio-unreachable");
+                        }
+                        data = new JSONObject();
+                        break;
                     default: throw new Failure(400, "unsupported-operation");
                 }
                 JSObject result = new JSObject().put("ok", true).put("data", data);

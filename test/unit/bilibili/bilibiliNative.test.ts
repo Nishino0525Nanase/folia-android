@@ -160,10 +160,59 @@ describe('Android authenticated reads', () => {
         mock.request.mockResolvedValueOnce({ ok: true, data: { pages: [{ cid: 77 }] } });
         mock.request.mockResolvedValueOnce({ ok: true, data: { dash: { audio: [{ mimeType: 'audio/mp4', bandwidth: 100,
             baseUrl: 'https://cn-test.bilivideo.com/audio.m4s' }] } } });
+        mock.request.mockResolvedValueOnce({ ok: true, data: {} });
         mock.proxy.mockResolvedValueOnce('http://127.0.0.1:9999/remote-audio/test');
         expect(await getBilibiliAudioSource('BV1FT6dBtEff:first')).toMatchObject({ url: 'http://127.0.0.1:9999/remote-audio/test', quality: 'high' });
         expect(mock.proxy).toHaveBeenCalledWith('https://cn-test.bilivideo.com/audio.m4s', { allowAnyHost: true, headers: { Referer: 'https://www.bilibili.com/' } });
+        expect(mock.request).toHaveBeenLastCalledWith({ operation: 'audioProbe', params: { url: 'https://cn-test.bilivideo.com/audio.m4s' }, session: '' });
         expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it.each(['http://cn-test.bilivideo.com/audio.m4s', 'https://xy-test.mcdn.bilivideo.cn:4483/audio.m4s'])(
+        'accepts an official media URL with its original scheme and port (%#)', async url => {
+            mock.request.mockResolvedValueOnce({ ok: true, data: { dash: { audio: [{ mime_type: 'audio/mp4', base_url: url }] } } });
+            mock.request.mockResolvedValueOnce({ ok: true, data: {} });
+            mock.proxy.mockResolvedValueOnce('http://127.0.0.1:9999/remote-audio/test');
+            expect(await getBilibiliAudioSource('BV1FT6dBtEff:77')).toMatchObject({ quality: 'high' });
+            expect(mock.proxy).toHaveBeenCalledWith(url, expect.any(Object));
+        },
+    );
+
+    it('prefers standard HTTPS backups and tries another route when a CDN probe fails', async () => {
+        mock.session = 'native:kept';
+        const primary = 'https://xy-test.mcdn.bilivideo.cn:4483/audio.m4s';
+        const backup = 'https://upos-test.bilivideo.com/audio.m4s';
+        mock.request.mockResolvedValueOnce({ ok: true, data: { dash: { audio: [{ mimeType: 'audio/mp4', baseUrl: primary, backupUrl: [backup] }] } } });
+        mock.request.mockResolvedValueOnce({ ok: false, status: 502, code: 'audio-http-403' });
+        mock.request.mockResolvedValueOnce({ ok: true, data: {} });
+        mock.proxy.mockResolvedValueOnce('http://127.0.0.1:9999/remote-audio/test');
+        await getBilibiliAudioSource('BV1FT6dBtEff:77');
+        expect(mock.request.mock.calls.slice(1)).toEqual([
+            [{ operation: 'audioProbe', params: { url: backup }, session: '' }],
+            [{ operation: 'audioProbe', params: { url: primary }, session: '' }],
+        ]);
+        expect(mock.proxy).toHaveBeenCalledWith(primary, expect.any(Object));
+    });
+
+    it('uses a valid backup after malformed, unsafe and expired URLs', async () => {
+        const backup = 'https://upos-test.bilivideo.com/audio.m4s';
+        mock.request.mockResolvedValueOnce({ ok: true, data: { dash: { audio: [{ mime_type: 'audio/mp4', base_url: 'broken',
+            backup_url: ['https://evil.invalid/audio', 'https://cn-test.bilivideo.com/audio?deadline=1', backup] }] } } });
+        mock.request.mockResolvedValueOnce({ ok: true, data: {} });
+        mock.proxy.mockResolvedValueOnce('http://127.0.0.1:9999/remote-audio/test');
+        await getBilibiliAudioSource('BV1FT6dBtEff:77');
+        expect(mock.request).toHaveBeenLastCalledWith({ operation: 'audioProbe', params: { url: backup }, session: '' });
+    });
+
+    it('does not pass a failed probe or an unproxied URL to the player', async () => {
+        const url = 'https://cn-test.bilivideo.com/audio.m4s';
+        const reply = { ok: true, data: { dash: { audio: [{ mimeType: 'audio/mp4', baseUrl: url }] } } };
+        mock.request.mockResolvedValueOnce(reply).mockResolvedValueOnce({ ok: false, status: 502, code: 'invalid-audio-content' });
+        await expect(getBilibiliAudioSource('BV1FT6dBtEff:77')).rejects.toMatchObject({ cause: { code: 'invalid-audio-content' } });
+        expect(mock.proxy).not.toHaveBeenCalled();
+        mock.request.mockResolvedValueOnce(reply).mockResolvedValueOnce({ ok: true, data: {} });
+        mock.proxy.mockResolvedValueOnce(url);
+        await expect(getBilibiliAudioSource('BV1FT6dBtEff:77')).rejects.toMatchObject({ cause: { code: 'local-audio-unavailable' } });
     });
 
     it('rejects a non-platform audio URL', async () => {

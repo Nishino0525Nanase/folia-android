@@ -3,7 +3,8 @@
 `bilibiliProvider.ts` implements the existing Omni auth, library, catalog and playback contracts.
 The login window creates an ordinary web QR request; the account owner must approve it in the
 Bilibili app. This is a candidate first-party web protocol adapter, not a registered Open Platform
-OAuth integration. Live login, favorites and playback have not been verified in this environment;
+OAuth integration. The user confirmed phone login in 0.7.21.12; playback is still being verified.
+Live account access has not been verified in this development environment;
 the earlier anonymous metadata request returned HTTP 412 and verification stopped there.
 A user report from Android 0.7.21.8 also confirmed upstream HTTP 412 at QR creation
 (backend HTTP 403), before scanning. The login adapter preserves both codes and
@@ -21,6 +22,14 @@ Android 0.7.21.12 also accepts the official `account.bilibili.com` QR URL return
 endpoint. Version 0.7.21.11 allowed only `passport.bilibili.com` and rejected that valid response as
 HTTP 502/`invalid-response` before rendering. Both exact HTTPS hosts are accepted; credentials,
 non-default ports and a QR key that does not match the response remain rejected.
+
+Android 0.7.21.13 fixes media URL handling separately from the QR URL policy. Media candidates keep
+their original HTTP/HTTPS scheme, port and signature on the exact Bilibili CDN domain families.
+Both `baseUrl`/`base_url` and `backupUrl`/`backup_url` are read. Within each quality, ordinary HTTPS
+routes are preferred. Up to four candidates receive a bounded native Range probe; only an MP4
+header passes, and CDN errors try the next candidate. Probes carry no account handle or cookies and
+do not follow redirects. Playback still uses the local audio proxy with Range support and Referer.
+The existing native session file and provider storage key are unchanged.
 
 Web builds retain the Worker's sealed bearer and encrypted server-side cookies. An old web bearer
 in an Android installation requires a new local login; it is never sent to the platform. Local sign-out
@@ -43,5 +52,7 @@ Validation: on 2026-10-23, the actual QR-generation response passed the producti
 produced a 320px PNG with the real QR renderer, and the same unscanned key polled as waiting (86101).
 The current account-host fixture reproduces the 0.7.21.11 rejection before the fix. Focused tests
 cover Android routing, QR states, missing credentials, cancellation, refusal, old-bearer migration,
-status, logout, favorites pagination and audio host checks. A real account scan, favorites read and
-playback on the user's phone remain necessary; a successful QR request alone is not proof of login.
+status, logout, favorites pagination and audio host checks. The 0.7.21.13 checks additionally cover
+HTTP/nonstandard-port media, backup selection, failed probes, native headers and MP4 byte validation.
+The development network currently receives HTTP 412 for the video API, so end-to-end audio playback
+still needs the user's phone; passing the mocked CDN tests is not proof of live playback.
