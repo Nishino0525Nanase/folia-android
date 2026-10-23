@@ -9,6 +9,8 @@ import { buildAmllDbSearchQueries, toAmllDbSongResults } from './amllDbCandidate
 import { applyChorusRangesByTime } from './chorusEffects';
 import { hasRenderableLyrics } from './validity';
 import { LYRIC_SOURCE_IDS, getLyricSource } from './lyricSources';
+import { canonicalLyricArtist } from './artistAliases';
+import { compactLyricSearchQuery } from './searchQuery';
 
 // src/utils/lyrics/lyricMatchSources.ts
 // How each lyric source of lyricSources.ts is searched and fetched: for the match windows, for
@@ -25,6 +27,7 @@ export type LyricMatchSearchTarget = {
     artist: string;
     durationMs: number;
     album?: string;
+    durationToleranceMs?: number;
 };
 
 export type LyricMatchFetchResult = {
@@ -83,7 +86,7 @@ export async function searchAmllDbLyricCandidates(
     for (const params of buildAmllDbSearchQueries(query)) {
         const items = await searchAmllDbSongs(params, AMLL_DB_SEARCH_PAGE_SIZE);
         if (items === null) {
-            return [];
+            throw new Error('Lyric database search is unavailable');
         }
         const candidates = toAmllDbSongResults(items);
         if (candidates.length > 0) {
@@ -163,7 +166,13 @@ export async function searchLyricsByMatchSource(
     query: string,
     target: LyricMatchSearchTarget,
 ): Promise<SongResult[]> {
-    return sortByMatchScore(await getLyricSourceAccess(source).search(query, MATCH_WINDOW_SEARCH_LIMIT, target), target);
+    const access = getLyricSourceAccess(source);
+    const canonical = canonicalLyricArtist(query);
+    const songs = await access.search(canonical, MATCH_WINDOW_SEARCH_LIMIT, target);
+    const compact = compactLyricSearchQuery(canonical);
+    const results = songs.length || source === 'amll' || compact === canonical
+        ? songs : await access.search(compact, MATCH_WINDOW_SEARCH_LIMIT, target);
+    return sortByMatchScore(results, target);
 }
 
 export async function fetchLyricsForMatchSource(

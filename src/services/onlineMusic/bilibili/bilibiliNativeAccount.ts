@@ -5,6 +5,10 @@ import { BilibiliNativeError, nativeBilibili, nativeBilibiliErrorResponse, recor
 const invalid = (): never => { throw new BilibiliNativeError(502, 'invalid-response'); };
 const user = (raw: Record<string, any>) => ({ id: raw.mid, nickname: raw.uname, avatarUrl: raw.face });
 const pageSize = (value: string | null) => Math.min(20, Math.max(1, Number(value) || 20));
+const favoriteFolder = (folder: Record<string, any>, ownerId: unknown) => ({
+    id: folder.id, title: folder.title, coverUrl: folder.cover, description: folder.intro,
+    trackCount: folder.media_count, owner: { id: ownerId, name: record(folder.upper).name || '' },
+});
 
 export const requestNativeBilibiliAccount = async (path: string, init: RequestInit, session: string): Promise<Response> => {
     try {
@@ -49,16 +53,22 @@ export const requestNativeBilibiliAccount = async (path: string, init: RequestIn
         const limit = pageSize(url.searchParams.get('limit'));
         const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);
         if (url.pathname === '/favorites') {
-            const { data } = await nativeBilibili('folders', {}, session);
+            const { data } = await nativeBilibili('folders', { pn: String(Math.floor(offset / 20) + 1), ps: '20' }, session);
             const list = data.list;
             if (!Array.isArray(list) && list != null) invalid();
-            const folders = (list || []).map((item: unknown) => {
-                const folder = record(item);
-                return { id: folder.id, title: folder.title, coverUrl: folder.cover,
-                    trackCount: folder.media_count, owner: { id: data.ownerId, name: '' } };
-            });
-            const next = Math.min(offset + limit, folders.length);
-            return Response.json({ items: folders.slice(offset, next), total: folders.length, nextOffset: Math.max(offset, next), hasMore: next < folders.length });
+            const folders = (list || []).map((item: unknown) => favoriteFolder(record(item), data.ownerId));
+            const items = folders.slice(offset % 20, offset % 20 + limit);
+            const nextOffset = offset + items.length;
+            const hasTotal = Number.isSafeInteger(data.count) && data.count >= 0;
+            const hasMore = offset % 20 + items.length < folders.length || Boolean(data.has_more)
+                || (hasTotal ? nextOffset < data.count : data.has_more == null && folders.length === 20);
+            if (hasMore && !items.length) invalid();
+            return Response.json({ items, nextOffset, hasMore, ...(hasTotal ? { total: data.count } : {}) });
+        }
+        const detail = /^\/favorites\/([1-9]\d{0,19})$/.exec(url.pathname);
+        if (detail) {
+            const { data } = await nativeBilibili('folder', { media_id: detail[1] }, session);
+            return Response.json(favoriteFolder(data, data.ownerId));
         }
         const folder = /^\/favorites\/([1-9]\d{0,19})\/tracks$/.exec(url.pathname);
         if (folder) {

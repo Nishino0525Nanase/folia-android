@@ -3990,6 +3990,7 @@ export default {
     "skipOnlineMatch": "Skip Online Match",
     "saving": "Saving...",
     "matchFailed": "Failed to fetch lyrics for selected song",
+    "lyricSearchFailed": "Lyric search is unavailable. Retry or choose another source.",
     "noLyricsAvailable": "No lyrics available",
     "dontUseOnlineMetadata": "Don't use online metadata",
     "markPureMusic": "Mark as instrumental",

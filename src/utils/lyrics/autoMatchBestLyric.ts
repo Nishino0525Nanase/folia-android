@@ -6,7 +6,7 @@ import { applyChorusRangesByTime } from './chorusEffects';
 import type { ChorusRange } from './chorusEffects';
 import { normalizeLyricMatchDurationMs } from './duration';
 import { calculateMatchScoreDetails } from './matchScore';
-import { buildLyricSearchQuery } from './searchQuery';
+import { buildLyricSearchQuery, compactLyricSearchQuery } from './searchQuery';
 import { buildLyricSourceOrder } from './sourcePriority';
 import { resolveProviderLyricsChorus } from './chorusResolver';
 import { hasRenderableLyrics } from './validity';
@@ -18,7 +18,7 @@ import type { LocalSongMetadataLyricCandidate } from './localSongMatchContext';
 // src/utils/lyrics/autoMatchBestLyric.ts
 // Utility module for preferring word-by-word lyrics while retaining a usable line-by-line fallback.
 
-const PROVIDER_SEARCH_TIMEOUT_MS = 3500;
+const PROVIDER_SEARCH_TIMEOUT_MS = 7500;
 const PROVIDER_LYRIC_TIMEOUT_MS = 5000;
 const AUTO_MATCH_SEARCH_LIMIT = 10;
 const AUTO_MATCH_MIN_SCORE = 75;
@@ -41,6 +41,8 @@ export interface AutoMatchProviderCandidate {
 
 export interface AutoMatchBestLyricOptions {
     album?: string;
+    durationToleranceMs?: number;
+    isCurrent?: () => boolean;
     preferredSource?: LyricProviderSource;
     metadataCandidate?: LocalSongMetadataLyricCandidate;
     exactMatchOnly?: boolean;
@@ -166,7 +168,8 @@ async function matchUnderArtist(
     const searchQuery = buildLyricSearchQuery(title, artist, options.album);
     const normalizedDurationMs = normalizeLyricMatchDurationMs(durationMs);
     console.log(`[autoMatchBestLyric] Initiating best lyric auto-match for "${searchQuery}" (Duration: ${normalizedDurationMs}ms)`);
-    const targetSong = { title, artist, album: options.album, durationMs: normalizedDurationMs };
+    const targetSong = { title, artist, album: options.album, durationMs: normalizedDurationMs,
+        durationToleranceMs: options.durationToleranceMs };
     const providerCandidate = options.providerCandidate ?? (options.neteaseCandidate ? {
         providerId: 'netease' as const,
         song: {
@@ -226,12 +229,19 @@ async function matchUnderArtist(
             };
         }
 
-        const songs = (await withTimeout(
+        if (options.isCurrent?.() === false) return null;
+        let songs = (await withTimeout(
             access.search(searchQuery, AUTO_MATCH_SEARCH_LIMIT, targetSong),
             PROVIDER_SEARCH_TIMEOUT_MS,
             `${source} search`,
-            []
-        )) ?? [];
+            null
+        ));
+        if (options.isCurrent?.() === false || !songs) return null;
+        const compactQuery = compactLyricSearchQuery(searchQuery);
+        if (!songs.length && source !== 'amll' && compactQuery !== searchQuery) {
+            songs = await withTimeout(access.search(compactQuery, AUTO_MATCH_SEARCH_LIMIT, targetSong),
+                PROVIDER_SEARCH_TIMEOUT_MS, `${source} compact search`, []) ?? [];
+        }
         if (picked) {
             const exactCandidate = songs.find(song => isSelectedMetadataCandidate(source, song, picked));
             if (exactCandidate || options.exactMatchOnly) {
@@ -243,6 +253,7 @@ async function matchUnderArtist(
 
     // The source's lyrics for `song`: those already in hand when it is the active song, else fetched.
     const getProcessed = async (source: LyricProviderSource, song: SongResult): Promise<ProviderLyricsResult | null> => {
+        if (options.isCurrent?.() === false) return null;
         const access = getLyricSourceAccess(source);
         if (providerCandidate?.providerId === source && access.songKey(providerCandidate.song) === access.songKey(song)) {
             return providerCandidate.lyricsResult;
@@ -389,8 +400,8 @@ async function matchUnderArtist(
 
         const neteaseCandidate = await getBestCandidate('netease');
         if (!neteaseCandidate) {
-            console.log('[autoMatchBestLyric] Skipping AMLLDB auto probe because no reliable NetEase candidate id was found.');
-            return null;
+            console.log('[autoMatchBestLyric] Searching AMLLDB directly without a catalogue id.');
+            return tryPlatformSource('amll');
         }
 
         const result = await tryAmllDbCandidate('ncm', neteaseCandidate);
@@ -405,6 +416,7 @@ async function matchUnderArtist(
     };
 
     for (const source of searchOrder) {
+        if (options.isCurrent?.() === false) return null;
         try {
             // AMLL DB is the one source that is not a platform: it has no songs of its own to search,
             // and a step of its own here. Another source that is not a platform has none yet and is
@@ -436,7 +448,7 @@ export async function autoMatchBestLyric(
     options: AutoMatchBestLyricOptions = {}
 ): Promise<AutoMatchBestLyricResult> {
     const match = await matchUnderArtist(title, artist, durationMs, options);
-    if (match || !options.alternateArtist) return match;
+    if (match || !options.alternateArtist || options.isCurrent?.() === false) return match;
     const alternate = await withTimeout(
         options.alternateArtist().catch(() => null),
         PROVIDER_SEARCH_TIMEOUT_MS,

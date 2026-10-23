@@ -131,6 +131,10 @@ describe('the search of the lyric match window', () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         await draw(named);
         await does(() => lastAsked().fail(new Error('no network')));
+        expect(search.searchFailed).toBe(true);
+        await searchFor('Retry query');
+        expect(search.searchFailed).toBe(false);
+        await does(() => lastAsked().answer([]));
         expect(shown()).toEqual({ results: [], chosen: null, searching: false });
     });
 

@@ -145,14 +145,14 @@ export async function searchQQSongs(keyword: string, page = 1, pageSize = 20): P
 }
 
 /**
- * Searches songs on QQ Music for lyric and metadata matching: a refused search is just "no candidates".
+ * Searches for lyric matching; transport errors remain distinguishable from an empty catalogue.
  */
 export async function searchQQLyrics(keyword: string, page = 1, pageSize = 20): Promise<SongResult[]> {
   try {
     return await searchQQSongs(keyword, page, pageSize);
   } catch (error) {
     console.error('[QQMusic] Search failed:', error);
-    return [];
+    throw error;
   }
 }
 

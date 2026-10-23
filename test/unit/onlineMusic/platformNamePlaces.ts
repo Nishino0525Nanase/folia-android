@@ -166,7 +166,7 @@ export const PLATFORM_NAME_PLACES: Record<string, PlatformNamePlace> = {
     'src/utils/lyrics/adapters/LocalFileLyricAdapter.ts': { n: { kugou: 1 }, kind: 'doc' },
     'src/utils/lyrics/adapters/NeteaseLyricAdapter.ts': { n: { netease: 5 }, kind: 'lyric', why: 'the parser of a lyric payload format named for the platform that made it; the stage API takes that format from any client' },
     'src/utils/lyrics/amllDbCandidates.ts': { n: { netease: 1, qq: 6 }, kind: 'lyric', why: 'the platform ids the AMLL DB files a song under' },
-    'src/utils/lyrics/autoMatchBestLyric.ts': { n: { netease: 16, qq: 13, spotify: 2 }, kind: 'lyric', why: 'raised by the upstream merge 2026-10-17' },
+    'src/utils/lyrics/autoMatchBestLyric.ts': { n: { netease: 15, qq: 13, spotify: 2 }, kind: 'lyric', why: 'raised by the upstream merge 2026-10-17' },
     'src/utils/lyrics/awlrcContainer.ts': { n: { kugou: 1 }, kind: 'doc' },
     'src/utils/lyrics/bodianLyrics.ts': { n: { bodian: 3 }, kind: 'file', why: 'raised by the upstream merge 2026-10-17' },
     'src/utils/lyrics/foliaLyricDocument.ts': { n: { netease: 1 }, kind: 'doc' },

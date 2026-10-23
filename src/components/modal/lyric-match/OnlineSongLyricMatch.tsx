@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SongResult } from '../../../types';
 import { getProviderSongMetadata } from '../../../services/onlineMusic/songMetadata';
+import { omni } from '../../../services/onlineMusic/omni';
 import { setStatusMessage } from '../../../stores/useStatusMessageStore';
 import { getMatchResultAlbumName, getMatchResultArtists, getMatchResultCoverUrl } from '../../../utils/lyrics/matchResult';
 import { formatSongName } from '../../../utils/songNameFormatter';
@@ -23,12 +24,7 @@ const OnlineSongLyricMatch: React.FC<OnlineSongLyricMatchProps> = ({ song, onClo
     const { t } = useTranslation();
     const metadata = getProviderSongMetadata(song);
 
-    const songInfo = useMemo(() => ({
-        title: song.name || '',
-        artist: metadata.artists.map(item => item.name).join(', '),
-        album: metadata.album?.name || '',
-        durationMs: metadata.durationMs,
-    }), [song]);
+    const songInfo = useMemo(() => omni.getLyricMatchTarget(song), [song]);
 
     const search = useLyricMatchSearch(song, songInfo, { pickResult: pickOnlineResult });
     const { source, selectedResult } = search;

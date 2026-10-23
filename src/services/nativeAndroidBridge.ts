@@ -40,6 +40,7 @@ const API_HOSTS = [
   // 走原生桥取回字节就没有同源问题了。
   'y.gtimg.cn',
   'kgimg.com',
+  'hdslb.com',
 ];
 
 type NativePlugin = {

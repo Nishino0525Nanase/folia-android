@@ -18,7 +18,6 @@ import { measureSongAudio, notTheSongWhy } from './wholeSongCheck';
 import { isCachedSongAudioDistrusted } from './playbackRecovery/mediaCacheGuard';
 import { toPlayableAudioUrl } from '../utils/appPlaybackHelpers';
 import { getOnlineProviderIdForSong } from '../utils/appPlaybackGuards';
-import { getProviderSongMetadata } from './onlineMusic/songMetadata';
 import { useLyricSettingsStore } from '../stores/useLyricSettingsStore';
 import { useOnlineProviderAccountStore } from '../stores/useOnlineProviderAccountStore';
 import { saveLyricCacheSongMetadata } from './lyricExport/lyricCacheMetadata';
@@ -197,6 +196,7 @@ export async function loadOnlineSongLyrics(
 ): Promise<void> {
     const { isCurrent, onLyrics, onPureMusicChange, onStateChange, onAutoMatchStart, onDone } = callbacks;
     const lyricCacheKey = getSongResourceCacheKey('lyric', song);
+    const matchTarget = omni.getLyricMatchTarget(song);
     const onlineLyricsState = await loadOnlineLyricsState(song);
   const initialSettingsLyricSettings = useLyricSettingsStore.getState();
 
@@ -236,7 +236,7 @@ export async function loadOnlineSongLyrics(
         const effectiveLyrics = preferredPrefetchedLyrics ?? prefetched.lyrics;
 
   const settingsLyricSettings = useLyricSettingsStore.getState();
-        const shouldAutoMatch = settingsLyricSettings.autoUseBestLyric && !onlineLyricsState?.hasOnlineOverride;
+        const shouldAutoMatch = settingsLyricSettings.autoUseBestLyric && matchTarget.autoMatch !== false && !onlineLyricsState?.hasOnlineOverride;
 
         if (!shouldAutoMatch) {
             const effectiveText = effectiveLyrics?.lines.map(line => line.fullText).join('\n') ?? '';
@@ -281,7 +281,7 @@ export async function loadOnlineSongLyrics(
     let finalState = onlineLyricsState;
 
   const settingsLyricSettings = useLyricSettingsStore.getState();
-    const shouldAutoMatch = settingsLyricSettings.autoUseBestLyric && !onlineLyricsState?.hasOnlineOverride;
+    const shouldAutoMatch = settingsLyricSettings.autoUseBestLyric && matchTarget.autoMatch !== false && !onlineLyricsState?.hasOnlineOverride;
 
     if (shouldAutoMatch) {
         // The lyrics in hand are already displayable, so hand them over and report done BEFORE the
@@ -296,12 +296,12 @@ export async function loadOnlineSongLyrics(
 
         try {
             onAutoMatchStart?.();
-            const metadata = getProviderSongMetadata(song);
-            const artistName = metadata.artists.map(a => a.name).join(', ');
             const ownProviderId = song.sourceRef?.kind === 'online' ? song.sourceRef.providerId : null;
             const ownLyricSource = getPlatformLyricSource(ownProviderId);
-            const bestMatch = await autoMatchBestLyric(song.name, artistName, metadata.durationMs, {
-                album: metadata.album?.name,
+            const bestMatch = await autoMatchBestLyric(matchTarget.title, matchTarget.artist, matchTarget.durationMs, {
+                album: matchTarget.album,
+                durationToleranceMs: matchTarget.durationToleranceMs,
+                isCurrent,
                 preferredSource: resolveLyricSourcePreference(settingsLyricSettings, song),
                 alternateArtist: () => omni.getAlternateArtistName(song),
                 providerCandidate: ownLyricSource
@@ -319,6 +319,7 @@ export async function loadOnlineSongLyrics(
                     }
                     : undefined
             });
+            if (!isCurrent()) return;
             if (bestMatch && 'lyrics' in bestMatch && bestMatch.source !== ownProviderId) {
                 const overrideState: OnlineLyricsState = {
                     lyricsSource: 'online',
@@ -329,6 +330,7 @@ export async function loadOnlineSongLyrics(
                     matchedLyricsProviderPlatform: bestMatch.matchedLyricsProviderPlatform,
                 };
                 await saveOnlineLyricsState(song, overrideState);
+                if (!isCurrent()) return;
                 resolvedLyrics = bestMatch.lyrics;
                 finalState = overrideState;
                 onStateChange?.(overrideState);
@@ -339,6 +341,7 @@ export async function loadOnlineSongLyrics(
                 // landed here and had its perfectly good lyrics thrown away as instrumental.
                 const pureMusic = markOnlineLyricsPureMusic(onlineLyricsState);
                 await saveOnlineLyricsState(song, pureMusic);
+                if (!isCurrent()) return;
                 resolvedLyrics = null;
                 finalState = pureMusic;
                 onStateChange?.(pureMusic);

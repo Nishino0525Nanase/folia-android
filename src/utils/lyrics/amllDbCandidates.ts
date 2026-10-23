@@ -59,6 +59,7 @@ export function toAmllDbSongResult(item: AmllApiSongItem): SongResult | null {
     return {
         id,
         name: item.musicNames?.[0] || 'Unknown Song',
+        aliases: (item.musicNames ?? []).slice(1),
         artists: (item.artistNames ?? []).map((name, index) => ({ id: index, name })),
         album: { id: 0, name: item.albumNames?.[0] ?? '' },
         // 官方搜索不返回时长，评分时时长项按未知处理

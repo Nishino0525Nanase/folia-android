@@ -1493,14 +1493,14 @@ export function useLibraryPlaybackController({
                 return true;
             }
 
-            const currentSongMetadata = getProviderSongMetadata(currentSong);
-            const artistName = currentSongMetadata.artists.map(artist => artist.name).filter(Boolean).join(', ');
-            const albumName = currentSongMetadata.album?.name || '';
+            const matchTarget = omni.getLyricMatchTarget(currentSong);
             const sourceRef = getPlaybackSourceRef(currentSong);
             const ownLyricsResult = await getOptionalProviderLyrics(currentSong);
             const ownLyricSource = getPlatformLyricSource(sourceRef.kind === 'online' ? sourceRef.providerId : null);
-            const bestMatch = await autoMatchBestLyric(currentSong.name, artistName, currentSongMetadata.durationMs, {
-                album: albumName,
+            const bestMatch = matchTarget.autoMatch === false ? null : await autoMatchBestLyric(matchTarget.title, matchTarget.artist, matchTarget.durationMs, {
+                album: matchTarget.album,
+                durationToleranceMs: matchTarget.durationToleranceMs,
+                isCurrent: () => isStillPlaying(currentSong),
                 preferredSource: resolveLyricSourcePreference(settingsLyricSettings, currentSong),
                 alternateArtist: () => omni.getAlternateArtistName(currentSong),
                 providerCandidate: ownLyricSource
@@ -1508,11 +1508,13 @@ export function useLibraryPlaybackController({
                     : undefined,
             });
 
+            if (!isStillPlaying(currentSong)) return false;
             if (!bestMatch) {
                 setStatusMsg({ type: 'info', text: t('status.bestLyricsNotFound') || '' });
                 return false;
             }
-            if ('isPureMusic' in bestMatch) {                    setStatusMsg({ type: 'info', text: t('status.bestLyricsPureMusic') });
+            if (bestMatch.isPureMusic === true) {
+                setStatusMsg({ type: 'info', text: t('status.bestLyricsPureMusic') });
                 return false;
             }
 

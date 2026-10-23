@@ -59,6 +59,7 @@ describe('toAmllDbSongResult', () => {
         expect(toAmllDbSongResult(songItem())).toEqual({
             id: 1983292457,
             name: '祝福',
+            aliases: [],
             artists: [{ id: 0, name: 'YOASOBI' }],
             album: { id: 0, name: '祝福' },
             durationMs: 0,

@@ -2,6 +2,7 @@
 // Shared helpers for constructing lyric search queries from song metadata.
 
 import { normalizeLyricMatchText } from './matchScore';
+import { canonicalLyricArtist } from './artistAliases';
 
 const MAX_ALBUM_QUERY_LENGTH = 48;
 
@@ -54,7 +55,7 @@ export const buildLyricSearchQuery = (
     artist?: string | null,
     album?: string | null
 ): string => {
-    return [normalizeSongTitleForLyricSearch(title, artist), artist?.trim(), normalizeAlbumForLyricSearch(album)]
+    return [normalizeSongTitleForLyricSearch(title, artist), artist ? canonicalLyricArtist(artist) : '', normalizeAlbumForLyricSearch(album)]
         .map(part => part?.trim())
         .filter((part): part is string => Boolean(part))
         .join(' - ');
@@ -69,3 +70,8 @@ export const buildKugouLyricSearchQuery = (keyword: string): string => {
     const structuredTitle = trimmedKeyword.split(/\s+-\s+/u)[0]?.trim();
     return structuredTitle || trimmedKeyword;
 };
+
+// Some catalogues treat the display separators or an album name as required search terms.
+export const compactLyricSearchQuery = (query: string): string => (
+    canonicalLyricArtist(query).split(/\s+-\s+/u).slice(0, 2).join(' ').trim()
+);

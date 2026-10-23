@@ -15,7 +15,7 @@ import type { NavidromeSong } from '@/types/navidrome';
 const env = vi.hoisted(() => ({
     /** What the piece gave the window the last time it drew. */
     window: null as null | { onSave: (result: unknown) => Promise<void>; noMatch?: { run: () => Promise<void> } },
-    search: { source: 'qq', selectedResult: null as unknown },
+    search: { source: 'qq', selectedResult: null as unknown, isSelectionCurrent: () => true },
     storedMatch: null as unknown,
     saveOnline: vi.fn(),
     saveNavidrome: vi.fn(),
@@ -77,7 +77,7 @@ describe('the three kinds of lyric match window, between the window and the save
     beforeEach(() => {
         root = createRoot(document.createElement('div'));
         env.window = null;
-        env.search = { source: 'qq', selectedResult: null };
+        env.search = { source: 'qq', selectedResult: null, isSelectionCurrent: () => true };
         env.storedMatch = null;
         for (const spy of [env.saveOnline, env.saveNavidrome, env.saveNavidromeNoMatch, env.saveLocal, env.saveLocalNoMatch, onMatch]) spy.mockReset();
         useStatusMessageStore.setState({ message: null });
@@ -100,7 +100,8 @@ describe('the three kinds of lyric match window, between the window and the save
         await draw(OnlineSongLyricMatch, onlineSong);
         env.saveOnline.mockResolvedValueOnce(false);
         await save();
-        expect(env.saveOnline.mock.calls).toEqual([[onlineSong, 'qq', chosen]]);
+        expect(env.saveOnline.mock.calls).toEqual([[onlineSong, 'qq', chosen, expect.any(Function)]]);
+        expect(env.saveOnline.mock.calls[0][3]()).toBe(true);
         expect(onMatch).not.toHaveBeenCalled();
         expect(message()).toBe('localMusic.noLyricsAvailable');
 
@@ -122,7 +123,7 @@ describe('the three kinds of lyric match window, between the window and the save
         await save();
         expect(env.saveNavidrome.mock.calls.at(-1)).toEqual([navidromeSong, 'qq', chosen, 'navi']);
 
-        env.search = { source: 'netease', selectedResult: chosen };
+        env.search = { source: 'netease', selectedResult: chosen, isSelectionCurrent: () => true };
         await draw(NavidromeSongLyricMatch, navidromeSong);
         await save();
         expect(env.saveNavidrome.mock.calls.at(-1)).toEqual([navidromeSong, 'netease', chosen, 'online']);
@@ -158,7 +159,7 @@ describe('the three kinds of lyric match window, between the window and the save
             choice: { lyricsSource: 'local', useOnlineCover: false, useOnlineMetadata: false },
         });
 
-        env.search = { source: 'netease', selectedResult: chosen };
+        env.search = { source: 'netease', selectedResult: chosen, isSelectionCurrent: () => true };
         await draw(LocalSongLyricMatch, localSong);
         await save();
         expect(env.saveLocal.mock.calls.at(-1)?.[0]).toMatchObject({

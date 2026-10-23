@@ -248,7 +248,15 @@ public class FoliaBilibiliPlugin extends Plugin {
                     case "folders": {
                         String cookie = cookieFor(handle);
                         JSONObject account = get("/x/web-interface/nav", new JSONObject(), cookie, null);
-                        data = get("/x/v3/fav/folder/created/list-all", new JSONObject().put("up_mid", String.valueOf(account.getLong("mid"))), cookie, null);
+                        data = get("/x/v3/fav/folder/created/list", params(input, "pn", "ps").put("up_mid", String.valueOf(account.getLong("mid"))), cookie, null);
+                        data.put("ownerId", String.valueOf(account.getLong("mid")));
+                        break;
+                    }
+                    case "folder": {
+                        String cookie = cookieFor(handle);
+                        JSONObject account = get("/x/web-interface/nav", new JSONObject(), cookie, null);
+                        data = get("/x/v3/fav/folder/info", params(input, "media_id"), cookie, null);
+                        if (data.getJSONObject("upper").getLong("mid") != account.getLong("mid")) throw new Failure(403, "folder-not-owned");
                         data.put("ownerId", String.valueOf(account.getLong("mid")));
                         break;
                     }

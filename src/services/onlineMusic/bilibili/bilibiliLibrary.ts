@@ -44,6 +44,15 @@ export const getBilibiliFavoriteTracks = async (id: MediaId, limit: number, offs
     return readPage(response.data, start, normalizeBilibiliFavoriteVideo);
 };
 
+export const getBilibiliFavoriteFolder = async (id: MediaId): Promise<ProviderCollection> => {
+    const folderId = bilibiliFavoriteFolderId(id);
+    if (!folderId) throw invalid();
+    const response = await requestBilibiliAccount(`/favorites/${folderId}`);
+    const folder = normalizeBilibiliFavoriteFolder(response.data);
+    if (String(folder.id) !== `fav:${folderId}`) throw invalid();
+    return folder;
+};
+
 export const importBilibiliFavoriteFolder = async (collection: ProviderCollection): Promise<UnifiedSong[]> => {
     if (collection.providerId !== 'bilibili' || !bilibiliFavoriteFolderId(collection.id)) {
         throw new OnlineProviderError('unsupported', i18n.t('importSource.favoriteUnavailable'), 'bilibili');

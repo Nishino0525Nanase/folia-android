@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getBilibiliLyricMatchTarget } from '@/services/onlineMusic/bilibili/bilibiliLyricMatch';
 
 const cachedAudioMock = vi.hoisted(() => vi.fn());
 const songCacheMock = vi.hoisted(() => vi.fn());
@@ -21,6 +22,10 @@ vi.mock('@/services/onlineMusic/omni', () => ({
     omni: {
         getAudioSource: sourceMock,
         getLyrics: lyricsMock,
+        getLyricMatchTarget: (song: SongResult) => song.sourceRef?.kind === 'online' && song.sourceRef.providerId === 'bilibili'
+            ? getBilibiliLyricMatchTarget(song) : ({ title: song.name,
+            artist: (song.artists || []).map(artist => artist.name).join(', '),
+            album: song.album?.name || '', durationMs: song.durationMs }),
         getProviderCapabilities: () => ({ lyrics: true }),
         getAlternateArtistName: otherArtistNameMock,
         resolveAudioQuality: (_providerId: string, preference: string) => preference,
@@ -377,6 +382,29 @@ describe('online QQ lyric candidate plumbing', () => {
         vi.clearAllMocks();
         songCacheMock.mockResolvedValue(null);
         loadLyricsStateMock.mockResolvedValue(null);
+    });
+
+    it('matches video credits and drops a late match after the song changes', async () => {
+        const video: SongResult = { ...song, name: '【4K】夜鹿 - 晴る【中日字幕】',
+            artists: [{ id: 123, name: 'Uploader' }], album: { id: 'video', name: 'Full video title' },
+            durationMs: 255_000, sourceRef: { kind: 'online', providerId: 'bilibili', mediaId: 'BV0000000001:first' } };
+        lyricsMock.mockResolvedValue({ lyrics: null, isPureMusic: false });
+        let finish!: (value: unknown) => void;
+        autoMatchMock.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+        let current = true;
+        const onDone = vi.fn();
+        const onStateChange = vi.fn();
+        const pending = loadOnlineSongLyrics(video, null, null, { isCurrent: () => current, onDone, onLyrics: vi.fn(), onStateChange });
+        await vi.waitFor(() => expect(autoMatchMock).toHaveBeenCalled());
+        expect(autoMatchMock).toHaveBeenCalledWith('晴る', 'ヨルシカ', 255_000,
+            expect.objectContaining({ album: '', durationToleranceMs: 30_000, isCurrent: expect.any(Function) }));
+        expect(onDone).toHaveBeenCalled();
+        current = false;
+        onStateChange.mockClear();
+        finish({ source: 'qq', id: 123, lyrics: { lines: [{ fullText: 'Late lyric', startTime: 0, endTime: 1, words: [] }] } });
+        await pending;
+        expect(saveLyricsStateMock).not.toHaveBeenCalled();
+        expect(onStateChange).not.toHaveBeenCalled();
     });
 
     it('passes the already-loaded QQ song and lyrics to auto-match as its provider candidate', async () => {

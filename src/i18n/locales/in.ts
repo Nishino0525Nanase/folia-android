@@ -3990,6 +3990,7 @@ export default {
     "skipOnlineMatch": "Lewati Kecocokan Online",
     "saving": "Menyimpan...",
     "matchFailed": "Gagal mengambil lirik untuk lagu yang dipilih",
+    "lyricSearchFailed": "Pencarian lirik tidak tersedia. Coba lagi atau pilih sumber lain.",
     "noLyricsAvailable": "Tidak ada lirik tersedia",
     "dontUseOnlineMetadata": "Jangan gunakan metadata online",
     "markPureMusic": "Tandai sebagai instrumental",

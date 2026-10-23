@@ -3,7 +3,8 @@ import { OnlineProviderError } from '../../../types/onlineMusic';
 import { createProviderSongMetadata } from '../../../utils/songMetadata';
 import { bilibiliSongPageUrl, bilibiliVideoSongs, normalizeBilibiliSong, parseBilibiliMediaId, normalizeBilibiliUser, normalizeBilibiliFavoriteFolder } from './bilibiliNormalize';
 import { bilibiliAuth } from './bilibiliAuth';
-import { getBilibiliFavoriteFolders, getBilibiliFavoriteTracks, importBilibiliFavoriteFolder } from './bilibiliLibrary';
+import { getBilibiliFavoriteFolder, getBilibiliFavoriteFolders, getBilibiliFavoriteTracks, importBilibiliFavoriteFolder } from './bilibiliLibrary';
+import { getBilibiliLyricMatchTarget } from './bilibiliLyricMatch';
 import { bilibiliInputPageUrl } from './bilibiliInput';
 import { usesNativeBilibili } from './bilibiliNative';
 import { getBilibiliApiBase, getBilibiliAudioSource, resolveBilibiliVideo } from './bilibiliTransport';
@@ -24,7 +25,7 @@ export const bilibiliProvider: OnlineMusicProvider = {
     normalizeSong: normalizeBilibiliSong,
     normalizeUser: normalizeBilibiliUser,
     normalizeCollection: normalizeBilibiliFavoriteFolder,
-    songMetadata: { getSongMetadata: createProviderSongMetadata },
+    songMetadata: { getSongMetadata: createProviderSongMetadata, getLyricMatchTarget: getBilibiliLyricMatchTarget },
     getSongPageUrl: bilibiliSongPageUrl,
     linkImport: {
         labelKey: 'importSource.bilibiliLabel', placeholderKey: 'importSource.bilibiliPlaceholder', descriptionKey: 'importSource.bilibiliDescription',
@@ -73,7 +74,10 @@ export const bilibiliProvider: OnlineMusicProvider = {
     auth: bilibiliAuth,
     library: { getUserPlaylists: getBilibiliFavoriteFolders },
     catalog: {
-        async getPlaylistDetail(id, collection) { return id === BILIBILI_IMPORTED_COLLECTION_ID ? getBilibiliImportedCollection() : collection ?? null; },
+        async getPlaylistDetail(id, collection) {
+            if (id === BILIBILI_IMPORTED_COLLECTION_ID) return getBilibiliImportedCollection();
+            return usesNativeBilibili() ? getBilibiliFavoriteFolder(id) : collection ?? null;
+        },
         async getPlaylistTracks(id, limit, offset) {
             return id === BILIBILI_IMPORTED_COLLECTION_ID ? bilibiliPage(await loadBilibiliImports(), limit, offset) : getBilibiliFavoriteTracks(id, limit, offset);
         },

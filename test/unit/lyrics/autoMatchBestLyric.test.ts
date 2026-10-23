@@ -4,7 +4,7 @@ import { neteaseApi } from '@/services/onlineMusic/netease/netease';
 import { processNeteaseLyrics } from '@/utils/lyrics/neteaseProcessing';
 import { searchQQLyrics, fetchQQLyrics } from '@/services/onlineMusic/qq/qqLyricProvider';
 import { searchKugouLyrics, fetchKugouLyrics } from '@/services/onlineMusic/kugou/kugouLyricProvider';
-import { fetchAmllDbLyrics } from '@/utils/lyrics/providers/amllDbProvider';
+import { fetchAmllDbLyrics, searchAmllDbSongs } from '@/utils/lyrics/providers/amllDbProvider';
 import { getOnlineMusicProvider } from '@/services/onlineMusic/providerRegistry';
 import { useOnlineProviderAccountStore } from '@/stores/useOnlineProviderAccountStore';
 
@@ -37,7 +37,8 @@ vi.mock('@/services/onlineMusic/kugou/kugouLyricProvider', () => ({
 
 vi.mock('@/utils/lyrics/providers/amllDbProvider', async (importOriginal) => ({
     ...await importOriginal<typeof import('@/utils/lyrics/providers/amllDbProvider')>(),
-    fetchAmllDbLyrics: vi.fn()
+    fetchAmllDbLyrics: vi.fn(),
+    searchAmllDbSongs: vi.fn(),
 }));
 
 const createLyrics = (isWordByWord: boolean) => ({
@@ -63,6 +64,30 @@ describe('autoMatchBestLyric', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         fetchAmllDbLyricsMock.mockResolvedValue(null);
+        vi.mocked(searchAmllDbSongs).mockResolvedValue([]);
+    });
+
+    it('searches the lyric database directly when the music catalogue cannot identify a video', async () => {
+        cloudSearchMock.mockResolvedValue({ result: { songs: [] } });
+        searchQQLyricsMock.mockResolvedValue([]);
+        vi.mocked(searchAmllDbSongs).mockResolvedValue([{
+            id: 1, filename: 'fixture.ttml', createdAt: 1, musicNames: ['Haru', '晴る'],
+            artistNames: ['ヨルシカ', '夜鹿', 'Yorushika'], albumNames: [], ncmMusicIds: ['123'], qqMusicIds: [],
+            appleMusicIds: [], spotifyIds: [], isrcs: [], authorIds: [], authorUsernames: [],
+        }]);
+        fetchAmllDbLyricsMock.mockResolvedValue(createLyrics(true));
+        expect(await autoMatchBestLyric('晴る', '夜鹿', 240_000, { preferredSource: 'amll' }))
+            .toMatchObject({ source: 'amll', id: 123, lyrics: { isWordByWord: true } });
+        expect(searchAmllDbSongs).toHaveBeenCalledWith({ musicName: '晴る', artistName: 'ヨルシカ' }, 50);
+    });
+
+    it('stops searching additional sources after the playing song changes', async () => {
+        let current = true;
+        searchQQLyricsMock.mockImplementation(async () => { current = false; return []; });
+        expect(await autoMatchBestLyric('Title', 'Artist', 200_000, { isCurrent: () => current })).toBeNull();
+        expect(searchQQLyricsMock).toHaveBeenCalledOnce();
+        expect(cloudSearchMock).not.toHaveBeenCalled();
+        expect(searchAmllDbSongs).not.toHaveBeenCalled();
     });
 
     it('tries the default QQ preference before a prefetched NetEase word-by-word candidate', async () => {
@@ -873,9 +898,9 @@ describe('autoMatchBestLyric', () => {
             ['there is none', async () => null],
             ['it is the same name', async () => 'Artist Name'],
             ['it cannot be read', async () => { throw new Error('offline'); }],
-        ])('searches only once when %s', async (_case, alternateArtist) => {
+        ])('does not restart the search with another artist when %s', async (_case, alternateArtist) => {
             expect(await autoMatchBestLyric('Song Title', 'Artist Name', 200000, { alternateArtist })).toBeNull();
-            expect(searchQQLyricsMock).toHaveBeenCalledTimes(1);
+            expect(searchQQLyricsMock.mock.calls.map(call => call[0])).toEqual(['Song Title - Artist Name', 'Song Title Artist Name']);
         });
     });
 });

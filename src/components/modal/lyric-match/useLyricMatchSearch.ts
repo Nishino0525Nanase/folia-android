@@ -12,7 +12,7 @@ import { buildLyricSearchQuery } from '../../../utils/lyrics/searchQuery';
 // which result is chosen when a search answers.
 
 /** What the song being matched is called: the first search text is made of it, and results are scored against it. */
-export type LyricMatchSongInfo = Required<LyricMatchSearchTarget>;
+export type LyricMatchSongInfo = LyricMatchSearchTarget & { album: string };
 
 export interface LyricMatchSearchOptions {
     /** The result chosen when a search answers. Without it none is: the person chooses. */
@@ -42,6 +42,7 @@ export const useLyricMatchSearch = (
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SongResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [searchFailed, setSearchFailed] = useState(false);
     const [selectedResult, setSelectedResult] = useState<SongResult | null>(null);
     const requestIdRef = useRef(0);
     const searchedSourceRef = useRef(source);
@@ -65,6 +66,7 @@ export const useLyricMatchSearch = (
         setResults([]);
         setSelectedResult(null);
         setResultContext(null);
+        setSearchFailed(false);
         chooseSource(next);
     };
 
@@ -81,6 +83,7 @@ export const useLyricMatchSearch = (
                 setIsSearching(false);
                 setResults([]);
                 setSelectedResult(null);
+                setSearchFailed(false);
             }
             return;
         }
@@ -91,6 +94,7 @@ export const useLyricMatchSearch = (
             && latestIdentityRef.current.song === targetSong
             && latestIdentityRef.current.source === activeSource;
         setIsSearching(true);
+        setSearchFailed(false);
         setResults([]);
         setSelectedResult(null);
         setResultContext({ song: targetSong, source: activeSource });
@@ -102,7 +106,10 @@ export const useLyricMatchSearch = (
             setResults(found);
             setSelectedResult(pickResult?.(found) ?? null);
         } catch (error) {
-            if (isCurrent()) console.error('[LyricMatch] Search failed:', error);
+            if (isCurrent()) {
+                setSearchFailed(true);
+                console.error('[LyricMatch] Search failed:', error);
+            }
         } finally {
             if (isCurrent()) {
                 setIsSearching(false);
@@ -136,6 +143,7 @@ export const useLyricMatchSearch = (
         setQuery,
         results: visibleResults,
         isSearching,
+        searchFailed: hasCurrentResults && searchFailed,
         selectedResult: visibleSelection,
         setSelectedResult: (result: SongResult | null) => {
             if (result === null) {

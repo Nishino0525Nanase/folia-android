@@ -1,6 +1,7 @@
 import { SongResult } from '../../types';
 import { normalizeLyricMatchDurationMs } from './duration';
 import { createProviderSongMetadata } from '../songMetadata';
+import { canonicalLyricArtist } from './artistAliases';
 
 import * as wanakana from 'wanakana';
 import * as OpenCC from 'opencc-js';
@@ -119,7 +120,7 @@ function calculateDurationScore(targetDurationMs: number, searchDurationMs: numb
 function splitArtistsForMatch(artistText: string): string[] {
     return artistText
         .split(/[,&、\/]|feat\.?|ft\.?|featuring|与/i)
-        .map(a => normalizeLyricMatchText(a))
+        .map(a => normalizeLyricMatchText(canonicalLyricArtist(a)))
         .filter(a => a.length > 0);
 }
 
@@ -153,7 +154,7 @@ function calculateArtistSimilarity(target: string, search: string): number {
 }
 
 export function calculateMatchScoreDetails(
-    song: { title: string; artist: string; durationMs: number; album?: string },
+    song: { title: string; artist: string; durationMs: number; album?: string; durationToleranceMs?: number },
     result: SongResult
 ): MatchScoreDetails {
     const searchTitle = result.name || '';
@@ -162,7 +163,8 @@ export function calculateMatchScoreDetails(
     const targetDurationMs = normalizeLyricMatchDurationMs(song.durationMs);
     const searchDurationMs = normalizeLyricMatchDurationMs(createProviderSongMetadata(result).durationMs);
 
-    const titleSimilarity = stringSimilarity(song.title, searchTitle, normalizeTitleForMatch);
+    const titleSimilarity = Math.max(...[searchTitle, ...(result.aliases || []), ...(result.translatedNames || [])]
+        .map(title => stringSimilarity(song.title, title, normalizeTitleForMatch)));
     const titleScore = titleSimilarity * SCORE_WEIGHTS.title;
 
     const artistSimilarity = song.artist.trim()
@@ -179,7 +181,11 @@ export function calculateMatchScoreDetails(
         ? (hasTargetAlbum ? 0 : SCORE_WEIGHTS.album)
         : albumSimilarity * SCORE_WEIGHTS.album;
 
-    const duration = calculateDurationScore(targetDurationMs, searchDurationMs);
+    const videoPadding = Math.min(30_000, Math.max(0, song.durationToleranceMs || 0));
+    const duration = videoPadding > 0 && titleSimilarity === 1 && artistSimilarity === 1 && Boolean(song.artist.trim())
+        && targetDurationMs > 0 && searchDurationMs > 0 && Math.abs(targetDurationMs - searchDurationMs) <= videoPadding
+        ? { multiplier: 0.95, matched: true }
+        : calculateDurationScore(targetDurationMs, searchDurationMs);
     const identityScore = titleScore + artistScore + albumScore;
     const titleMatched = titleSimilarity >= 0.65;
     const artistMatched = !song.artist.trim() || artistSimilarity >= 0.5;

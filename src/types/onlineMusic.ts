@@ -443,6 +443,18 @@ export interface OnlineLyricsProvider {
 
 export interface OnlineSongMetadataProvider {
     getSongMetadata(song: SongResult): ProviderSongMetadata;
+    getLyricMatchTarget?(song: SongResult): ProviderLyricMatchTarget;
+}
+
+export interface ProviderLyricMatchTarget {
+    title: string;
+    artist: string;
+    album: string;
+    durationMs: number;
+    /** Video intros/outros may differ from the recording; only exact identities receive this tolerance. */
+    durationToleranceMs?: number;
+    /** Ambiguous titles can still be searched by hand without saving an automatic guess. */
+    autoMatch?: boolean;
 }
 
 // provider 自行声明它支持哪几种扫码登录方式；不声明即代表只有单一方式，UI 维持单步流程。

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchAmllDbLyrics, searchAmllDbSongs } from '@/utils/lyrics/providers/amllDbProvider';
-import { fetchLyricsForMatchSource, searchAmllDbLyricCandidates } from '@/utils/lyrics/lyricMatchSources';
+import { fetchLyricsForMatchSource, searchAmllDbLyricCandidates, searchLyricsByMatchSource } from '@/utils/lyrics/lyricMatchSources';
 import type { AmllApiSongItem } from '@/utils/lyrics/providers/amllApi';
 import { neteaseApi } from '@/services/onlineMusic/netease/netease';
 import { searchQQLyrics } from '@/services/onlineMusic/qq/qqLyricProvider';
@@ -78,6 +78,18 @@ describe('lyricMatchSources', () => {
         vi.resetAllMocks();
     });
 
+    it('uses the Japanese artist alias and retries an empty structured query without album terms', async () => {
+        vi.mocked(searchQQLyrics).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+        await searchLyricsByMatchSource('qq', '晴る - 夜鹿 - Video title', { title: '晴る', artist: '夜鹿', durationMs: 240_000 });
+        expect(vi.mocked(searchQQLyrics).mock.calls.map(call => call[0])).toEqual(['晴る - ヨルシカ - Video title', '晴る ヨルシカ']);
+    });
+
+    it('does not retry a refused lyric search as if it had no results', async () => {
+        vi.mocked(searchQQLyrics).mockRejectedValue(new Error('refused'));
+        await expect(searchLyricsByMatchSource('qq', 'Title - Artist', target)).rejects.toThrow('refused');
+        expect(searchQQLyrics).toHaveBeenCalledOnce();
+    });
+
     describe('searchAmllDbLyricCandidates', () => {
         it('searches the official API with musicName and first artist, without probing lyrics', async () => {
             searchAmllDbSongsMock.mockResolvedValue([
@@ -127,7 +139,7 @@ describe('lyricMatchSources', () => {
         it('stops without the title-only retry when the request fails', async () => {
             searchAmllDbSongsMock.mockResolvedValue(null);
 
-            await expect(searchAmllDbLyricCandidates('Song Title - Artist Name', target)).resolves.toEqual([]);
+            await expect(searchAmllDbLyricCandidates('Song Title - Artist Name', target)).rejects.toThrow('unavailable');
             expect(searchAmllDbSongsMock).toHaveBeenCalledTimes(1);
         });
     });

@@ -22,7 +22,7 @@ vi.mock('@/services/onlineMusic/providerStorage', () => ({
 }));
 import { bilibiliAuth } from '@/services/onlineMusic/bilibili/bilibiliAuth';
 import { getBilibiliAudioSource, requestBilibiliAccount } from '@/services/onlineMusic/bilibili/bilibiliTransport';
-import { getBilibiliFavoriteFolders, getBilibiliFavoriteTracks } from '@/services/onlineMusic/bilibili/bilibiliLibrary';
+import { getBilibiliFavoriteFolder, getBilibiliFavoriteFolders, getBilibiliFavoriteTracks } from '@/services/onlineMusic/bilibili/bilibiliLibrary';
 
 const key = '1234567890abcdef1234567890abcdef';
 // Shape returned by the official generate endpoint on 2026-10-23; the QR key is synthetic.
@@ -172,9 +172,35 @@ describe('Android authenticated reads', () => {
 
     it('normalizes the signed-in user folders', async () => {
         mock.session = 'native:kept';
-        mock.request.mockResolvedValueOnce({ ok: true, data: { ownerId: '123', list: [{ id: 9, title: 'Favorites', media_count: 2 }] } });
+        mock.request.mockResolvedValueOnce({ ok: true, data: { ownerId: '123', count: 1, list: [{ id: 9, title: 'Favorites', media_count: 2 }] } });
         expect(await getBilibiliFavoriteFolders('123', 20, 0)).toMatchObject({ hasMore: false, total: 1,
             items: [{ id: 'fav:9', name: 'Favorites', creator: { id: '123' }, trackCount: 2 }] });
+    });
+
+    it('reads covers and continues paginated folders using raw upstream offsets', async () => {
+        mock.session = 'native:kept';
+        const folders = Array.from({ length: 21 }, (_, i) => ({ id: i + 1, title: `Folder ${i + 1}`,
+            media_count: 141, cover: `http://i0.hdslb.com/${i + 1}.jpg` }));
+        mock.request.mockImplementation(({ operation, params }) => {
+            expect(operation).toBe('folders');
+            expect(params.ps).toBe('20');
+            const start = (Number(params.pn) - 1) * 20;
+            return { ok: true, data: { ownerId: '123', count: 21, has_more: false, list: folders.slice(start, start + 20) } };
+        });
+        expect(await getBilibiliFavoriteFolders('123', 20, 0)).toMatchObject({ nextOffset: 20, hasMore: true,
+            items: expect.arrayContaining([expect.objectContaining({ coverUrl: 'https://i0.hdslb.com/1.jpg' })]) });
+        expect(await getBilibiliFavoriteFolders('123', 20, 20)).toMatchObject({ nextOffset: 21, hasMore: false,
+            total: 21, items: [expect.objectContaining({ id: 'fav:21', coverUrl: 'https://i0.hdslb.com/21.jpg' })] });
+    });
+
+    it('refreshes an existing favorite folder cover and rejects another folder response', async () => {
+        mock.session = 'native:kept';
+        const data = { id: 9, ownerId: '123', title: 'Favorites', media_count: 141, cover: '//i0.hdslb.com/cover.jpg' };
+        mock.request.mockResolvedValueOnce({ ok: true, data });
+        expect(await getBilibiliFavoriteFolder('fav:9')).toMatchObject({ coverUrl: 'https://i0.hdslb.com/cover.jpg', trackCount: 141 });
+        expect(mock.request).toHaveBeenLastCalledWith({ operation: 'folder', params: { media_id: '9' }, session: 'native:kept' });
+        mock.request.mockResolvedValueOnce({ ok: true, data: { ...data, id: 10 } });
+        await expect(getBilibiliFavoriteFolder('fav:9')).rejects.toThrow();
     });
 
     it('advances past deleted entries and reads the correct fixed-size upstream page', async () => {

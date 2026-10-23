@@ -347,15 +347,16 @@ const prefetchSong = async (
   const settingsLyricSettings = useLyricSettingsStore.getState();
                 const autoUseBest = settingsLyricSettings.autoUseBestLyric;
                 const preferredSource = resolveLyricSourcePreference(settingsLyricSettings, song);
-                const shouldAutoMatch = autoUseBest && !hasAuthoritativeOnlineLyricsSelection(onlineLyricsState);
+                const matchTarget = omni.getLyricMatchTarget(song);
+                const shouldAutoMatch = autoUseBest && matchTarget.autoMatch !== false && !hasAuthoritativeOnlineLyricsSelection(onlineLyricsState);
 
                 if (shouldAutoMatch) {
                     try {
-                        const metadata = getProviderSongMetadata(song);
-                        const artistName = metadata.artists.map(a => a.name).join(', ');
                         const ownLyricSource = getPlatformLyricSource(sourceRef.providerId);
-                        const bestMatch = await autoMatchBestLyric(song.name, artistName, metadata.durationMs, {
-                            album: metadata.album?.name,
+                        const bestMatch = await autoMatchBestLyric(matchTarget.title, matchTarget.artist, matchTarget.durationMs, {
+                            album: matchTarget.album,
+                            durationToleranceMs: matchTarget.durationToleranceMs,
+                            isCurrent: () => !signal.aborted,
                             preferredSource,
                             alternateArtist: () => omni.getAlternateArtistName(song),
                             ...(ownLyricSource
@@ -373,6 +374,7 @@ const prefetchSong = async (
                                 } }
                                 : {})
                         });
+                        if (signal.aborted) return;
                         if (bestMatch && 'lyrics' in bestMatch && bestMatch.source !== sourceRef.providerId) {
                             const overrideState: OnlineLyricsState = {
                                 lyricsSource: 'online',

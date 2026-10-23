@@ -52,6 +52,11 @@ describe('QQ lyric provider', () => {
         expect(lyricRequestBody.request.param).toMatchObject({ roma: 1, roma_t: 0 });
     });
 
+    it('distinguishes an upstream refusal from an empty lyric search', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ code: 0, request: { code: 2001 } })));
+        await expect(searchQQLyrics('test')).rejects.toThrow('2001');
+    });
+
     it('keeps QQ lyric searches anonymous', async () => {
         const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
             code: 0,

@@ -242,7 +242,7 @@ export const LyricMatchWindow: React.FC<LyricMatchWindowProps> = ({
                             ) : results.length === 0 ? (
                                 <div className={`flex flex-col items-center justify-center h-40 opacity-50 ${textSecondary}`}>
                                     <Music size={40} className="mb-2" />
-                                    <p className="text-sm">{t('localMusic.noResults')}</p>
+                                    <p className="text-sm">{t(search.searchFailed ? 'localMusic.lyricSearchFailed' : 'localMusic.noResults')}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-1.5">

@@ -3991,6 +3991,7 @@ export default {
     "skipOnlineMatch": "不使用在线匹配",
     "saving": "保存...",
     "matchFailed": "获取歌词失败",
+    "lyricSearchFailed": "歌词搜索服务暂时不可用，请重试或切换来源",
     "noLyricsAvailable": "无可用歌词",
     "dontUseOnlineMetadata": "不使用在线数据",
     "markPureMusic": "标记为纯音乐",

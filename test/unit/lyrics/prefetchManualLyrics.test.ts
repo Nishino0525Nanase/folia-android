@@ -14,6 +14,7 @@ vi.mock('@/services/onlineMusic/omni', () => ({ omni: {
     resolveAudioQuality: (_id: string, quality: string) => quality,
     getAudioSource: env.audio,
     getLyrics: env.nativeLyrics,
+    getLyricMatchTarget: (song: SongResult) => ({ title: song.name, artist: '', album: '', durationMs: song.durationMs }),
     getProviderCapabilities: () => ({ lyrics: false }),
 } }));
 vi.mock('@/services/onlineMusic/resourceCache', () => ({

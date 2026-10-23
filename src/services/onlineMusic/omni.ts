@@ -33,6 +33,7 @@ import type {
     LoginState,
     LoginTexts,
     ProviderMark,
+    ProviderLyricMatchTarget,
 } from '../../types/onlineMusic';
 import { resolveProviderLyricsChorus } from '../../utils/lyrics/chorusResolver';
 import { DEFAULT_ONLINE_PROVIDER_ID, OnlineProviderError } from '../../types/onlineMusic';
@@ -40,6 +41,7 @@ import { useOnlineProviderAccountStore } from '../../stores/useOnlineProviderAcc
 import { getPlaybackSourceRef } from '../../utils/appPlaybackGuards';
 import { toSafePlaybackUrl } from '../../utils/appPlaybackHelpers';
 import { saveSongReplayGain } from './resourceCache';
+import { getProviderSongMetadata } from './songMetadata';
 import {
     getOnlineMusicProvider,
     getOnlineMusicProviderForSong,
@@ -992,6 +994,15 @@ export const omni = {
     async getChorusRanges(song: SongResult): Promise<OmniChorusRange[]> {
         const provider = providerForSong(song);
         return provider.lyrics?.getChorusRanges?.(song.id) ?? [];
+    },
+
+    getLyricMatchTarget(song: SongResult): ProviderLyricMatchTarget {
+        const provider = getOnlineMusicProviderForSong(song);
+        const own = provider?.songMetadata?.getLyricMatchTarget?.(song);
+        if (own) return own;
+        const metadata = getProviderSongMetadata(song);
+        return { title: song.name || '', artist: metadata.artists.map(item => item.name).join(', '),
+            album: metadata.album?.name || '', durationMs: metadata.durationMs };
     },
 
     // Another name the song's artist may be listed under elsewhere, when its provider knows one.
