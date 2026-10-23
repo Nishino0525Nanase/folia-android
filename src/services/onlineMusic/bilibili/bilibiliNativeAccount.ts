@@ -14,7 +14,9 @@ export const requestNativeBilibiliAccount = async (path: string, init: RequestIn
         if (url.pathname === '/login/qr/start') {
             const { data } = await nativeBilibili('qrStart');
             const qr = new URL(String(data.url));
-            if (qr.protocol !== 'https:' || qr.hostname !== 'passport.bilibili.com' || qr.username || qr.password
+            // The generate API is on passport, but current official QR links use account.
+            if (qr.protocol !== 'https:' || !['passport.bilibili.com', 'account.bilibili.com'].includes(qr.hostname)
+                || qr.port || qr.username || qr.password
                 || !/^[a-fA-F0-9]{32}$/.test(data.qrcode_key) || qr.searchParams.get('qrcode_key') !== data.qrcode_key) invalid();
             return Response.json({ key: data.qrcode_key, expiresAt: data.expiresAt,
                 imageUrl: await QRCode.toDataURL(qr.href, { width: 320, margin: 2, errorCorrectionLevel: 'M' }) });

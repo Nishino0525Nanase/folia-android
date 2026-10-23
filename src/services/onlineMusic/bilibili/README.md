@@ -17,6 +17,11 @@ fixed API paths, no ambient WebView cookies and no redirects. A successful poll 
 the account API before the handle is returned. Cancelled or superseded polls cannot revive a login;
 overlapping successful polls retain the same handle. Expired sessions require scanning again.
 
+Android 0.7.21.12 also accepts the official `account.bilibili.com` QR URL returned by the generate
+endpoint. Version 0.7.21.11 allowed only `passport.bilibili.com` and rejected that valid response as
+HTTP 502/`invalid-response` before rendering. Both exact HTTPS hosts are accepted; credentials,
+non-default ports and a QR key that does not match the response remain rejected.
+
 Web builds retain the Worker's sealed bearer and encrypted server-side cookies. An old web bearer
 in an Android installation requires a new local login; it is never sent to the platform. Local sign-out
 removes local access and invalidates pending client generations, without claiming platform revocation.
@@ -34,7 +39,9 @@ locally; short-link metadata resolution still uses the existing anonymous web ad
 Manual lyric matching and lyric-file imports use the shared online lyric state keyed to the original
 playback identity, without changing the video audio source. Keyword search is not supported.
 
-Validation: the direct QR-generation endpoint returned HTTP 200/code 0 on 2026-10-23. Focused tests
+Validation: on 2026-10-23, the actual QR-generation response passed the production account adapter,
+produced a 320px PNG with the real QR renderer, and the same unscanned key polled as waiting (86101).
+The current account-host fixture reproduces the 0.7.21.11 rejection before the fix. Focused tests
 cover Android routing, QR states, missing credentials, cancellation, refusal, old-bearer migration,
 status, logout, favorites pagination and audio host checks. A real account scan, favorites read and
 playback on the user's phone remain necessary; a successful QR request alone is not proof of login.

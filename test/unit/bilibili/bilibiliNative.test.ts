@@ -18,8 +18,9 @@ import { getBilibiliAudioSource, requestBilibiliAccount } from '@/services/onlin
 import { getBilibiliFavoriteFolders, getBilibiliFavoriteTracks } from '@/services/onlineMusic/bilibili/bilibiliLibrary';
 
 const key = '1234567890abcdef1234567890abcdef';
+// Shape returned by the official generate endpoint on 2026-10-23; the QR key is synthetic.
 const qr = () => ({ ok: true, data: { qrcode_key: key,
-    url: `https://passport.bilibili.com/h5-app/passport/login/scan?qrcode_key=${key}`,
+    url: `https://account.bilibili.com/h5/account-h5/auth/scan-web?navhide=1&callback=close&qrcode_key=${key}`,
     expiresAt: Date.now() + 180_000 } });
 beforeEach(() => {
     mock.request.mockReset(); mock.image.mockReset(); mock.proxy.mockReset();
@@ -35,7 +36,7 @@ describe('Android QR account flow', () => {
         mock.request.mockResolvedValueOnce(qr());
         expect(await bilibiliAuth.startLogin!()).toBe(key);
         expect(await bilibiliAuth.createQr!(key)).toBe('data:image/png;base64,YQ==');
-        expect(mock.image).toHaveBeenCalledWith(expect.stringContaining('passport.bilibili.com'), expect.any(Object));
+        expect(mock.image).toHaveBeenCalledWith(qr().data.url, expect.any(Object));
         for (const [code, state] of [[86101, 'waiting'], [86090, 'scanned'], [0, 'confirmed']]) {
             mock.request.mockResolvedValueOnce({ ok: true, data: { code }, ...(code === 0 ? { session: 'native:account' } : {}) });
             expect(await bilibiliAuth.checkLogin!(key)).toEqual({ state });
@@ -52,8 +53,22 @@ describe('Android QR account flow', () => {
         expect(mock.session).toBe('');
     });
 
-    it('rejects a QR URL from an unexpected host before rendering it', async () => {
-        mock.request.mockResolvedValueOnce({ ...qr(), data: { ...qr().data, url: `https://evil.invalid/?qrcode_key=${key}` } });
+    it('continues to accept the earlier official passport QR URL', async () => {
+        const url = `https://passport.bilibili.com/h5-app/passport/login/scan?qrcode_key=${key}`;
+        mock.request.mockResolvedValueOnce({ ...qr(), data: { ...qr().data, url } });
+        expect(await bilibiliAuth.startLogin!()).toBe(key);
+        expect(mock.image).toHaveBeenCalledWith(url, expect.any(Object));
+    });
+
+    it.each([
+        `https://evil.invalid/?qrcode_key=${key}`,
+        `https://account.bilibili.com.evil.invalid/?qrcode_key=${key}`,
+        `http://account.bilibili.com/?qrcode_key=${key}`,
+        `https://user:password@account.bilibili.com/?qrcode_key=${key}`,
+        `https://account.bilibili.com:8443/?qrcode_key=${key}`,
+        'https://account.bilibili.com/?qrcode_key=00000000000000000000000000000000',
+    ])('rejects an unsafe or mismatched QR URL before rendering it (%#)', async url => {
+        mock.request.mockResolvedValueOnce({ ...qr(), data: { ...qr().data, url } });
         await expect(bilibiliAuth.startLogin!()).rejects.toThrow();
         expect(mock.image).not.toHaveBeenCalled();
     });
