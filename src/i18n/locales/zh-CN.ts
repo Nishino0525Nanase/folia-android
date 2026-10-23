@@ -1914,6 +1914,9 @@ export default {
     "filename": "人声校准.lrc"
 },
   "lyricPreparation": {
+    "recognizing": "正在识别《{{name}}》：{{progress}}%",
+    "audioQueued": "等待音频识别 {{count}} 首",
+    "automaticSubtitles": "这些字幕已从当前音频自动识别并保存，时间来自音频，文字可能存在识别错误。",
     "running": "正在匹配歌词 {{done}} / {{total}}",
     "complete": "歌词已检查 {{done}} / {{total}}",
     "paused": "歌词匹配已暂停 {{done}} / {{total}}",
@@ -2494,8 +2497,8 @@ export default {
     "disableHomeDynamicBackgroundDesc": "主页不再播放背景动画，降低 GPU 占用",
     "autoUseBestLyric": "自动使用最佳歌词",
     "settingsHeadingLyricSource": "歌词来源",
-    "autoUseBestLyricDesc": "检索网易云、AMLLDB、QQ、酷狗和 LRCLIB。导入视频后在后台提前匹配歌词，保留手动选择的结果。",
-    "autoUseBestLyricDescSpotify": "检索网易云、AMLLDB、QQ、酷狗和 LRCLIB。导入视频后在后台提前匹配歌词，保留手动选择的结果。 Spotify 需登录后使用。",
+    "autoUseBestLyricDesc": "检索网易云、AMLLDB、QQ、酷狗和 LRCLIB。导入后自动搜索歌词，缺失时下载该视频音频在本地识别并保存字幕；保留手动选择，可在歌单中暂停。",
+    "autoUseBestLyricDescSpotify": "检索网易云、AMLLDB、QQ、酷狗和 LRCLIB。导入后自动搜索歌词，缺失时下载该视频音频在本地识别并保存字幕；保留手动选择，可在歌单中暂停。 Spotify 需登录后使用。",
     "lyricMatchPriority": "歌词匹配优先级",
     "lyricMatchPriorityDesc": "在多个歌词源都存在匹配度满足要求的歌词时，优先选择该歌词源的结果。",
     "localLyricsPriority": "本地歌曲歌词优先级",

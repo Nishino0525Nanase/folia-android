@@ -70,3 +70,45 @@ describe('durable lyric preparation', () => {
         online = true; h.queue.wake(); expect(h.deps.prepare).toHaveBeenCalledOnce();
     });
 });
+
+describe('automatic audio fallback', () => {
+    const audioHarness = (saved: PreparationSnapshot | null = null) => {
+        const audio: { resolve: (result: PreparationResult) => void; signal: AbortSignal; current: () => boolean; progress: (n: number) => void }[] = [];
+        const deps = { load: async () => saved, save: vi.fn(async (_s: PreparationSnapshot) => {}),
+            prepare: vi.fn(async (): Promise<PreparationResult> => 'unmatched'),
+            recognize: vi.fn(async (_song: SongResult, current: () => boolean, signal: AbortSignal, progress: (n: number) => void) => {
+                const task = deferred<PreparationResult>(); audio.push({ ...task, signal, current, progress }); return task.promise;
+            }), canRun: () => true, wait: async () => {} };
+        return { queue: createLyricPreparationQueue(deps), deps, audio };
+    };
+    it('automatically recognizes missing lyrics serially while text preparation continues', async () => {
+        const h = audioHarness(); await h.queue.enqueue([song(1), song(2), song(3)], 'a'); await settle();
+        expect(h.deps.prepare).toHaveBeenCalledTimes(3);
+        expect(h.deps.recognize).toHaveBeenCalledTimes(1);
+        expect(h.queue.getSnapshot().entries.map(e => e.status)).toEqual(['recognizing', 'audio-pending', 'audio-pending']);
+        await h.queue.flush(); const saves = h.deps.save.mock.calls.length;
+        h.audio[0].progress(35); expect(h.queue.getSnapshot().entries[0].audioProgress).toBe(35);
+        await h.queue.flush(); expect(h.deps.save).toHaveBeenCalledTimes(saves);
+        h.audio[0].resolve('ready'); await settle(); expect(h.deps.recognize).toHaveBeenCalledTimes(2);
+        h.audio[1].resolve('unmatched'); await settle(); h.audio[2].resolve('ready'); await settle();
+        expect(h.queue.getSnapshot().entries.map(e => e.status)).toEqual(['ready', 'unmatched', 'ready']);
+    });
+    it('automatically upgrades old unresolved imports, without repeating completed or failed audio jobs', async () => {
+        const saved: PreparationSnapshot = { version: 1, paused: false, entries: ['ready', 'review', 'unmatched'].map((status, i) =>
+            ({ key: String(i), song: song(i), groups: ['a'], updatedAt: 0, status: status as PreparationResult })) };
+        const h = audioHarness(saved); await h.queue.initialize();
+        expect(h.deps.prepare).not.toHaveBeenCalled(); expect(h.deps.recognize.mock.calls[0][0].id).toBe(1);
+        h.audio[0].resolve('failed'); await settle(); h.audio[1].resolve('ready'); await settle(); await h.queue.flush();
+        const restart = audioHarness(structuredClone(h.deps.save.mock.calls.at(-1)![0])); await restart.queue.initialize();
+        expect(restart.deps.recognize).not.toHaveBeenCalled();
+    });
+    it('aborts on pause or offline and resumes unfinished recognition without another search', async () => {
+        const h = audioHarness(); await h.queue.enqueue([song(1)], 'a'); await settle();
+        h.queue.togglePause(); expect(h.audio[0].signal.aborted).toBe(true); expect(h.audio[0].current()).toBe(false);
+        h.audio[0].resolve('ready'); await settle(); expect(h.queue.getSnapshot().entries[0].status).toBe('audio-pending');
+        h.queue.togglePause(); expect(h.deps.recognize).toHaveBeenCalledTimes(2);
+        h.deps.canRun = () => false; h.queue.wake(); expect(h.audio[1].signal.aborted).toBe(true);
+        h.audio[1].resolve('ready'); await settle(); h.deps.canRun = () => true; h.queue.wake();
+        expect(h.deps.recognize).toHaveBeenCalledTimes(3); expect(h.deps.prepare).toHaveBeenCalledOnce();
+    });
+});

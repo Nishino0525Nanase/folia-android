@@ -3,7 +3,7 @@ import { saveToCache } from './db';
 import { PrefetchedSongData, isUrlValid, updatePrefetchedAudioUrl } from './prefetchService';
 import { isPureMusicLyricText } from '../utils/lyrics/pureMusic';
 import { migrateLyricDataRenderHints } from '../utils/lyrics/renderHints';
-import { hasAuthoritativeOnlineLyricsSelection, loadOnlineLyricsState, markOnlineLyricsPureMusic, resolveOnlineLyrics, resolveOnlineLyricsPureMusic, saveOnlineLyricsState } from '../utils/onlineLyricsState';
+import { hasAuthoritativeOnlineLyricsSelection, loadOnlineLyricsState, markOnlineLyricsPureMusic, resolveOnlineLyrics, resolveOnlineLyricsPureMusic, savePreparedOnlineLyrics } from '../utils/onlineLyricsState';
 import { autoMatchBestLyric } from '../utils/lyrics/autoMatchBestLyric';
 import { getPlatformLyricSource } from '../utils/lyrics/lyricSources';
 import { resolveLyricSourcePreference } from '../utils/lyrics/lyricSourcePreference';
@@ -211,8 +211,22 @@ export async function loadOnlineSongLyrics(
         return;
     }
 
+    // Imports can finish recognition, or the listener can select lyrics, while provider requests are in flight.
+    const showLatestSelection = async (): Promise<boolean> => {
+        const latest = await loadOnlineLyricsState(song);
+        if (!isCurrent()) return true;
+        if (!hasAuthoritativeOnlineLyricsSelection(latest)) return false;
+        const selected = resolveOnlineLyrics(latest, null);
+        onStateChange?.(latest);
+        onPureMusicChange?.(resolveOnlineLyricsPureMusic(latest, selected?.lines.map(line => line.fullText).join('\n') ?? ''));
+        onLyrics(selected);
+        onDone();
+        return true;
+    };
+
     const cachedLyrics = await getSongCacheWithLegacyMigration<LyricData>('lyric', song, migrateLyricDataRenderHints);
     if (!isCurrent()) return;
+    if (await showLatestSelection()) return;
     const preferredCachedLyrics = resolveOnlineLyrics(onlineLyricsState, cachedLyrics);
     const hasAuthoritativeLyricsSelection = hasAuthoritativeOnlineLyricsSelection(onlineLyricsState);
     if (preferredCachedLyrics && (hasAuthoritativeLyricsSelection || !initialSettingsLyricSettings.autoUseBestLyric)) {
@@ -276,6 +290,7 @@ export async function loadOnlineSongLyrics(
     const parsedLyrics = processed.lyrics;
 
     if (!isCurrent()) return;
+    if (await showLatestSelection()) return;
 
     let resolvedLyrics = resolveOnlineLyrics(onlineLyricsState, parsedLyrics);
     let finalState = onlineLyricsState;
@@ -330,22 +345,26 @@ export async function loadOnlineSongLyrics(
                     matchedLyricsSource: bestMatch.source,
                     matchedLyricsProviderPlatform: bestMatch.matchedLyricsProviderPlatform,
                 };
-                await saveOnlineLyricsState(song, overrideState);
+                const saved = await savePreparedOnlineLyrics(song, overrideState, isCurrent);
                 if (!isCurrent()) return;
-                resolvedLyrics = bestMatch.lyrics;
-                finalState = overrideState;
-                onStateChange?.(overrideState);
+                if (saved) {
+                    resolvedLyrics = bestMatch.lyrics;
+                    finalState = overrideState;
+                    onStateChange?.(overrideState);
+                }
             } else if (bestMatch?.isPureMusic) {
                 // Checked against `true`, not with `in`: a MATCH object also carries
                 // `isPureMusic: false`, so `'isPureMusic' in bestMatch` was true for it too - and
                 // a best match from the track's own provider (which fails the branch above) then
                 // landed here and had its perfectly good lyrics thrown away as instrumental.
                 const pureMusic = markOnlineLyricsPureMusic(onlineLyricsState);
-                await saveOnlineLyricsState(song, pureMusic);
+                const saved = await savePreparedOnlineLyrics(song, pureMusic, isCurrent);
                 if (!isCurrent()) return;
-                resolvedLyrics = null;
-                finalState = pureMusic;
-                onStateChange?.(pureMusic);
+                if (saved) {
+                    resolvedLyrics = null;
+                    finalState = pureMusic;
+                    onStateChange?.(pureMusic);
+                }
             }
         } catch (error) {
             console.warn('[OnlinePlayback] Failed to auto-match best lyric:', error);
@@ -353,6 +372,7 @@ export async function loadOnlineSongLyrics(
     }
 
     if (!isCurrent()) return;
+    if (await showLatestSelection()) return;
 
     const resolvedText = resolvedLyrics?.lines.map(line => line.fullText).join('\n') ?? '';
     onPureMusicChange?.(

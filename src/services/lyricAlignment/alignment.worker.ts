@@ -1,7 +1,8 @@
-import { env, pipeline } from '@huggingface/transformers';
+import { env, pipeline, Tensor, type AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
 import { wasm, mjs } from 'virtual:folia-whisper-runtime';
 import { alignLyricsToWords, wordsToSubtitle, type TimedWord } from './alignment';
 import { ALIGNMENT_MODEL, ALIGNMENT_REVISION, type AlignmentRequest, type AlignmentReply } from './protocol';
+import { languageFromLogits } from './languageDetection';
 
 // Speech inference and text alignment run in a disposable worker, never on the player rendering thread.
 const bundledModel = Boolean(import.meta.env.FOLIA_ALIGNMENT_BUNDLED);
@@ -12,6 +13,21 @@ env.useBrowserCache = !bundledModel;
 env.backends.onnx.wasm!.numThreads = 1;
 env.backends.onnx.wasm!.wasmPaths = { wasm, mjs };
 const send = (reply: AlignmentReply) => self.postMessage(reply);
+
+// Transformers.js 3.8.1 defaults omitted language to English. Explicitly detect each window instead.
+const detectLanguage = async (transcriber: AutomaticSpeechRecognitionPipeline, audio: Float32Array): Promise<string> => {
+    const config = transcriber.model.generation_config as unknown as { decoder_start_token_id: number; lang_to_id: Record<string, number> };
+    const features = await transcriber.processor(audio);
+    const decoder = new Tensor('int64', BigInt64Array.from([BigInt(config.decoder_start_token_id)]), [1, 1]);
+    let output: Record<string, Tensor> = {};
+    try {
+        output = await transcriber.model.forward({ input_features: features.input_features, decoder_input_ids: decoder });
+        return languageFromLogits(output.logits.data as Float32Array, config.lang_to_id);
+    } finally {
+        const tensors = new Set([decoder, ...Object.values(features), ...Object.values(output)]);
+        for (const tensor of tensors) if (tensor instanceof Tensor) tensor.dispose();
+    }
+};
 self.onmessage = async (event: MessageEvent<AlignmentRequest>) => {
     try {
         const { samples, lyrics, language } = event.data;
@@ -35,8 +51,9 @@ self.onmessage = async (event: MessageEvent<AlignmentRequest>) => {
             let energy = 0;
             for (let i = 0; i < audio.length; i++) energy += audio[i] * audio[i];
             if (energy / audio.length > 0.000001) {
+                const detectedLanguage = language === 'auto' ? await detectLanguage(transcriber, audio) : language;
                 const result = await transcriber(audio, { return_timestamps: 'word', task: 'transcribe',
-                    ...(language === 'auto' ? {} : { language }), max_new_tokens: 448, num_beams: 1, do_sample: false });
+                    language: detectedLanguage, max_new_tokens: 448, num_beams: 1, do_sample: false });
                 const output = Array.isArray(result) ? result[0] : result;
                 for (const chunk of output.chunks ?? []) {
                     const [start, stop] = chunk.timestamp;

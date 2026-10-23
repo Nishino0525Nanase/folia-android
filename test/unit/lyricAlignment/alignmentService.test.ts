@@ -14,10 +14,12 @@ class WorkerStub {
 }
 afterEach(() => vi.unstubAllGlobals());
 const request = () => ({ samples: new Float32Array(160), lyrics: null, language: 'auto' as const });
+const settle = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 it('terminates inference immediately on cancellation', async () => {
     vi.stubGlobal('Worker', WorkerStub);
     const controller = new AbortController();
     const pending = inferAlignment(request(), controller.signal, () => {});
+    await settle();
     controller.abort();
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
     expect(WorkerStub.latest.terminate).toHaveBeenCalledOnce();
@@ -26,6 +28,7 @@ it('delivers progress and disposes the worker after a result', async () => {
     vi.stubGlobal('Worker', WorkerStub);
     const progress = vi.fn();
     const pending = inferAlignment(request(), new AbortController().signal, progress);
+    await settle();
     WorkerStub.latest.onmessage?.({ data: { type: 'progress', value: { phase: 'recognizing', progress: 50 } } });
     const result = { kind: 'transcribed', lyrics: { lines: [] }, matchedLines: 0, totalLines: 0, coverage: 0 };
     WorkerStub.latest.onmessage?.({ data: { type: 'result', value: result } });
@@ -36,6 +39,7 @@ it('delivers progress and disposes the worker after a result', async () => {
 it('does not leave a worker alive when initialization or messaging fails', async () => {
     vi.stubGlobal('Worker', WorkerStub);
     const pending = inferAlignment(request(), new AbortController().signal, () => {});
+    await settle();
     WorkerStub.latest.onerror?.({ message: 'unavailable' });
     await expect(pending).rejects.toThrow('unavailable');
     expect(WorkerStub.latest.terminate).toHaveBeenCalledOnce();
@@ -43,4 +47,18 @@ it('does not leave a worker alive when initialization or messaging fails', async
     vi.stubGlobal('Worker', BrokenWorker);
     await expect(inferAlignment(request(), new AbortController().signal, () => {})).rejects.toThrow('clone-failed');
     expect(WorkerStub.latest.terminate).toHaveBeenCalledOnce();
+});
+it('serializes manual and background inference and skips a cancelled waiter', async () => {
+    vi.stubGlobal('Worker', WorkerStub);
+    const first = inferAlignment(request(), new AbortController().signal, () => {});
+    await settle(); const active = WorkerStub.latest;
+    const controller = new AbortController();
+    const cancelled = inferAlignment(request(), controller.signal, () => {});
+    const third = inferAlignment(request(), new AbortController().signal, () => {});
+    controller.abort(); await expect(cancelled).rejects.toMatchObject({ name: 'AbortError' });
+    expect(WorkerStub.latest).toBe(active);
+    const result = { kind: 'transcribed', lyrics: { lines: [] }, matchedLines: 0, totalLines: 0, coverage: 0 };
+    active.onmessage?.({ data: { type: 'result', value: result } }); await first; await settle();
+    expect(WorkerStub.latest).not.toBe(active);
+    WorkerStub.latest.onmessage?.({ data: { type: 'result', value: result } }); await third;
 });

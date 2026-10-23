@@ -67,6 +67,7 @@ import { currentTime } from '../../../../stores/motionSignals';
 import { resolveLocalSongLyrics } from '../../../../utils/lyrics/localSongLyrics';
 import { detectLyricFileIssues } from '../../../../utils/lyrics/lyricFileIssues';
 import { createLikePresses } from '../../../../utils/likePresses';
+import { usePreparedLyricsPlayback } from './usePreparedLyricsPlayback';
 
 // src/components/app/playback/start/useLibraryPlaybackController.ts
 
@@ -152,6 +153,7 @@ export function useLibraryPlaybackController({
     const audioQuality = useAudioSettingsStore(state => state.audioQuality);
     const queueAddBehavior = useAudioSettingsStore(state => state.queueAddBehavior);
     const currentSong = usePlaybackStore(state => state.currentSong);
+    usePreparedLyricsPlayback(currentSong, setLyrics, persistLastPlaybackCache);
     const lyrics = usePlaybackStore(state => state.lyrics);
     const playQueue = usePlaybackStore(state => state.playQueue);
     const starredNavidromeSongIds = useLibraryStore(state => state.starredNavidromeSongIds);

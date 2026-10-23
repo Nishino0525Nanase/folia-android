@@ -1913,6 +1913,9 @@ export default {
     "filename": "vokal-selaras.lrc"
 },
   "lyricPreparation": {
+    "recognizing": "Mengenali {{name}}: {{progress}}%",
+    "audioQueued": "Menunggu pengenalan audio: {{count}}",
+    "automaticSubtitles": "Subtitel ini dikenali dan disimpan otomatis dari audio ini. Waktunya mengikuti audio, tetapi teks mungkin mengandung kesalahan.",
     "running": "Menyiapkan lirik {{done}} / {{total}}",
     "complete": "Lirik diperiksa {{done}} / {{total}}",
     "paused": "Pencocokan lirik dijeda {{done}} / {{total}}",
@@ -2493,8 +2496,8 @@ export default {
     "disableHomeDynamicBackgroundDesc": "Halaman beranda menghentikan animasi latarnya untuk mengurangi penggunaan GPU",
     "autoUseBestLyric": "Gunakan Lirik Terbaik Otomatis",
     "settingsHeadingLyricSource": "Sumber lirik",
-    "autoUseBestLyricDesc": "Cari NetEase, AMLLDB, QQ, Kugou dan LRCLIB. Siapkan lirik video yang diimpor di latar belakang dan pertahankan pilihan manual.",
-    "autoUseBestLyricDescSpotify": "Cari NetEase, AMLLDB, QQ, Kugou dan LRCLIB. Siapkan lirik video yang diimpor di latar belakang dan pertahankan pilihan manual. Spotify memerlukan login.",
+    "autoUseBestLyricDesc": "Cari NetEase, AMLLDB, QQ, Kugou dan LRCLIB. Cari lirik setelah impor; jika tidak ada, unduh audio asli untuk mengenali dan menyimpan takarir secara lokal. Pertahankan pilihan manual; jeda dari daftar putar.",
+    "autoUseBestLyricDescSpotify": "Cari NetEase, AMLLDB, QQ, Kugou dan LRCLIB. Cari lirik setelah impor; jika tidak ada, unduh audio asli untuk mengenali dan menyimpan takarir secara lokal. Pertahankan pilihan manual; jeda dari daftar putar. Spotify memerlukan login.",
     "lyricMatchPriority": "Prioritas pencocokan lirik",
     "lyricMatchPriorityDesc": "Saat beberapa sumber lirik memiliki kecocokan berkualitas tinggi, utamakan sumber ini terlebih dahulu.",
     "localLyricsPriority": "Prioritas lirik lagu lokal",

@@ -16,7 +16,7 @@ let controller: AbortController | null = null;
 const listeners = new Set<() => void>();
 const update = (patch: Partial<AlignmentJob>) => { if (job) job = { ...job, ...patch }; listeners.forEach(fn => fn()); };
 
-export const inferAlignment = (request: AlignmentRequest, signal: AbortSignal, progress: (value: AlignmentProgress) => void): Promise<AlignmentResult> => new Promise((resolve, reject) => {
+const inferInWorker = (request: AlignmentRequest, signal: AbortSignal, progress: (value: AlignmentProgress) => void): Promise<AlignmentResult> => new Promise((resolve, reject) => {
     signal.throwIfAborted();
     const worker = new Worker(new URL('./alignment.worker.ts', import.meta.url), { type: 'module' });
     const finish = () => { worker.terminate(); signal.removeEventListener('abort', abort); };
@@ -31,6 +31,19 @@ export const inferAlignment = (request: AlignmentRequest, signal: AbortSignal, p
     try { worker.postMessage(request, [request.samples.buffer]); }
     catch (error) { finish(); reject(error); }
 });
+
+// Manual and import-driven recognition share one model slot, including cancelled tasks waiting for it.
+let inferenceTail: Promise<unknown> = Promise.resolve();
+export const inferAlignment = (request: AlignmentRequest, signal: AbortSignal, progress: (value: AlignmentProgress) => void): Promise<AlignmentResult> => {
+    const pending = inferenceTail.then(() => inferInWorker(request, signal, progress));
+    inferenceTail = pending.catch(() => {});
+    let abort = () => {};
+    const cancelled = new Promise<never>((_resolve, reject) => {
+        abort = () => reject(new DOMException('Cancelled', 'AbortError'));
+        if (signal.aborted) abort(); else signal.addEventListener('abort', abort, { once: true });
+    });
+    return Promise.race([pending, cancelled]).finally(() => signal.removeEventListener('abort', abort));
+};
 
 export const audioAlignment = {
     getSnapshot: () => job,

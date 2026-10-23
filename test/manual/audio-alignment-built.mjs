@@ -43,7 +43,7 @@ try {
                 else if (data.type === 'error') { finish(); reject(new Error(data.message)); }
             };
             const samples = audio.getChannelData(0).slice();
-            instance.postMessage({ samples, lyrics: null, language: 'english' }, [samples.buffer]);
+            instance.postMessage({ samples, lyrics: null, language: 'auto' }, [samples.buffer]);
         });
     }, worker);
     assert.equal(result.kind, 'transcribed');

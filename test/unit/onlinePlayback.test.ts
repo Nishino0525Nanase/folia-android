@@ -8,7 +8,7 @@ const lyricsMock = vi.hoisted(() => vi.fn());
 const otherArtistNameMock = vi.hoisted(() => vi.fn());
 const autoMatchMock = vi.hoisted(() => vi.fn());
 const loadLyricsStateMock = vi.hoisted(() => vi.fn());
-const saveLyricsStateMock = vi.hoisted(() => vi.fn());
+const saveLyricsStateMock = vi.hoisted(() => vi.fn(async () => true));
 const isUrlValidMock = vi.hoisted(() => vi.fn(() => true));
 const updatePrefetchedAudioUrlMock = vi.hoisted(() => vi.fn());
 
@@ -48,7 +48,7 @@ vi.mock('@/utils/lyrics/autoMatchBestLyric', () => ({
 vi.mock('@/utils/onlineLyricsState', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/utils/onlineLyricsState')>()),
     loadOnlineLyricsState: loadLyricsStateMock,
-    saveOnlineLyricsState: saveLyricsStateMock,
+    savePreparedOnlineLyrics: saveLyricsStateMock,
 }));
 
 vi.mock('@/services/prefetchService', () => ({
@@ -382,6 +382,24 @@ describe('online QQ lyric candidate plumbing', () => {
         vi.clearAllMocks();
         songCacheMock.mockResolvedValue(null);
         loadLyricsStateMock.mockResolvedValue(null);
+        saveLyricsStateMock.mockResolvedValue(true);
+    });
+
+    it.each(['none', 'match', 'instrumental'])('keeps subtitles completed during a late %s search', async outcome => {
+        lyricsMock.mockResolvedValue({ lyrics: null, isPureMusic: false });
+        let finish!: (value: unknown) => void;
+        autoMatchMock.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+        const onLyrics = vi.fn();
+        const pending = loadOnlineSongLyrics(song, null, null, { isCurrent: () => true, onLyrics, onDone: vi.fn() });
+        await vi.waitFor(() => expect(autoMatchMock).toHaveBeenCalled());
+        const generated = { lines: [{ fullText: 'Recognized from this recording', startTime: 1, endTime: 4, words: [] }] };
+        loadLyricsStateMock.mockResolvedValue({ lyricsSource: 'imported', importedLyrics: generated });
+        saveLyricsStateMock.mockResolvedValue(false);
+        finish(outcome === 'none' ? null : outcome === 'match' ? { source: 'qq', id: 9, lyrics: { lines: [] } }
+            : { source: 'qq', id: 9, isPureMusic: true });
+        await pending;
+        expect(onLyrics).toHaveBeenLastCalledWith(generated);
+        expect(onLyrics).not.toHaveBeenCalledWith(null);
     });
 
     it('matches video credits and drops a late match after the song changes', async () => {
@@ -514,6 +532,7 @@ describe('instrumental tracks, once auto-match has settled them', () => {
         vi.clearAllMocks();
         songCacheMock.mockResolvedValue(null);
         loadLyricsStateMock.mockResolvedValue(null);
+        saveLyricsStateMock.mockResolvedValue(true);
     });
 
     it('stores the verdict, so the search is not repeated on every play', async () => {
@@ -540,7 +559,7 @@ describe('instrumental tracks, once auto-match has settled them', () => {
         expect(saveLyricsStateMock).toHaveBeenCalledWith(song, expect.objectContaining({
             hasOnlineOverride: true,
             matchedIsPureMusic: true,
-        }));
+        }), expect.any(Function));
         expect(onLyrics).toHaveBeenCalledWith(null);
     });
 

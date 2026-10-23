@@ -6,6 +6,7 @@ import { getPlaybackAnalysisTarget } from '../playbackRecovery/representationReg
 const MAX_BYTES = 64 * 1024 * 1024;
 export const readAlignmentAudio = async (song: SongResult, audioUrl: string | null, signal: AbortSignal): Promise<Float32Array> => {
     signal.throwIfAborted();
+    if (song.durationMs > 900_000) throw new Error('audio-too-long');
     const { representation } = getPlaybackAnalysisTarget(song);
     const local = await readLocalTrackBytes(song, { representation, audioUrl });
     signal.throwIfAborted();

@@ -1913,6 +1913,9 @@ export default {
     "filename": "vocal-aligned.lrc"
 },
   "lyricPreparation": {
+    "recognizing": "Recognizing {{name}}: {{progress}}%",
+    "audioQueued": "Waiting for audio recognition: {{count}}",
+    "automaticSubtitles": "These subtitles were recognized automatically from this audio. They follow the audio timing but may contain transcription errors.",
     "running": "Preparing lyrics {{done}} / {{total}}",
     "complete": "Lyrics checked {{done}} / {{total}}",
     "paused": "Lyric preparation paused {{done}} / {{total}}",
@@ -2493,8 +2496,8 @@ export default {
     "disableHomeDynamicBackgroundDesc": "The home page stops its background animation to lower GPU use",
     "autoUseBestLyric": "Auto Use Best Lyric",
     "settingsHeadingLyricSource": "Lyric sources",
-    "autoUseBestLyricDesc": "Search NetEase, AMLLDB, QQ, Kugou and LRCLIB. Prepare imported video lyrics in the background and keep existing manual choices.",
-    "autoUseBestLyricDescSpotify": "Search NetEase, AMLLDB, QQ, Kugou and LRCLIB. Prepare imported video lyrics in the background and keep existing manual choices. Spotify requires sign-in.",
+    "autoUseBestLyricDesc": "Search NetEase, AMLLDB, QQ, Kugou and LRCLIB. Search lyrics after import; if missing, download the original audio and recognize and save subtitles locally. Keep manual choices; pause from the playlist.",
+    "autoUseBestLyricDescSpotify": "Search NetEase, AMLLDB, QQ, Kugou and LRCLIB. Search lyrics after import; if missing, download the original audio and recognize and save subtitles locally. Keep manual choices; pause from the playlist. Spotify requires sign-in.",
     "lyricMatchPriority": "Lyric match priority",
     "lyricMatchPriorityDesc": "When multiple lyric sources have high-confidence matches, prefer this source first.",
     "localLyricsPriority": "Local song lyrics priority",
