@@ -36,4 +36,15 @@ describe('LRCLIB lyric source', () => {
         fetchMock.mockResolvedValueOnce(new Response('', { status: 429 }));
         await expect(lrclibAccess.search('unknown', 20, target)).rejects.toThrow('429');
     });
+
+    it('ranks matching duration and artist before applying the result limit', async () => {
+        fetchMock.mockResolvedValue(new Response(JSON.stringify([
+            ...Array.from({ length: 12 }, (_, index) => ({ ...entry, id: 9100 + index, duration: index + 4 })),
+            { ...entry, id: 9200, artistName: 'Yorushika' },
+        ])));
+        const songs = await lrclibAccess.search('晴る - ヨルシカ', 1, target);
+        expect(songs.map(song => song.id)).toEqual([9200]);
+        expect(await lrclibAccess.fetch(songs[0], { chorusRanges: [] })).toMatchObject({ lyrics: { lines: [{ fullText: 'Fixture line' }, { fullText: 'Second fixture' }] } });
+        expect(fetchMock).toHaveBeenCalledOnce();
+    });
 });

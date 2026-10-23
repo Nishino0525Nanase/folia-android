@@ -2,12 +2,12 @@
 // Shared helpers for constructing lyric search queries from song metadata.
 
 import { normalizeLyricMatchText } from './matchScore';
-import { canonicalLyricArtist } from './artistAliases';
+import { canonicalLyricArtist, isKnownLyricArtist } from './artistAliases';
 
 const MAX_ALBUM_QUERY_LENGTH = 48;
 
 const normalizeArtistIdentity = (value: string): string => (
-    normalizeLyricMatchText(value).replace(/\s+/gu, '')
+    normalizeLyricMatchText(canonicalLyricArtist(value)).replace(/\s+/gu, '')
 );
 
 // Removes a duplicated "artist - title" prefix when the provider already supplies artists separately.
@@ -75,3 +75,12 @@ export const buildKugouLyricSearchQuery = (keyword: string): string => {
 export const compactLyricSearchQuery = (query: string): string => (
     canonicalLyricArtist(query).split(/\s+-\s+/u).slice(0, 2).join(' ').trim()
 );
+
+/** Bounded retrieval fallbacks keep identity/duration validation separate from search keywords. */
+export const buildLyricSearchFallbacks = (query: string): string[] => {
+    const canonical = canonicalLyricArtist(query);
+    const parts = canonical.split(/\s+-\s+/u).map(part => part.trim());
+    const japanese = /[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(canonical) || isKnownLyricArtist(parts[1] || '');
+    return [...new Set([compactLyricSearchQuery(canonical), ...(parts.length >= 2 && japanese ? [parts[0]] : [])])]
+        .filter(candidate => candidate && candidate !== canonical);
+};

@@ -19,6 +19,17 @@ describe('video lyric search hints', () => {
         ['【Hi-Res无损】梁静茹《暖暖》', '暖暖', '梁静茹'],
         ['晴る - Yorushika', '晴る', 'ヨルシカ'],
         ['【米津玄師】Lemon【中日字幕】', 'Lemon', '米津玄師'],
+        ['【4K】【中日字幕】晴る-Yorushika', '晴る', 'ヨルシカ'],
+        ['ヨルシカ-晴る', '晴る', 'ヨルシカ'],
+        ['春泥棒 / 春日大盗 - Yorushika', '春泥棒', 'ヨルシカ'],
+        ['ヨルシカ《放晴 / 晴る》', '晴る', 'ヨルシカ'],
+        ['Lemon-Kenshi Yonezu', 'Lemon', '米津玄師'],
+        ['【中日字幕】Ｋｅｎｓｈｉ　Ｙｏｎｅｚｕ - Lemon', 'Lemon', '米津玄師'],
+        ['【爱缪】マリーゴールド【中字】', 'マリーゴールド', 'あいみょん'],
+        ['【ずとまよ】秒針を噛む【中日字幕】', '秒針を噛む', 'ずっと真夜中でいいのに。'],
+        ['First Love - Hikaru Utada', 'First Love', '宇多田ヒカル'],
+        ['晴る Yorushika', '晴る', 'ヨルシカ'],
+        ['YOASOBI-アイドル', 'アイドル', 'YOASOBI'],
     ])('extracts credits from %s', (name, title, artist) => {
         const song = video(name);
         const before = structuredClone(song);
@@ -47,5 +58,15 @@ describe('video lyric search hints', () => {
     it('recognizes a catalogue title alias and artist alias', () => {
         const target = { title: '晴る', artist: '夜鹿', durationMs: 240_000 };
         expect(calculateMatchScoreDetails(target, { ...candidate('Haru'), aliases: ['晴る'] }).score).toBe(100);
+    });
+
+    it('ranks the exact recording above a different cut still inside the video-padding tolerance', () => {
+        const target = getBilibiliLyricMatchTarget(video('晴る-Yorushika'));
+        expect(calculateMatchScoreDetails(target, { ...candidate(), durationMs: 255_000 }).score)
+            .toBeGreaterThan(calculateMatchScoreDetails(target, { ...candidate(), durationMs: 271_000 }).score);
+    });
+
+    it('keeps unknown compact hyphens as part of the title', () => {
+        expect(getBilibiliLyricMatchTarget(video('Rain-Man'))).toMatchObject({ title: 'Rain-Man', artist: '' });
     });
 });

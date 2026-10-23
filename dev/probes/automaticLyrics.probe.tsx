@@ -3,6 +3,7 @@ import type { UnifiedSong } from '../../src/types';
 import type { OnlineMusicProvider } from '../../src/types/onlineMusic';
 import { registerOnlineMusicProvider } from '../../src/services/onlineMusic/providerRegistry';
 import { omni } from '../../src/services/onlineMusic/omni';
+import { getBilibiliLyricMatchTarget } from '../../src/services/onlineMusic/bilibili/bilibiliLyricMatch';
 import { setLyricsState, usePlaybackStore } from '../../src/stores/usePlaybackStore';
 import { useLyricSettingsStore } from '../../src/stores/useLyricSettingsStore';
 import { useOnlineProviderAccountStore } from '../../src/stores/useOnlineProviderAccountStore';
@@ -15,17 +16,20 @@ import type { ProbeDefinition } from './definition';
 const id = 'probe-auto-lyrics';
 const subtitles = new URLSearchParams(location.search).has('subtitles');
 const match = new URLSearchParams(location.search).has('match');
+const japanese = new URLSearchParams(location.search).has('japanese');
 useLyricSettingsStore.setState({ preferredAlternativeLyricSource: 'lrclib', autoUseBestLyric: !new URLSearchParams(location.search).has('catalogue-off') });
 const song: UnifiedSong = { id: 'unidentified', name: 'Imported unidentified audio', artists: [], album: { id: 0, name: '' }, durationMs: 11000,
     sourceRef: { kind: 'online', providerId: id, mediaId: 'unidentified' } };
+if (japanese) Object.assign(song, { name: '【4K】【中日字幕】晴る-Yorushika', durationMs: 271_000, artists: [{ id: 1, name: '字幕搬运UP' }] });
 const provider: OnlineMusicProvider = {
     id, displayName: 'Automatic lyric probe',
     capabilities: { search: false, playback: true, lyrics: subtitles, auth: false, userLibrary: false, playlists: false, albums: false,
         artists: false, recommendations: false, mutations: false, wordByWordLyrics: false, explore: false },
     normalizeSong: raw => raw as UnifiedSong,
     songMetadata: {
-        getSongMetadata: () => ({ artists: [], album: { id: 0, name: '' }, durationMs: 11000, aliases: [], translatedNames: [] }),
-        getLyricMatchTarget: () => ({ title: 'Fixture song', artist: 'Fixture artist', album: 'Test', durationMs: 11000, autoMatch: match }),
+        getSongMetadata: () => ({ artists: song.artists, album: song.album, durationMs: song.durationMs, aliases: [], translatedNames: [] }),
+        getLyricMatchTarget: () => japanese ? getBilibiliLyricMatchTarget(song)
+            : ({ title: 'Fixture song', artist: 'Fixture artist', album: 'Test', durationMs: 11000, autoMatch: match }),
     },
     ...(subtitles ? { lyrics: { mediaTimed: true, getLyrics: async () => {
         const response = await fetch('/__video_subtitles');

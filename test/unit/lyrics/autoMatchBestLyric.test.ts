@@ -80,6 +80,37 @@ describe('autoMatchBestLyric', () => {
         expect(searchQQLyricsMock).not.toHaveBeenCalled();
     });
 
+    it('finds Japanese lyrics after unrelated structured results and an empty compact search', async () => {
+        const correct = { id: 901, name: '晴る', artists: [{ id: 0, name: 'Yorushika' }], album: { id: 0, name: '' }, durationMs: 271_000 };
+        vi.mocked(lrclibAccess.search).mockImplementation(async query => query === '晴る' ? [correct]
+            : query.includes(' - ') ? [{ ...correct, id: 902, artists: [{ id: 1, name: 'Another Artist' }] }] : []);
+        vi.mocked(lrclibAccess.fetch).mockResolvedValue({ lyrics: createLyrics(false), isPureMusic: false });
+        expect(await autoMatchBestLyric('晴る', '夜鹿', 271_000, { preferredSource: 'lrclib', acceptLineByLine: true }))
+            .toMatchObject({ source: 'lrclib', id: 901 });
+        expect(vi.mocked(lrclibAccess.search).mock.calls.map(call => call[0])).toEqual(['晴る - ヨルシカ', '晴る ヨルシカ', '晴る']);
+        expect(searchQQLyricsMock).not.toHaveBeenCalled();
+    });
+
+    it('does not accept another artist merely because a Japanese title-only retrieval succeeded', async () => {
+        vi.mocked(lrclibAccess.search).mockResolvedValue([{ id: 902, name: '晴る', artists: [{ id: 1, name: 'Another Artist' }], album: { id: 0, name: '' }, durationMs: 271_000 }]);
+        expect(await autoMatchBestLyric('晴る', '夜鹿', 271_000, { preferredSource: 'lrclib', acceptLineByLine: true })).toBeNull();
+        expect(lrclibAccess.fetch).not.toHaveBeenCalled();
+    });
+
+    it('stops Japanese fallback requests after the active match is cancelled', async () => {
+        let current = true;
+        vi.mocked(lrclibAccess.search).mockImplementation(async query => { if (query === '晴る ヨルシカ') current = false; return []; });
+        expect(await autoMatchBestLyric('晴る', '夜鹿', 271_000, { preferredSource: 'lrclib', isCurrent: () => current })).toBeNull();
+        expect(lrclibAccess.search).toHaveBeenCalledTimes(2);
+        expect(lrclibAccess.fetch).not.toHaveBeenCalled();
+    });
+
+    it('does not treat a rejected Japanese lyric request as a keyword miss', async () => {
+        vi.mocked(lrclibAccess.search).mockRejectedValue(new Error('rate-limited'));
+        expect(await autoMatchBestLyric('晴る', '夜鹿', 271_000, { preferredSource: 'lrclib' })).toBeNull();
+        expect(lrclibAccess.search).toHaveBeenCalledOnce();
+    });
+
     it.each(['different-artist', 'missing-duration', 'wrong-duration'])('rejects unsafe title-only matching: %s', async scenario => {
         const song = { id: 19, name: '晴る', artists: [{ id: 0, name: 'ヨルシカ' }], album: { id: 0, name: '' }, durationMs: 255_000 };
         vi.mocked(lrclibAccess.search).mockResolvedValue(scenario === 'different-artist' ? [song, { ...song, id: 20, artists: [{ id: 2, name: 'Another Artist' }] }]
@@ -915,7 +946,7 @@ describe('autoMatchBestLyric', () => {
             const result = await autoMatchBestLyric('Wonderwall', '绿洲合唱团', 259000, { alternateArtist });
             expect(result).toMatchObject({ source: 'qq', id: 201 });
             expect(alternateArtist).toHaveBeenCalledTimes(1);
-            expect(searchQQLyricsMock.mock.calls.map(call => call[0])).toEqual(['Wonderwall - 绿洲合唱团', 'Wonderwall - Oasis']);
+            expect(searchQQLyricsMock.mock.calls.map(call => call[0])).toEqual(['Wonderwall - 绿洲合唱团', 'Wonderwall 绿洲合唱团', 'Wonderwall - Oasis']);
         });
 
         it('does not ask for the other name when the given one finds the lyrics', async () => {

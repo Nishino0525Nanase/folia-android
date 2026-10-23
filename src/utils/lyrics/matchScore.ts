@@ -37,7 +37,7 @@ export type MatchScoreDetails = {
  * Removes punctuation and symbols while preserving letters across languages.
  */
 export function normalizeLyricMatchText(value: string): string {
-    const romajiValue = wanakana.toRomaji(value);
+    const romajiValue = wanakana.toRomaji(value.normalize('NFKC'));
     const simpValue = t2sConverter(romajiValue);
 
     return simpValue
@@ -184,7 +184,8 @@ export function calculateMatchScoreDetails(
     const videoPadding = Math.min(30_000, Math.max(0, song.durationToleranceMs || 0));
     const duration = videoPadding > 0 && titleSimilarity === 1 && artistSimilarity === 1 && Boolean(song.artist.trim())
         && targetDurationMs > 0 && searchDurationMs > 0 && Math.abs(targetDurationMs - searchDurationMs) <= videoPadding
-        ? { multiplier: 0.95, matched: true }
+        && Math.abs(targetDurationMs - searchDurationMs) > 3000
+        ? { multiplier: 0.9, matched: true }
         : calculateDurationScore(targetDurationMs, searchDurationMs);
     const identityScore = titleScore + artistScore + albumScore;
     const titleMatched = titleSimilarity >= 0.65;

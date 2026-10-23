@@ -79,9 +79,18 @@ describe('lyricMatchSources', () => {
     });
 
     it('uses the Japanese artist alias and retries an empty structured query without album terms', async () => {
-        vi.mocked(searchQQLyrics).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+        vi.mocked(searchQQLyrics).mockResolvedValue([]);
         await searchLyricsByMatchSource('qq', '晴る - 夜鹿 - Video title', { title: '晴る', artist: '夜鹿', durationMs: 240_000 });
-        expect(vi.mocked(searchQQLyrics).mock.calls.map(call => call[0])).toEqual(['晴る - ヨルシカ - Video title', '晴る ヨルシカ']);
+        expect(vi.mocked(searchQQLyrics).mock.calls.map(call => call[0])).toEqual(['晴る - ヨルシカ - Video title', '晴る ヨルシカ', '晴る']);
+    });
+
+    it('continues past unrelated results, merges duplicates and keeps the actual Japanese identity first', async () => {
+        const other = { id: 1, name: '晴る', artists: [{ id: 1, name: 'Another Artist' }], album: { id: 0, name: '' }, durationMs: 271_000 };
+        const correct = { ...other, id: 2, artists: [{ id: 2, name: 'Yorushika' }] };
+        vi.mocked(searchQQLyrics).mockResolvedValueOnce([other]).mockResolvedValueOnce([other]).mockResolvedValueOnce([correct]);
+        const songs = await searchLyricsByMatchSource('qq', '晴る - 夜鹿', { title: '晴る', artist: '夜鹿', durationMs: 271_000 });
+        expect(songs.map(song => song.id)).toEqual([2, 1]);
+        expect(searchQQLyrics).toHaveBeenCalledTimes(3);
     });
 
     it('does not retry a refused lyric search as if it had no results', async () => {

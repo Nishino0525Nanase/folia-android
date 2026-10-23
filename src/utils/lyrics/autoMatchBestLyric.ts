@@ -7,7 +7,7 @@ import type { ChorusRange } from './chorusEffects';
 import { normalizeLyricMatchDurationMs } from './duration';
 import { calculateMatchScoreDetails, normalizeLyricMatchText } from './matchScore';
 import { canonicalLyricArtist } from './artistAliases';
-import { buildLyricSearchQuery, compactLyricSearchQuery } from './searchQuery';
+import { buildLyricSearchQuery, buildLyricSearchFallbacks } from './searchQuery';
 import { buildLyricSourceOrder } from './sourcePriority';
 import { resolveProviderLyricsChorus } from './chorusResolver';
 import { hasRenderableLyrics } from './validity';
@@ -101,12 +101,13 @@ function selectBestCandidate(
         details.titleMatched && (details.artistMatched || details.albumMatched === true);
 
     const scored = songs
-        .slice(0, AUTO_MATCH_SEARCH_LIMIT)
+        .slice(0, 50)
         .map(song => ({
             song,
             details: calculateMatchScoreDetails(target, song)
         }))
-        .sort((a, b) => b.details.score - a.details.score);
+        .sort((a, b) => b.details.score - a.details.score
+            || Math.abs(target.durationMs - a.song.durationMs) - Math.abs(target.durationMs - b.song.durationMs));
 
     if (SHOULD_LOG_MATCH_DETAILS) {
         for (const item of scored) {
@@ -243,25 +244,24 @@ async function matchUnderArtist(
         }
 
         if (options.isCurrent?.() === false) return null;
-        let songs = (await withTimeout(
-            access.search(searchQuery, AUTO_MATCH_SEARCH_LIMIT, targetSong),
-            PROVIDER_SEARCH_TIMEOUT_MS,
-            `${source} search`,
-            null
-        ));
-        if (options.isCurrent?.() === false || !songs) return null;
-        const compactQuery = compactLyricSearchQuery(searchQuery);
-        if (!songs.length && source !== 'amll' && compactQuery !== searchQuery) {
-            songs = await withTimeout(access.search(compactQuery, AUTO_MATCH_SEARCH_LIMIT, targetSong),
-                PROVIDER_SEARCH_TIMEOUT_MS, `${source} compact search`, []) ?? [];
-        }
-        if (picked) {
-            const exactCandidate = songs.find(song => isSelectedMetadataCandidate(source, song, picked));
-            if (exactCandidate || options.exactMatchOnly) {
-                return exactCandidate ?? null;
+        const queries = [searchQuery, ...(source === 'amll' ? [] : buildLyricSearchFallbacks(searchQuery))];
+        for (const [index, query] of queries.entries()) {
+            if (options.isCurrent?.() === false) return null;
+            const songs = await withTimeout(
+                access.search(query, index > 1 ? 20 : AUTO_MATCH_SEARCH_LIMIT, targetSong),
+                PROVIDER_SEARCH_TIMEOUT_MS, `${source} search`, null,
+            );
+            // A failure is not an empty result: do not fan out requests after a timeout/refusal.
+            if (options.isCurrent?.() === false || !songs) return null;
+            if (picked) {
+                const exactCandidate = songs.find(song => isSelectedMetadataCandidate(source, song, picked));
+                if (exactCandidate) return exactCandidate;
+                if (options.exactMatchOnly) continue;
             }
+            const best = selectBestCandidate(source, songs, targetSong);
+            if (best) return best;
         }
-        return selectBestCandidate(source, songs, targetSong);
+        return null;
     };
 
     // The source's lyrics for `song`: those already in hand when it is the active song, else fetched.

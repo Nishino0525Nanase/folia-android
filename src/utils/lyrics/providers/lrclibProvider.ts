@@ -2,6 +2,7 @@ import type { SongResult } from '../../../types';
 import type { LyricSourceAccess } from '../lyricMatchSources';
 import { parseLyricsByFormat } from '../parserCore';
 import { hasRenderableLyrics } from '../validity';
+import { calculateMatchScore } from '../matchScore';
 
 // Public LRCLIB catalogue: only timestamped lyrics are used; plain text is never presented as synchronized.
 const BASE = 'https://lrclib.net/api';
@@ -26,7 +27,7 @@ const remember = (entry: Entry) => {
 };
 
 export const lrclibAccess: LyricSourceAccess = {
-    async search(query, limit) {
+    async search(query, limit, target) {
         // Respect edited manual searches as well as the automatic title/artist query.
         const parts = query.split(/\s+-\s+/u).map(part => part.trim()).filter(Boolean);
         const params = parts.length >= 2
@@ -39,13 +40,14 @@ export const lrclibAccess: LyricSourceAccess = {
         }
         return data.filter(valid).filter(entry => entry.instrumental === true
             || typeof entry.syncedLyrics === 'string' && /\[\d+:\d+(?:[.:]\d+)?\]/u.test(entry.syncedLyrics))
-            .slice(0, limit).map(entry => {
+            .map(entry => {
                 remember(entry);
                 return { id: entry.id, name: entry.trackName, artists: [{ id: 0, name: entry.artistName }],
                     album: { id: 0, name: typeof entry.albumName === 'string' ? entry.albumName : '' },
                     durationMs: Math.round(entry.duration * 1000),
                     sourceRef: { kind: 'online', providerId: 'lrclib', mediaId: String(entry.id) } } satisfies SongResult;
-            });
+            }).sort((a, b) => calculateMatchScore(target, b) - calculateMatchScore(target, a)
+                || Math.abs(target.durationMs - a.durationMs) - Math.abs(target.durationMs - b.durationMs)).slice(0, limit);
     },
     async fetch(song) {
         const id = Number(song.id);

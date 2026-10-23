@@ -7,7 +7,7 @@ export type PreparationResult = 'ready' | 'review' | 'unmatched' | 'failed';
 export type PreparationOutcome = PreparationResult | { status: PreparationResult; mediaSubtitleStatus?: MediaSubtitleStatus };
 export type PreparationEntry = { key: string; song: SongResult; groups: string[];
     status: PreparationResult | 'pending' | 'running' | 'audio-pending' | 'recognizing'; updatedAt: number; audioProgress?: number; mediaSubtitleStatus?: MediaSubtitleStatus; retryAt?: number; retryCount?: number };
-export type PreparationSnapshot = { version: 1 | 2 | 3 | 4; paused: boolean; entries: PreparationEntry[] };
+export type PreparationSnapshot = { version: 1 | 2 | 3 | 4 | 5; paused: boolean; entries: PreparationEntry[] };
 type Deps = {
     load: () => Promise<PreparationSnapshot | null>;
     save: (snapshot: PreparationSnapshot) => Promise<void>;
@@ -20,7 +20,7 @@ type Deps = {
 };
 
 export const createLyricPreparationQueue = (deps: Deps) => {
-    let snapshot: PreparationSnapshot = { version: 4, paused: false, entries: [] };
+    let snapshot: PreparationSnapshot = { version: 5, paused: false, entries: [] };
     let initialized: Promise<void> | null = null;
     let writes = Promise.resolve();
     let active = 0;
@@ -102,14 +102,17 @@ export const createLyricPreparationQueue = (deps: Deps) => {
     };
     const initialize = () => initialized ??= (async () => {
         const saved = await deps.load().catch(() => null);
-        if ((saved?.version === 1 || saved?.version === 2 || saved?.version === 3 || saved?.version === 4) && Array.isArray(saved.entries)) {
-            snapshot = { version: 4, paused: saved.paused === true, entries: saved.entries.filter(entry =>
+        if (saved && [1, 2, 3, 4, 5].includes(saved.version) && Array.isArray(saved.entries)) {
+            snapshot = { version: 5, paused: saved.paused === true, entries: saved.entries.filter(entry =>
                 entry && typeof entry.key === 'string' && entry.song?.sourceRef?.kind === 'online'
                 && Array.isArray(entry.groups) && ['pending', 'running', 'ready', 'review', 'unmatched', 'failed', 'audio-pending', 'recognizing'].includes(entry.status)
-            ).map(entry => ({ ...entry, audioProgress: undefined, status: saved.version < 4 && deps.retryUnresolved?.(entry.song) && ['review', 'unmatched', 'failed'].includes(entry.status) ? 'pending'
-                : entry.status === 'running' ? 'pending'
-                : entry.status === 'recognizing' || entry.status === 'audio-pending' ? deps.recognize ? 'audio-pending' : 'pending'
-                : saved.version === 1 && deps.recognize && ['review', 'unmatched', 'failed'].includes(entry.status) ? 'audio-pending' : entry.status })) };
+            ).map(entry => {
+                const recheck = saved.version < 5 && deps.retryUnresolved?.(entry.song) && ['review', 'unmatched', 'failed'].includes(entry.status);
+                return { ...entry, audioProgress: undefined, ...(recheck ? { retryAt: undefined, retryCount: 0 } : {}),
+                    status: recheck || entry.status === 'running' ? 'pending'
+                        : entry.status === 'recognizing' || entry.status === 'audio-pending' ? deps.recognize ? 'audio-pending' : 'pending'
+                            : saved.version === 1 && deps.recognize && ['review', 'unmatched', 'failed'].includes(entry.status) ? 'audio-pending' : entry.status };
+            }) };
         }
         emit();
         pump();

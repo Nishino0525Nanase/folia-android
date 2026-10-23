@@ -78,3 +78,26 @@ test('retries login-required captions automatically after sign-in without manual
     await expect(page.locator('[data-automatic-lyrics]')).toContainText('2.45 Original caption');
     expect(requests).toBe(2);
 });
+
+test('automatically finds Japanese lyrics from a decorated video title and reuses the match after reload', async ({ page }) => {
+    const searches: string[] = [];
+    const expensive: string[] = [];
+    page.on('request', request => { if (/__automatic_audio|\/models\/|alignment\.worker/.test(request.url())) expensive.push(request.url()); });
+    await page.route('**/__video_subtitles', route => route.fulfill({ json: null }));
+    await page.route('https://lrclib.net/api/**', route => {
+        const params = new URL(route.request().url()).searchParams;
+        searches.push(params.get('q') || `${params.get('track_name')} - ${params.get('artist_name')}`);
+        return route.fulfill({ json: params.get('q') === '晴る' ? [{ id: 990, trackName: '晴る', artistName: 'Yorushika', albumName: '', duration: 271,
+            syncedLyrics: '[00:01.00]Japanese fixture line\n[00:04.00]Automatic matched line' }]
+            : params.has('artist_name') ? [{ id: 991, trackName: '晴る', artistName: 'Another Artist', albumName: '', duration: 271,
+                syncedLyrics: '[00:01.00]Wrong recording' }] : [] });
+    });
+    await page.goto('/dev-probe.html?probe=automaticLyrics&japanese&subtitles');
+    await expect(page.locator('[data-automatic-lyrics]')).toContainText('Automatic matched line');
+    await expect(page.locator('[data-saved-source]')).toHaveText('lrclib');
+    expect(searches).toEqual(['晴る - ヨルシカ', '晴る ヨルシカ', '晴る']);
+    await page.reload();
+    await expect(page.locator('[data-automatic-lyrics]')).toContainText('Automatic matched line');
+    expect(searches).toHaveLength(3);
+    expect(expensive).toEqual([]);
+});

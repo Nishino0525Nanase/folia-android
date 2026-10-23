@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildKugouLyricSearchQuery, buildLyricSearchQuery, normalizeSongTitleForLyricSearch } from '@/utils/lyrics/searchQuery';
+import { buildKugouLyricSearchQuery, buildLyricSearchQuery, buildLyricSearchFallbacks, normalizeSongTitleForLyricSearch } from '@/utils/lyrics/searchQuery';
 
 // test/unit/lyrics/searchQuery.test.ts
 // Covers lyric search query construction edge cases.
@@ -30,6 +30,17 @@ describe('buildLyricSearchQuery', () => {
 
     it('does not remove a title prefix that is not the supplied artist', () => {
         expect(normalizeSongTitleForLyricSearch('Part I - Nod-Krai', 'HOYO-MiX')).toBe('Part I - Nod-Krai');
+    });
+
+    it('removes a duplicated artist prefix even when the two credits use different aliases', () => {
+        expect(buildLyricSearchQuery('Yorushika - 晴る', '夜鹿')).toBe('晴る - ヨルシカ');
+    });
+
+    it('searches Japanese titles without requiring an artist spelling, while keeping validation separate', () => {
+        expect(buildLyricSearchFallbacks('晴る - Yorushika - Video album')).toEqual(['晴る ヨルシカ', '晴る']);
+        expect(buildLyricSearchFallbacks('Lemon - 米津玄师')).toEqual(['Lemon 米津玄師', 'Lemon']);
+        expect(buildLyricSearchFallbacks('Song - Artist')).toEqual(['Song Artist']);
+        expect(buildLyricSearchFallbacks('晴る')).toEqual([]);
     });
 });
 

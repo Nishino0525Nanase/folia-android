@@ -2,7 +2,7 @@ import { getOnlineMusicProvider } from '../../services/onlineMusic/providerRegis
 import { useOnlineProviderAccountStore } from '../../stores/useOnlineProviderAccountStore';
 import type { AmllDbPlatform, LyricData, LyricProviderSource, SongResult } from '../../types';
 import type { ChorusRange, ProviderLyricsResult } from '../../types/onlineMusic';
-import { calculateMatchScore } from './matchScore';
+import { calculateMatchScore, calculateMatchScoreDetails } from './matchScore';
 import { searchQQLyrics, fetchQQLyrics } from '../../services/onlineMusic/qq/qqLyricProvider';
 import { fetchAmllDbLyrics, getAmllDbMusicIds, searchAmllDbSongs } from './providers/amllDbProvider';
 import { buildAmllDbSearchQueries, toAmllDbSongResults } from './amllDbCandidates';
@@ -10,7 +10,7 @@ import { applyChorusRangesByTime } from './chorusEffects';
 import { hasRenderableLyrics } from './validity';
 import { LYRIC_SOURCE_IDS, getLyricSource } from './lyricSources';
 import { canonicalLyricArtist } from './artistAliases';
-import { compactLyricSearchQuery } from './searchQuery';
+import { buildLyricSearchFallbacks } from './searchQuery';
 import { lrclibAccess } from './providers/lrclibProvider';
 
 // src/utils/lyrics/lyricMatchSources.ts
@@ -170,11 +170,16 @@ export async function searchLyricsByMatchSource(
 ): Promise<SongResult[]> {
     const access = getLyricSourceAccess(source);
     const canonical = canonicalLyricArtist(query);
-    const songs = await access.search(canonical, MATCH_WINDOW_SEARCH_LIMIT, target);
-    const compact = compactLyricSearchQuery(canonical);
-    const results = songs.length || source === 'amll' || compact === canonical
-        ? songs : await access.search(compact, MATCH_WINDOW_SEARCH_LIMIT, target);
-    return sortByMatchScore(results, target);
+    const results = new Map<string, SongResult>();
+    for (const keywords of [canonical, ...(source === 'amll' ? [] : buildLyricSearchFallbacks(canonical))]) {
+        const songs = await access.search(keywords, MATCH_WINDOW_SEARCH_LIMIT, target);
+        for (const song of songs) results.set(access.songKey(song), song);
+        if (songs.some(song => {
+            const details = calculateMatchScoreDetails(target, song);
+            return details.score >= 75 && details.titleMatched && (details.artistMatched || details.albumMatched === true);
+        })) break;
+    }
+    return sortByMatchScore([...results.values()], target);
 }
 
 export async function fetchLyricsForMatchSource(

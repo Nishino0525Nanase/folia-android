@@ -133,10 +133,31 @@ it('rechecks old unresolved video imports once for the newly available subtitle 
         retryUnresolved: () => true, canRun: () => true, wait: async () => {} };
     const queue = createLyricPreparationQueue(deps); await queue.initialize(); await settle(); await queue.flush();
     expect(prepare).toHaveBeenCalledTimes(3); expect(queue.getSnapshot().entries[0].status).toBe('ready');
-    const snapshot = structuredClone(queue.getSnapshot()); expect(snapshot.version).toBe(4);
+    const snapshot = structuredClone(queue.getSnapshot()); expect(snapshot.version).toBe(5);
     prepare.mockClear();
     const restart = createLyricPreparationQueue({ ...deps, load: async () => snapshot });
     await restart.initialize(); await settle(); expect(prepare).not.toHaveBeenCalled();
+});
+
+it('rechecks version-four misses once under the new search policy without reviving old retry timers', async () => {
+    const prepare = vi.fn(async (): Promise<PreparationResult> => 'unmatched');
+    const saved: PreparationSnapshot = { version: 4, paused: true, entries: ['ready', 'unmatched', 'review'].map((status, index) => ({
+        key: String(index), song: song(index), groups: ['a'], status: status as PreparationResult, updatedAt: 0,
+        ...(index ? { retryAt: Date.now() + 60_000, retryCount: 3 } : {}),
+    })) };
+    const deps = { load: async () => saved, save: async (_snapshot: PreparationSnapshot) => {}, prepare,
+        retryUnresolved: () => true, canRun: () => true, wait: async () => {} };
+    const queue = createLyricPreparationQueue(deps);
+    await queue.initialize();
+    expect(prepare).not.toHaveBeenCalled();
+    expect(queue.getSnapshot().entries.map(entry => entry.status)).toEqual(['ready', 'pending', 'pending']);
+    expect(queue.getSnapshot().entries[1].retryAt).toBeUndefined();
+    queue.togglePause(); await settle();
+    expect(prepare).toHaveBeenCalledTimes(2);
+    const snapshot = structuredClone(queue.getSnapshot()); prepare.mockClear();
+    const restart = createLyricPreparationQueue({ ...deps, load: async () => snapshot });
+    await restart.initialize(); await settle();
+    expect(prepare).not.toHaveBeenCalled();
 });
 
 it('keeps native caption jobs eligible when other automatic matching is disabled', async () => {
