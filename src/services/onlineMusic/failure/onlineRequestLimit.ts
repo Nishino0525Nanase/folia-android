@@ -18,14 +18,22 @@ export class OnlineRequestTimeout extends OnlineProviderError {
  * 给一个请求加上 `limitMs` 的时限。`run` 拿到的 signal 交给 fetch：到点时请求被中止，并以 OnlineRequestTimeout
  * 失败。在时限内有了结果的，成功和失败都原样交出去。
  */
-export const withOnlineRequestLimit = <T>(run: (signal: AbortSignal) => Promise<T>, limitMs: number): Promise<T> => {
+export const withOnlineRequestLimit = <T>(run: (signal: AbortSignal) => Promise<T>, limitMs: number, parent?: AbortSignal): Promise<T> => {
     const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let abort = () => {};
     return new Promise<T>((resolve, reject) => {
-        const timer = setTimeout(() => {
+        abort = () => { controller.abort(); reject(new DOMException('Request cancelled', 'AbortError')); };
+        if (parent?.aborted) { abort(); return; }
+        parent?.addEventListener('abort', abort, { once: true });
+        timer = setTimeout(() => {
             reject(new OnlineRequestTimeout(limitMs));
             controller.abort();
         }, limitMs);
         // `run` 当场抛错也走同一条路：以它的错失败，计时器清掉。
-        new Promise<T>(settle => settle(run(controller.signal))).then(resolve, reject).finally(() => clearTimeout(timer));
+        new Promise<T>(settle => settle(run(controller.signal))).then(resolve, reject);
+    }).finally(() => {
+        clearTimeout(timer);
+        parent?.removeEventListener('abort', abort);
     });
 };

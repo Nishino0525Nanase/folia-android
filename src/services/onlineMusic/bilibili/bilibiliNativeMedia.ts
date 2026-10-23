@@ -6,6 +6,7 @@ import { bilibiliInputPageUrl } from './bilibiliInput';
 import { nativeBilibili, BilibiliNativeError, record } from './bilibiliNative';
 import { parseBilibiliMediaId, readBilibiliResolvedVideo } from './bilibiliNormalize';
 import { getBilibiliSession, getBilibiliSessionGeneration } from './bilibiliSession';
+import { selectBilibiliAudio } from './bilibiliAudioSelection';
 import { bilibiliAudioCandidates } from './bilibiliAudioCandidates';
 
 // Android playback uses the same local account and existing loopback audio server, without cloud credentials.
@@ -32,14 +33,15 @@ export const resolveNativeBilibiliVideo = async (params: Record<string, string>)
 
 export const nativeMediaError = (error: unknown): OnlineProviderError => {
     if (error instanceof OnlineProviderError) return error;
-    const status = error instanceof BilibiliNativeError ? error.status : 0;
+    const nativeStatus = error instanceof BilibiliNativeError ? error.status : 0;
     const code = error instanceof BilibiliNativeError ? error.code : 'native-request-failed';
+    const status = Number(/^audio-http-(\d{3})$/.exec(code)?.[1]) || nativeStatus;
     return new OnlineProviderError(status === 401 ? 'auth-required' : status === 422 ? 'not-playable' : status ? 'unavailable' : 'network',
         i18n.t(status === 401 ? 'importSource.loginRequired' : status === 403 || status === 412 ? 'importSource.platformRestricted' : 'importSource.serviceUnavailable'),
         'bilibili', { code, upstreamCode: code === 'upstream-http' ? String(status) : code }, status || undefined);
 };
 
-export const getNativeBilibiliAudio = async (mediaId: string): Promise<ProviderAudioSource> => {
+export const getNativeBilibiliAudio = async (mediaId: string, signal?: AbortSignal): Promise<ProviderAudioSource> => {
     const identity = parseBilibiliMediaId(mediaId);
     if (!identity) throw new BilibiliNativeError(400, 'invalid-video');
     const generation = getBilibiliSessionGeneration();
@@ -47,32 +49,23 @@ export const getNativeBilibiliAudio = async (mediaId: string): Promise<ProviderA
     const account = session.startsWith('native:') ? session : '';
     let cid = identity.cid;
     if (identity.first) {
-        const { data } = await nativeBilibili('view', { bvid: identity.bvid }, account);
+        const { data } = await nativeBilibili('view', { bvid: identity.bvid }, account, signal);
         cid = record(Array.isArray(data.pages) ? data.pages[0] : null).cid;
     }
     if (!Number.isSafeInteger(cid) || !cid || cid < 0) throw new BilibiliNativeError(502, 'invalid-video-part');
-    const { data } = await nativeBilibili('playurl', { bvid: identity.bvid, cid: String(cid), fnval: '16', fnver: '0', fourk: '0' }, account);
+    const { data } = await nativeBilibili('playurl', { bvid: identity.bvid, cid: String(cid), fnval: '16', fnver: '0', fourk: '0' }, account, signal);
     const now = Date.now();
     const candidates = bilibiliAudioCandidates(record(data.dash).audio, now);
-    let selected: URL | undefined;
-    let failure: unknown = new BilibiliNativeError(502, 'audio-unreachable');
-    for (const candidate of candidates.slice(0, 4)) {
-        if (generation !== getBilibiliSessionGeneration()) throw new BilibiliNativeError(401, 'session-changed');
-        try {
-            // No account handle or Cookie header is sent to the media CDN.
-            await nativeBilibili('audioProbe', { url: candidate.href });
-            selected = candidate;
-            break;
-        } catch (error) { failure = error; }
-    }
-    if (!selected) throw failure;
-    const url = selected;
+    const url = await selectBilibiliAudio(candidates, signal);
+    signal?.throwIfAborted();
+    if (generation !== getBilibiliSessionGeneration()) throw new BilibiliNativeError(401, 'session-changed');
     const deadline = Number(url.searchParams.get('deadline')) * 1000;
     if (deadline && deadline <= now) throw new BilibiliNativeError(502, 'audio-expired');
     const expiresAt = Math.min(deadline || now + 60_000, now + 6 * 60 * 60_000);
     const proxied = await proxyNativeRemoteAudioUrl(url.href, {
         allowAnyHost: true, headers: { Referer: 'https://www.bilibili.com/' },
     });
+    signal?.throwIfAborted();
     if (!proxied.startsWith('http://127.0.0.1:')) throw new BilibiliNativeError(502, 'local-audio-unavailable');
     if (generation !== getBilibiliSessionGeneration()) throw new BilibiliNativeError(401, 'session-changed');
     return { url: proxied, quality: 'high', fetchedAt: now, expiresAt };

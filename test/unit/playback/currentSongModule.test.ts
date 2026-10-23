@@ -186,3 +186,13 @@ describe('the current song module', () => {
         expect(second()).toBe(false);
     });
 });
+
+
+it('cancels old audio work immediately on a newer play or player reset', () => {
+    const old = startPlay();
+    const current = startPlay();
+    expect(old.signal.aborted).toBe(true);
+    expect(current.signal.aborted).toBe(false);
+    dropPlaysInFlight();
+    expect(current.signal.aborted).toBe(true);
+});

@@ -192,3 +192,15 @@
 .status-toast.is-calm .status-toast-chip { transition: none; }
 .status-toast.is-calm .status-toast-fill { display: none; }
 .status-toast.is-calm .status-toast-seconds { display: inline; }
+
+/* Phone errors need readable diagnostics and independent, reachable actions. */
+@media (max-width: 767px) and (pointer: coarse) {
+    .status-toast { width: calc(100vw - 32px); max-width: 100%; box-sizing: border-box; padding: 12px 14px; }
+    .status-toast-line { flex-wrap: wrap; gap: 8px; }
+    .status-toast-title { flex: 1; font-size: 15px; }
+    .status-toast-sep { display: none; }
+    .status-toast-note { flex: 1 0 100%; white-space: normal; overflow: visible; }
+    .status-toast-chip { max-width: 100%; overflow-wrap: anywhere; white-space: normal; overflow: visible; }
+    .status-toast-buttons { margin-left: auto; }
+    .status-toast-button { min-height: 44px; padding: 0 16px; }
+}

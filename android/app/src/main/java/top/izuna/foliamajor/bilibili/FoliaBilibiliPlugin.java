@@ -16,6 +16,8 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
+import okhttp3.Call;
 import okhttp3.Cookie;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
@@ -29,6 +31,8 @@ public class FoliaBilibiliPlugin extends Plugin {
     private final OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(12, TimeUnit.SECONDS).callTimeout(18, TimeUnit.SECONDS)
             .followRedirects(false).followSslRedirects(false).build();
+    private final Map<String, BilibiliRequest> cancellable = new ConcurrentHashMap<>();
+    private final ThreadLocal<BilibiliRequest> running = new ThreadLocal<>();
     private final Object lock = new Object();
     private int generation = 0;
     private String pendingKey = "";
@@ -82,7 +86,10 @@ public class FoliaBilibiliPlugin extends Plugin {
                 .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36")
                 .header("Referer", "https://www.bilibili.com/");
         if (!cookie.isEmpty()) request.header("Cookie", cookie);
-        try (Response response = client.newCall(request.build()).execute()) {
+        Call http = client.newCall(request.build());
+        BilibiliRequest work = running.get();
+        if (work != null) work.attach(http);
+        try (Response response = http.execute()) {
             if (!response.isSuccessful()) throw new Failure(response.code(), "upstream-http");
             if (received != null) {
                 for (String value : response.headers("Set-Cookie")) {
@@ -107,6 +114,13 @@ public class FoliaBilibiliPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void cancel(PluginCall call) {
+        BilibiliRequest work = cancellable.get(call.getString("requestId", ""));
+        if (work != null) work.cancel();
+        call.resolve();
+    }
+
+    @PluginMethod
     public void request(PluginCall call) {
         String operation = call.getString("operation", "");
         String handle = call.getString("session", "");
@@ -124,8 +138,13 @@ public class FoliaBilibiliPlugin extends Plugin {
             }
             attempt = generation;
         }
+        String requestId = call.getString("requestId", "");
+        BilibiliRequest work = new BilibiliRequest();
+        if (!requestId.isEmpty()) cancellable.put(requestId, work);
         requests.execute(() -> {
+            running.set(work);
             try {
+                if (work.isCancelled()) throw new Failure(499, "request-cancelled");
                 JSONObject data;
                 String newHandle = null;
                 switch (operation) {
@@ -212,13 +231,12 @@ public class FoliaBilibiliPlugin extends Plugin {
                         data = get("/x/player/playurl", params(input, "bvid", "cid", "fnval", "fnver", "fourk"), handle.isEmpty() ? "" : cookieFor(handle), null);
                         break;
                     case "audioProbe":
-                        try { new BilibiliAudioProbe(client).verify(input.optString("url")); }
+                        try { data = new JSONObject().put("url", new BilibiliAudioProbe(client).verify(input.optString("url"), work::attach)); }
                         catch (java.io.IOException error) {
                             String code = error.getMessage();
                             // Only fixed diagnostic codes cross the bridge, never a signed URL from an I/O exception.
-                            throw new Failure(502, code != null && code.matches("audio-http-[0-9]{3}|invalid-audio-host|invalid-audio-content") ? code : "audio-unreachable");
+                            throw new Failure(502, code != null && code.matches("audio-http-[0-9]{3}|invalid-audio-host|invalid-audio-content|audio-redirect-limit") ? code : "audio-unreachable");
                         }
-                        data = new JSONObject();
                         break;
                     default: throw new Failure(400, "unsupported-operation");
                 }
@@ -230,6 +248,9 @@ public class FoliaBilibiliPlugin extends Plugin {
             } catch (Exception error) {
                 // Never log cookies, response bodies, poll keys or native handles.
                 call.resolve(new JSObject().put("ok", false).put("status", 0).put("code", "native-request-failed"));
+            } finally {
+                running.remove();
+                if (!requestId.isEmpty()) cancellable.remove(requestId, work);
             }
         });
     }

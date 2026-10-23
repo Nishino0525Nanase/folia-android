@@ -739,6 +739,7 @@ export function usePlaybackQueueController({
             // Where the platform could not be reached the load asks again by itself while this play is
             // wanted, and says so.
             preloadedOnlineAudioResult = await loadOnlineSongAudio(song, audioQuality, prefetched, {
+                signal: isLatestPlaybackRequest.signal,
                 retry: {
                     isCurrent: isLatestPlaybackRequest,
                     onRetrying: shown => {

@@ -19,6 +19,10 @@ export const bilibiliAudioCandidates = (raw: unknown, now: number): URL[] => {
                 || !['bilivideo.com', 'bilivideo.cn', 'bilivideo.net'].some(host => url.hostname === host || url.hostname.endsWith(`.${host}`))) continue;
             const deadline = url.searchParams.get('deadline');
             if (deadline !== null && (!/^\d+$/.test(deadline) || Number(deadline) * 1000 <= now)) { expired = true; continue; }
+            // Prefer the encrypted route on conventional HTTP hosts; signed path/query stay intact.
+            if (url.protocol === 'http:' && !url.port) {
+                const secure = new URL(url.href); secure.protocol = 'https:'; candidates.push(secure);
+            }
             candidates.push(url);
         }
         // Conventional HTTPS CDN routes are preferable to nonstandard-port and HTTP routes.

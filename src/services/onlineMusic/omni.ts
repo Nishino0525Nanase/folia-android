@@ -907,15 +907,21 @@ export const omni = {
         return audioQualityFor(providerId, preference);
     },
 
-    async getAudioSource(song: SongResult, quality: AudioQualityPreference): Promise<OmniAudioSource | null> {
+    async getAudioSource(song: SongResult, quality: AudioQualityPreference, options?: { signal?: AbortSignal }): Promise<OmniAudioSource | null> {
+        options?.signal?.throwIfAborted();
         const provider = providerForSong(song);
         const level = audioQualityFor(provider.id, quality);
         let source: OmniAudioSource | null;
         try {
-            source = await runRequest(provider, 'audio', async () => await (provider.playback?.getAudioSource(song, level) ?? null));
+            source = await runRequest(provider, 'audio', async () => {
+                const playback = provider.playback;
+                return (options ? playback?.getAudioSource(song, level, options) : playback?.getAudioSource(song, level)) ?? null;
+            });
+            options?.signal?.throwIfAborted();
         } catch (error) {
             // The provider gave no address. An extension may still give one, as it may where the provider answers null;
             // without one the very error goes on, for the caller to sort (failure/onlineFailureCase.ts).
+            options?.signal?.throwIfAborted();
             const fromHook = await applyOmniAudioHook(song, null);
             if (fromHook?.url) return fromHook;
             throw error;

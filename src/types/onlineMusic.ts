@@ -388,7 +388,7 @@ export interface OnlineSearchProvider {
 export interface OnlinePlaybackProvider {
     getSongDetail(id: MediaId): Promise<UnifiedSong | null>;
     // 拿不到地址而知道为什么的抛错（provider 的 `describeFailure` 说它的意思）；null 是没有地址、也没有可说的。
-    getAudioSource(song: SongResult, quality: AudioQualityPreference): Promise<ProviderAudioSource | null>;
+    getAudioSource(song: SongResult, quality: AudioQualityPreference, options?: { signal?: AbortSignal }): Promise<ProviderAudioSource | null>;
     /**
      * The quality levels the provider really tells apart, for one whose audio does not differ at
      * all four. Without it, all four (standard, high, lossless, hires). The quality option shows these levels only, and

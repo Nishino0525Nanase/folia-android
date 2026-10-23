@@ -35,6 +35,7 @@ export type OnlineAudioSourceResult =
     | { kind: 'unavailable'; failure: OnlineFailure };
 
 export interface LoadOnlineAudioSourceOptions {
+    signal?: AbortSignal;
     // The media cache's copy is passed over: it is the copy that just failed to play.
     bypassMediaCache?: boolean;
     // Where the platform could not be reached, asks again by itself (`autoRetryDelaysMs`) as long as
@@ -144,7 +145,7 @@ export async function loadOnlineSongAudioSource(
         let source: ProviderAudioSource | null = null;
         let thrown: unknown;
         try {
-            source = await omni.getAudioSource(song, audioQuality);
+            source = await (options.signal ? omni.getAudioSource(song, audioQuality, { signal: options.signal }) : omni.getAudioSource(song, audioQuality));
         } catch (error) {
             thrown = error ?? new Error('The audio source request failed');
         }
@@ -158,6 +159,7 @@ export async function loadOnlineSongAudioSource(
             // A provider (a mod's) that answers null, or an address that may not be played.
             ? onlineFailureOf({ operation: 'audio', providerId, signedOut }, { detail: { case: 'no-audio' } })
             : onlineFailureOf({ operation: 'audio', providerId, signedOut }, { error: thrown });
+        if (options.signal?.aborted) return { kind: 'unavailable', failure };
         noteOnlineRequestCooldown(failure);
 
         const delays = autoRetryDelaysMs(failure);

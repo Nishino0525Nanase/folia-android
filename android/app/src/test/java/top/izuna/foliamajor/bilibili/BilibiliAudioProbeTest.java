@@ -46,4 +46,36 @@ public class BilibiliAudioProbeTest {
             catch (IOException expected) { assertEquals(status == 200 ? "invalid-audio-content" : "audio-http-" + status, expected.getMessage()); }
         }
     }
+    @Test public void followsOnlyMediaRedirectsAndReturnsThePlayableRoute() throws Exception {
+        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(chain -> {
+            boolean redirect = chain.request().url().host().equals("first.bilivideo.com");
+            Response.Builder result = new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1)
+                    .code(redirect ? 302 : 206).message("Probe").body(ResponseBody.create(MediaType.get("audio/mp4"),
+                            new byte[] { 0, 0, 0, 24, 'f', 't', 'y', 'p', 'd', 'a', 's', 'h' }));
+            if (redirect) result.header("Location", "https://edge.bilivideo.com/audio.m4s");
+            return result.build();
+        }).build();
+        assertEquals("https://edge.bilivideo.com/audio.m4s", new BilibiliAudioProbe(client).verify("https://first.bilivideo.com/a"));
+    }
+
+    @Test public void refusesRedirectsOutsideMediaDomainsBeforeRequestingThem() throws Exception {
+        final int[] calls = { 0 };
+        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(chain -> {
+            calls[0]++;
+            return new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(302).message("Probe")
+                    .header("Location", "https://evil.invalid/audio").body(ResponseBody.create(null, "")).build();
+        }).build();
+        try { new BilibiliAudioProbe(client).verify("https://first.bilivideo.com/a"); fail("Unsafe redirect accepted"); }
+        catch (IOException expected) { assertEquals("invalid-audio-host", expected.getMessage()); }
+        assertEquals(1, calls[0]);
+    }
+
+    @Test public void cancellationAlsoAppliesToCallsAttachedLater() {
+        BilibiliRequest request = new BilibiliRequest();
+        request.cancel();
+        okhttp3.Call call = new OkHttpClient().newCall(new okhttp3.Request.Builder().url("https://api.bilibili.com/").build());
+        request.attach(call);
+        assertTrue(call.isCanceled());
+    }
+
 }

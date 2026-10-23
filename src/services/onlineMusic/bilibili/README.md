@@ -31,6 +31,13 @@ header passes, and CDN errors try the next candidate. Probes carry no account ha
 do not follow redirects. Playback still uses the local audio proxy with Range support and Referer.
 The existing native session file and provider storage key are unchanged.
 
+Android 0.7.21.14 tries up to eight candidates with two concurrent probes, preferring HTTPS on
+conventional HTTP hosts. Probe redirects are limited to three and validated against the same media
+host families at every hop; the verified final URL goes to the local proxy. The first successful
+probe cancels the other. New playback requests carry an AbortSignal through Omni into the native
+bridge; superseded or reset playback cancels both queued and running native HTTP work. HTTP 403/412
+media refusals retain their upstream status and no longer trigger the generic connectivity retry loop.
+
 Web builds retain the Worker's sealed bearer and encrypted server-side cookies. An old web bearer
 in an Android installation requires a new local login; it is never sent to the platform. Local sign-out
 removes local access and invalidates pending client generations, without claiming platform revocation.
@@ -56,3 +63,8 @@ status, logout, favorites pagination and audio host checks. The 0.7.21.13 checks
 HTTP/nonstandard-port media, backup selection, failed probes, native headers and MP4 byte validation.
 The development network currently receives HTTP 412 for the video API, so end-to-end audio playback
 still needs the user's phone; passing the mocked CDN tests is not proof of live playback.
+
+0.7.21.14 verification also covers a stalled primary with a fast backup, cancellation before a
+pending metadata request completes, redirect targets, credential omission and queued-call cancellation.
+The user confirmed that some tracks play on 0.7.21.13; per-track availability and sustained streaming
+on the user's network still require device verification after installing 0.7.21.14.

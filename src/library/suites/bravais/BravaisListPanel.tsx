@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo } from 'react';
-import { ChevronLeft, ListPlus, Play } from 'lucide-react';
+import { ChevronLeft, ListPlus, MoreHorizontal, Play } from 'lucide-react';
 import { List, useListRef, type RowComponentProps } from 'react-window';
 import { useTranslation } from 'react-i18next';
+import { useBravaisPhoneLocate } from './useBravaisPhoneLocate';
+import { getSizedCoverUrl } from '../../../utils/coverUrl';
 import type { BravaisItem, BravaisLayer } from './bravaisLayer';
 import { BravaisSeamStatusLine } from './BravaisSeamCollection';
 import BravaisSeamFilterField from './BravaisSeamFilterField';
@@ -24,16 +26,21 @@ export type BravaisPanelActions = {
     locate: (itemKey: string) => void;
     play: (itemKey: string) => void;
     fold: () => void;
+    enqueue?: (itemKey: string) => void;
+    more?: (itemKey: string) => void;
 };
 
 type RowProps = {
+    touchMode: boolean;
+    enqueueLabel: string;
+    moreLabel: string;
     items: readonly BravaisItem[];
     highlightKey: string | null;
     nowPlayingKey: string | null;
     actions: BravaisPanelActions;
 };
 
-const ListRow = ({ index, style, items, highlightKey, nowPlayingKey, actions }: RowComponentProps<RowProps>): React.ReactElement | null => {
+const ListRow = ({ index, style, items, highlightKey, nowPlayingKey, actions, touchMode, enqueueLabel, moreLabel }: RowComponentProps<RowProps>): React.ReactElement | null => {
     const item = items[index];
     if (!item) return null;
     const classes = [
@@ -49,24 +56,28 @@ const ListRow = ({ index, style, items, highlightKey, nowPlayingKey, actions }: 
             role="option"
             aria-selected={item.key === highlightKey}
             data-bravais-list-row={item.key}
-            onMouseEnter={() => setBravaisLinkedKey(item.key)}
-            onMouseLeave={() => setBravaisLinkedKey(null)}
-            onClick={() => actions.locate(item.key)}
-            onDoubleClick={() => actions.play(item.key)}
+            tabIndex={touchMode ? 0 : undefined}
+            aria-disabled={item.unavailable || undefined}
+            onKeyDown={event => { if (touchMode && !item.unavailable && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); actions.play(item.key); } }}
+            onMouseEnter={touchMode ? undefined : () => setBravaisLinkedKey(item.key)}
+            onMouseLeave={touchMode ? undefined : () => setBravaisLinkedKey(null)}
+            onClick={() => { if (touchMode) { if (!item.unavailable) actions.play(item.key); } else actions.locate(item.key); }}
+            onDoubleClick={touchMode ? undefined : () => actions.play(item.key)}
         >
-            <span className="bravais-list-badge">{item.badge}</span>
+            <>{touchMode && item.coverUrl ? <img className="bravais-list-cover" src={getSizedCoverUrl(item.coverUrl, 128)} alt="" loading="lazy" decoding="async" /> : <span className="bravais-list-badge">{item.badge}</span>}</>
             <span className="bravais-list-text">
                 <strong>{item.title}</strong>
                 {item.subtitle && <small>{item.subtitle}</small>}
             </span>
-            {item.durationLabel && <span className="bravais-list-time">{item.durationLabel}</span>}
+            {touchMode && actions.enqueue ? <span className="bravais-list-row-actions"><button type="button" className="bravais-list-enqueue" aria-label={enqueueLabel} disabled={item.unavailable} onKeyDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); actions.enqueue?.(item.key); }}><ListPlus aria-hidden /></button>{actions.more && <button type="button" className="bravais-list-enqueue" aria-label={moreLabel} onKeyDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); actions.more?.(item.key); }}><MoreHorizontal aria-hidden /></button>}</span> : item.durationLabel && <span className="bravais-list-time">{item.durationLabel}</span>}
         </div>
     );
 };
 
-const BravaisListPanel: React.FC<{ layer: BravaisLayer; depth: number; actions: BravaisPanelActions }> = ({ layer, actions }) => {
+const BravaisListPanel: React.FC<{ layer: BravaisLayer; depth: number; actions: BravaisPanelActions; touchMode?: boolean }> = ({ layer, actions, touchMode = false }) => {
     const { t } = useTranslation();
     const listRef = useListRef(null);
+    useBravaisPhoneLocate(layer, touchMode, listRef, actions.locate);
     const { seam, entries } = layer;
     const collection = seam.collection;
     const linkedKey = useBravaisUiStore(state => state.linkedKey);
@@ -76,10 +87,10 @@ const BravaisListPanel: React.FC<{ layer: BravaisLayer; depth: number; actions: 
 
     // 悬停墙上的磁贴：滚到对应的行（离散事件，不跟指针逐帧）。
     useEffect(() => {
-        if (!wallHoverKey) return;
+        if (touchMode || !wallHoverKey) return;
         const index = items.findIndex(item => item.key === wallHoverKey);
         if (index >= 0) listRef.current?.scrollToRow({ index, align: 'smart', behavior: 'smooth' });
-    }, [items, listRef, wallHoverKey]);
+    }, [items, listRef, wallHoverKey, touchMode]);
 
     // 面板关掉时撤掉联动高亮。
     useEffect(() => () => {
@@ -88,11 +99,14 @@ const BravaisListPanel: React.FC<{ layer: BravaisLayer; depth: number; actions: 
     }, []);
 
     const rowProps = useMemo<RowProps>(() => ({
+        touchMode,
+        enqueueLabel: t('libraryBravais.addToQueue'),
+        moreLabel: t('libraryBravaisCollection.more'),
         items,
         highlightKey,
         nowPlayingKey: layer.nowPlayingKey,
         actions,
-    }), [actions, highlightKey, items, layer.nowPlayingKey]);
+    }), [actions, highlightKey, items, layer.nowPlayingKey, touchMode, t]);
     const sort = entries?.sort;
 
     return (
@@ -104,7 +118,7 @@ const BravaisListPanel: React.FC<{ layer: BravaisLayer; depth: number; actions: 
                 </button>
                 <BravaisSeamCrumbs layer={layer} panelLabel={entries?.listCrumb ?? ''} onClosePanel={actions.close} />
                 <button type="button" className="bravais-seam-level" data-bravais-seam-action="hide" onClick={actions.fold}>
-                    {t('libraryBravais.seamFold')}
+                    {touchMode ? collection?.moreLabel : t('libraryBravais.seamFold')}
                 </button>
             </div>
             {layer.seam.filter && <BravaisSeamFilterField filter={layer.seam.filter} variant="panel" />}
@@ -136,7 +150,7 @@ const BravaisListPanel: React.FC<{ layer: BravaisLayer; depth: number; actions: 
                     <List
                         listRef={listRef}
                         rowCount={items.length}
-                        rowHeight={BRAVAIS_LIST_ROW_HEIGHT}
+                        rowHeight={touchMode ? 72 : BRAVAIS_LIST_ROW_HEIGHT}
                         rowComponent={ListRow}
                         rowProps={rowProps}
                         overscanCount={6}

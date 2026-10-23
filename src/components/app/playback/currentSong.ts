@@ -50,6 +50,7 @@ export const askedSongKeyRef: AskedSongKeyRef = {
     },
 };
 
+let playRequest = new AbortController();
 let playsStarted = 0;
 let playsDropped = 0;
 /** How often a song was asked for. The key cannot tell two asks for the same song apart; this can. */
@@ -58,17 +59,20 @@ let asks = 0;
 /** Every play that has started and has not shown its song yet gives up at its next check. */
 export const dropPlaysInFlight = (): void => {
     playsDropped += 1;
+    playRequest.abort();
 };
 
 /**
  * A play calls this when it starts and keeps what it gets: the answer to "is this play still
  * wanted". It is yes until a newer play starts or the plays in flight are dropped.
  */
-export const startPlay = (): (() => boolean) => {
+export const startPlay = (): (() => boolean) & { signal: AbortSignal } => {
+    playRequest.abort();
+    playRequest = new AbortController();
     playsStarted += 1;
     const started = playsStarted;
     const dropped = playsDropped;
-    return () => playsStarted === started && playsDropped === dropped;
+    return Object.assign(() => playsStarted === started && playsDropped === dropped, { signal: playRequest.signal });
 };
 
 /**

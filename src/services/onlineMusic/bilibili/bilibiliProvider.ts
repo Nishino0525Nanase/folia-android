@@ -43,7 +43,7 @@ export const bilibiliProvider: OnlineMusicProvider = {
         const code = typeof cause?.code === 'string' ? cause.code : undefined;
         return {
             ...(error.code === 'not-playable' ? { case: 'no-audio' as const } : {}),
-            ...(error.httpStatus === 403 || error.httpStatus === 412 || code?.includes('restricted') ? { case: 'refused' as const } : {}),
+            ...(error.httpStatus === 403 || error.httpStatus === 412 || code?.includes('restricted') || code === 'audio-http-403' || code === 'audio-http-412' ? { case: 'refused' as const } : {}),
             message: error.message, httpStatus: error.httpStatus, code,
             ...(typeof cause?.upstreamCode === 'string' ? { upstreamCode: cause.upstreamCode } : {}),
         };
@@ -61,12 +61,12 @@ export const bilibiliProvider: OnlineMusicProvider = {
             }
             return songs.find(song => song.sourceRef.mediaId === String(id)) ?? null;
         },
-        async getAudioSource(song) {
+        async getAudioSource(song, _quality, options) {
             const source = song.sourceRef;
             if (source?.kind !== 'online' || source.providerId !== 'bilibili') {
                 throw new OnlineProviderError('unsupported', 'The song is not an imported video', 'bilibili');
             }
-            return getBilibiliAudioSource(source.mediaId);
+            return getBilibiliAudioSource(source.mediaId, options?.signal);
         },
         getAvailability: () => ({ state: 'unknown' }),
     },

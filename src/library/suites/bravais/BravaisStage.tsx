@@ -136,12 +136,12 @@ const BravaisStage: React.FC<LibrarySuiteStageProps> = ({
     const { wallLook, seamLook } = useBravaisWallLook(reportPlayerOcclusion, reportPlayerBackdrop);
     // 墙面的缩放倍率（双指捏合 / Ctrl+滚轮，与 Lattice 共用一份）：档位 × 倍率才是这一刻的 scale。
     const wallZoom = useLatticeSettingsStore(state => state.wallZoom);
-    const view = useBravaisViewport(rootRef, wallZoom);
-    const reducedMotion = useReducedMotionFor('lattice');
+    const view = useBravaisViewport(rootRef, wallZoom, isPhoneTouch ? 1.5 : 1);
+    const reducedMotion = useReducedMotionFor('lattice') || isPhoneTouch;
     // B11：换层的翻牌 / 波次按「降低动态效果」降级成淡入淡出（lattice 或 collectionMorph，见 bravaisMotion）。
-    const reducedTransitions = useBravaisReducedTransitions();
+    const reducedTransitions = useBravaisReducedTransitions() || isPhoneTouch;
     const devicePixelRatio = useDevicePixelRatio();
-    const performanceMode = useLatticeSettingsStore(state => state.latticePerformanceMode);
+    const performanceMode = useLatticeSettingsStore(state => state.latticePerformanceMode) || isPhoneTouch;
     const vignette = useLatticeSettingsStore(state => state.latticeVignette);
     const lightsOn = useLatticeSettingsStore(state => state.latticeLightsOn);
     const tintEnabled = useLatticeSettingsStore(state => state.latticePosterTintEnabled);
@@ -201,7 +201,7 @@ const BravaisStage: React.FC<LibrarySuiteStageProps> = ({
         resolveSeamTarget(seamInputFor(target)).variant === 'poster'
     ), [seamInputFor]);
 
-    const camera = useBravaisCamera({ frameRef, renderFrame, fieldRef, reducedMotion });
+    const camera = useBravaisCamera({ frameRef, renderFrame, fieldRef, reducedMotion, deviceScale: isPhoneTouch ? 1.5 : 1 });
     // 墙此刻的显示（useBravaisDisplay 提交时就写进它）：形状从它读，换形状的同一次提交里各处就按新形状找 slot。
     const displayBridgeRef = useRef<BravaisDisplay | null>(null);
     const getShape = useCallback(() => displayBridgeRef.current?.shape ?? BRAVAIS_BLOCK_SHAPE, []);

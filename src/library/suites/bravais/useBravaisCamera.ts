@@ -70,10 +70,12 @@ export const useBravaisCamera = ({
     renderFrame,
     fieldRef,
     reducedMotion,
+    deviceScale = 1,
 }: {
     frameRef: MutableRefObject<BravaisFrameState>;
     renderFrame: () => void;
     fieldRef: RefObject<HTMLDivElement | null>;
+    deviceScale?: number;
     reducedMotion: boolean;
 }) => {
     // 已裁剪（渲染了 slot）的可见范围；墙渲染它外扩 overscan 的 slot。
@@ -235,7 +237,7 @@ export const useBravaisCamera = ({
             // 基准档位只跟视口宽度走：帧状态里的 scale 已经含了倍率，不能拿它当基准。
             baseScale: () => {
                 const view = frameRef.current.view;
-                return view ? getBravaisScale(view.width) : 1;
+                return view ? getBravaisScale(view.width) * deviceScale : 1;
             },
             minFactor: WALL_ZOOM_MIN,
             maxFactor: WALL_ZOOM_MAX,

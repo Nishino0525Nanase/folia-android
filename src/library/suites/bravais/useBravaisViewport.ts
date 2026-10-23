@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { WallView } from '../../../components/wall/wallView';
 import { getBravaisScale } from './bravaisConstants';
 
@@ -6,7 +6,9 @@ import { getBravaisScale } from './bravaisConstants';
 // stage 的视口尺寸与相机缩放：ResizeObserver 量出来，只有尺寸真的变了才写 state（离散；缩放档位按宽度断点）。
 // 还没量到之前是 null：墙不画，免得用默认尺寸摆一遍再挪。
 
-export const useBravaisViewport = (rootRef: RefObject<HTMLElement | null>, zoom = 1): WallView | null => {
+export const useBravaisViewport = (rootRef: RefObject<HTMLElement | null>, zoom = 1, deviceScale = 1): WallView | null => {
+    const scaleMultiplier = useRef(zoom * deviceScale);
+    scaleMultiplier.current = zoom * deviceScale;
     const [view, setView] = useState<WallView | null>(null);
 
     useEffect(() => {
@@ -15,9 +17,9 @@ export const useBravaisViewport = (rootRef: RefObject<HTMLElement | null>, zoom 
         const update = (width: number, height: number) => {
             if (width <= 0 || height <= 0) return;
             setView(current => (
-                current && current.width === width && current.height === height
+                current && current.width === width && current.height === height && current.scale === getBravaisScale(width) * scaleMultiplier.current
                     ? current
-                    : { width, height, scale: getBravaisScale(width) }
+                    : { width, height, scale: getBravaisScale(width) * scaleMultiplier.current }
             ));
         };
         update(root.clientWidth, root.clientHeight);
@@ -31,10 +33,10 @@ export const useBravaisViewport = (rootRef: RefObject<HTMLElement | null>, zoom 
     useEffect(() => {
         setView(current => {
             if (!current) return current;
-            const scale = getBravaisScale(current.width) * zoom;
+            const scale = getBravaisScale(current.width) * zoom * deviceScale;
             return scale === current.scale ? current : { ...current, scale };
         });
-    }, [zoom]);
+    }, [zoom, deviceScale]);
 
     return view;
 };

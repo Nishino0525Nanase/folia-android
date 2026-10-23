@@ -4,7 +4,8 @@ import { isCapacitorAndroid } from '../../../platform/runtime';
 // The Android transport owns cookies; web deployments continue to use their configured backend.
 type NativeReply = { ok: boolean; data?: unknown; session?: string; status?: number; code?: string };
 const plugin = registerPlugin<{
-    request(options: { operation: string; params: Record<string, string>; session: string }): Promise<NativeReply>;
+    request(options: { operation: string; params: Record<string, string>; session: string; requestId?: string }): Promise<NativeReply>;
+    cancel(options: { requestId: string }): Promise<void>;
 }>('FoliaBilibili');
 
 export const usesNativeBilibili = isCapacitorAndroid;
@@ -16,10 +17,30 @@ export class BilibiliNativeError extends Error {
     constructor(readonly status: number, readonly code: string) { super(code); }
 }
 
-export const nativeBilibili = async (operation: string, params: Record<string, string> = {}, session = '') => {
+const requestPrefix = Date.now().toString(36) + Math.random().toString(36).slice(2);
+let requestSequence = 0;
+export const nativeBilibili = async (operation: string, params: Record<string, string> = {}, session = '', signal?: AbortSignal) => {
+    signal?.throwIfAborted();
+    const requestId = `${requestPrefix}-${++requestSequence}`;
+    let removeAbort = () => {};
     let reply: NativeReply;
-    try { reply = await plugin.request({ operation, params, session }); }
-    catch { throw new BilibiliNativeError(0, 'native-request-failed'); }
+    try {
+        const pending = plugin.request({ operation, params, session, ...(signal ? { requestId } : {}) });
+        reply = signal ? await new Promise<NativeReply>((resolve, reject) => {
+            const abort = () => {
+                void plugin.cancel({ requestId }).catch(() => {});
+                reject(new DOMException('Request cancelled', 'AbortError'));
+            };
+            signal.addEventListener('abort', abort, { once: true });
+            removeAbort = () => signal.removeEventListener('abort', abort);
+            pending.then(resolve, reject);
+            if (signal.aborted) abort();
+        }) : await pending;
+    } catch {
+        signal?.throwIfAborted();
+        throw new BilibiliNativeError(0, 'native-request-failed');
+    } finally { removeAbort(); }
+    signal?.throwIfAborted();
     if (!reply.ok) throw new BilibiliNativeError(reply.status || 0, reply.code || 'native-request-failed');
     return { data: record(reply.data), session: reply.session || null };
 };

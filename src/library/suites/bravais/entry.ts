@@ -47,7 +47,7 @@ export const installBravaisTransitionHook = <Name extends keyof BravaisTransitio
     };
 };
 
-const BravaisStage = React.lazy(() => import('./BravaisStage'));
+const BravaisStage = React.lazy(() => import('./BravaisStageRouter'));
 const BravaisHome = React.lazy(() => import('./BravaisHome'));
 const BravaisCollection = React.lazy(() => import('./BravaisCollection'));
 const BravaisArtist = React.lazy(() => import('./BravaisArtist'));

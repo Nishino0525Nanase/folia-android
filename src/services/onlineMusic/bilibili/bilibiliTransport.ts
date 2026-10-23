@@ -142,9 +142,9 @@ const checkedTicketSource = (raw: unknown): ProviderAudioSource => {
     return { url: base.startsWith('/') ? `${url.pathname}${url.search}` : url.href, fetchedAt: Date.now(), expiresAt: data.expiresAt, quality: 'high' };
 };
 
-export const getBilibiliAudioSource = async (mediaId: string): Promise<ProviderAudioSource> => {
+export const getBilibiliAudioSource = async (mediaId: string, signal?: AbortSignal): Promise<ProviderAudioSource> => {
     if (usesNativeBilibili()) {
-        try { return await withOnlineRequestLimit(() => getNativeBilibiliAudio(mediaId), BILIBILI_REQUEST_LIMIT_MS); }
+        try { return await withOnlineRequestLimit(requestSignal => getNativeBilibiliAudio(mediaId, requestSignal), BILIBILI_REQUEST_LIMIT_MS, signal); }
         catch (error) { throw nativeMediaError(error); }
     }
     const identity = parseBilibiliMediaId(mediaId);
