@@ -53,6 +53,32 @@ describe('coverCache', () => {
         expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 
+    it('removes a legacy HTML cache entry and fetches the actual image', async () => {
+        getFromCacheMock.mockResolvedValueOnce(new Blob(['<html>error</html>'], { type: 'text/html' }));
+        const image = new Blob(['jpeg'], { type: 'image/jpeg' });
+        globalThis.fetch = vi.fn().mockResolvedValue(new Response(image));
+        await expect(loadCachedOrFetchCover('cover_bad', 'https://img.test/good.jpg')).resolves.toBe('blob:cached-cover');
+        expect(removeFromCacheMock).toHaveBeenCalledWith('cover_bad');
+        expect(removeCoverAssetMock).toHaveBeenCalledWith('cover_bad');
+        expect(writeCoverAssetMock).toHaveBeenCalledWith('cover_bad', image);
+    });
+
+    it('removes a persisted non-image descriptor and never returns its blob URL', async () => {
+        getFromCacheMock.mockResolvedValueOnce({ backend: 'opfs', mimeType: 'text/html', size: 12, updatedAt: 1 });
+        readCoverAssetMock.mockResolvedValueOnce(new Blob(['<html></html>'], { type: 'text/html' }));
+        await expect(getCachedCoverUrl('cover_bad_file')).resolves.toBeNull();
+        expect(removeCoverAssetMock).toHaveBeenCalledWith('cover_bad_file');
+        expect(createObjectUrlSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not save a successful HTTP response containing an HTML error page', async () => {
+        getFromCacheMock.mockResolvedValueOnce(null);
+        globalThis.fetch = vi.fn().mockResolvedValue(new Response('<html>error</html>', { headers: { 'Content-Type': 'text/html' } }));
+        await expect(loadCachedOrFetchCover('cover_bad_download', 'https://img.test/a.jpg')).resolves.toBe('https://img.test/a.jpg');
+        expect(writeCoverAssetMock).not.toHaveBeenCalled();
+        expect(saveToCacheMock).not.toHaveBeenCalled();
+    });
+
     it('reuses cached cover URLs without fetching', async () => {
         const blob = new Blob(['cached']);
         getFromCacheMock.mockResolvedValueOnce(blob);

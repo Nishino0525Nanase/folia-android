@@ -48,11 +48,9 @@ describe('Android native fetch binary response', () => {
             method: 'GET',
         }));
         expect(ordinaryFetch).not.toHaveBeenCalled();
-        const cover = await fakeWindow.fetch('https://i0.hdslb.com/bfs/archive/cover.jpg');
-        expect(new Uint8Array(await cover.arrayBuffer())).toEqual(bytes);
-        expect(httpRequest).toHaveBeenLastCalledWith(expect.objectContaining({
-            url: 'https://i0.hdslb.com/bfs/archive/cover.jpg', method: 'GET',
-        }));
-        expect(ordinaryFetch).not.toHaveBeenCalled();
+        // Artwork follows the same native WebView interception as <img> and CSS backgrounds.
+        await fakeWindow.fetch('https://i0.hdslb.com/bfs/archive/cover.jpg');
+        expect(ordinaryFetch).toHaveBeenCalledWith('https://i0.hdslb.com/bfs/archive/cover.jpg', undefined);
+        expect(httpRequest).toHaveBeenCalledOnce();
     });
 });

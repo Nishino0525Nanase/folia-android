@@ -21,6 +21,11 @@ const isStoredCoverDescriptor = (value: unknown): value is StoredCoverDescriptor
         && typeof candidate.updatedAt === 'number';
 };
 
+// Old successful HTTP responses sometimes contained an HTML error page. Discard those entries on read.
+const isNonImageBlob = (blob: Blob): boolean => blob.size === 0 || (
+    Boolean(blob.type) && !blob.type.startsWith('image/') && blob.type !== 'application/octet-stream'
+);
+
 const buildCoverRequestUrl = (coverUrl: string): string => {
     if (typeof window !== 'undefined' && window.electron) return coverUrl;
     try {
@@ -43,12 +48,18 @@ const buildCoverRequestUrl = (coverUrl: string): string => {
 const fetchCoverBlob = async (coverUrl: string): Promise<Blob> => {
     const response = await fetch(buildCoverRequestUrl(coverUrl), { mode: 'cors' });
     if (response.ok === false) throw new Error(`Cover request failed: ${response.status}`);
-    return await response.blob();
+    const blob = await response.blob();
+    if (isNonImageBlob(blob)) throw new Error('Cover response is not an image');
+    return blob;
 };
 
 export async function getCachedCoverUrl(cacheKey: string): Promise<string | null> {
     const stored = await getFromCache<unknown>(cacheKey);
     if (isBlob(stored)) {
+        if (isNonImageBlob(stored)) {
+            await removeCachedCover(cacheKey);
+            return null;
+        }
         const descriptor = await writeCoverAsset(cacheKey, stored).catch(() => null);
         if (!descriptor) {
             return createSafeObjectUrl(stored);
@@ -66,6 +77,10 @@ export async function getCachedCoverUrl(cacheKey: string): Promise<string | null
     const cachedCover = await readCoverAsset(cacheKey, isStoredCoverDescriptor(stored) ? stored.mimeType : undefined);
     if (!cachedCover) {
         if (stored) await removeFromCache(cacheKey);
+        return null;
+    }
+    if (isNonImageBlob(cachedCover)) {
+        await removeCachedCover(cacheKey);
         return null;
     }
     return createSafeObjectUrl(cachedCover);

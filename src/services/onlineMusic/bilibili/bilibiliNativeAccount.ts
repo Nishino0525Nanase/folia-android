@@ -1,5 +1,6 @@
 import QRCode from 'qrcode';
 import { BilibiliNativeError, nativeBilibili, nativeBilibiliErrorResponse, record } from './bilibiliNative';
+import { fillNativeBilibiliFolderCovers } from './bilibiliNativeFolderCovers';
 
 // Adapt local Android QR/account responses to the existing provider contract.
 const invalid = (): never => { throw new BilibiliNativeError(502, 'invalid-response'); };
@@ -56,8 +57,10 @@ export const requestNativeBilibiliAccount = async (path: string, init: RequestIn
             const { data } = await nativeBilibili('folders', { pn: String(Math.floor(offset / 20) + 1), ps: '20' }, session);
             const list = data.list;
             if (!Array.isArray(list) && list != null) invalid();
-            const folders = (list || []).map((item: unknown) => favoriteFolder(record(item), data.ownerId));
-            const items = folders.slice(offset % 20, offset % 20 + limit);
+            const folders = (list || []).map((item: unknown) => record(item));
+            const selected = folders.slice(offset % 20, offset % 20 + limit);
+            await fillNativeBilibiliFolderCovers(selected, session);
+            const items = selected.map((item: Record<string, any>) => favoriteFolder(item, data.ownerId));
             const nextOffset = offset + items.length;
             const hasTotal = Number.isSafeInteger(data.count) && data.count >= 0;
             const hasMore = offset % 20 + items.length < folders.length || Boolean(data.has_more)
@@ -68,6 +71,7 @@ export const requestNativeBilibiliAccount = async (path: string, init: RequestIn
         const detail = /^\/favorites\/([1-9]\d{0,19})$/.exec(url.pathname);
         if (detail) {
             const { data } = await nativeBilibili('folder', { media_id: detail[1] }, session);
+            await fillNativeBilibiliFolderCovers([data], session);
             return Response.json(favoriteFolder(data, data.ownerId));
         }
         const folder = /^\/favorites\/([1-9]\d{0,19})\/tracks$/.exec(url.pathname);

@@ -208,6 +208,8 @@ public class MainActivity extends BridgeActivity {
 
         super.onCreate(savedInstanceState);
 
+        if (getBridge() != null) getBridge().setWebViewClient(new top.izuna.foliamajor.bilibili.BilibiliArtworkWebViewClient(getBridge()));
+
         checkWebViewSupport();
         applyImmersiveMode();
         applyWebViewPlaybackSettings();

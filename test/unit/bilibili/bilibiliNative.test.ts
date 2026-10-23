@@ -193,6 +193,19 @@ describe('Android authenticated reads', () => {
             total: 21, items: [expect.objectContaining({ id: 'fav:21', coverUrl: 'https://i0.hdslb.com/21.jpg' })] });
     });
 
+    it('fills a missing folder cover from its resources without changing folder paging', async () => {
+        mock.session = 'native:kept';
+        mock.request.mockImplementation(({ operation, params }) => {
+            if (operation === 'folders') return { ok: true, data: { ownerId: '123', count: 1,
+                list: [{ id: 9, title: 'Favorites', media_count: 141, cover: '' }] } };
+            expect(operation).toBe('tracks');
+            expect(params).toEqual({ media_id: '9', pn: '1', ps: '20' });
+            return { ok: true, data: { info: { media_count: 141 }, medias: [{ cover: '' }, { cover: '//i2.hdslb.com/bfs/archive/video.jpg' }] } };
+        });
+        expect(await getBilibiliFavoriteFolders('123', 20, 0)).toMatchObject({ nextOffset: 1, hasMore: false, total: 1,
+            items: [{ id: 'fav:9', trackCount: 141, coverUrl: 'https://i2.hdslb.com/bfs/archive/video.jpg' }] });
+    });
+
     it('refreshes an existing favorite folder cover and rejects another folder response', async () => {
         mock.session = 'native:kept';
         const data = { id: 9, ownerId: '123', title: 'Favorites', media_count: 141, cover: '//i0.hdslb.com/cover.jpg' };
