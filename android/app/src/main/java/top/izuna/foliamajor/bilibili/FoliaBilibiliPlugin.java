@@ -38,6 +38,8 @@ public class FoliaBilibiliPlugin extends Plugin {
     private String pendingKey = "";
     private long pendingUntil = 0;
     private JSONObject session;
+    private volatile String wbiKey = "";
+    private volatile long wbiKeyUntil = 0;
 
     private static final class Failure extends Exception {
         final int status;
@@ -78,13 +80,22 @@ public class FoliaBilibiliPlugin extends Plugin {
 
     // Endpoints are selected here, never supplied by the renderer. Redirects cannot carry cookies elsewhere.
     private JSONObject get(String path, JSONObject params, String cookie, Map<String, Cookie> received) throws Exception {
+        return get(path, params, cookie, received, false);
+    }
+
+    private JSONObject get(String path, JSONObject params, String cookie, Map<String, Cookie> received, boolean publicWbiKey) throws Exception {
         String host = path.startsWith("/x/passport-login/") ? "passport.bilibili.com" : "api.bilibili.com";
         HttpUrl.Builder url = new HttpUrl.Builder().scheme("https").host(host).encodedPath(path);
         java.util.Iterator<String> keys = params.keys();
         while (keys.hasNext()) { String key = keys.next(); url.addQueryParameter(key, params.getString(key)); }
-        Request.Builder request = new Request.Builder().url(url.build()).get()
-                .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36")
-                .header("Referer", "https://www.bilibili.com/");
+        Request.Builder request = new Request.Builder().url(url.build()).get();
+        if (path.startsWith("/x/player/")) {
+            BilibiliVideoRequest.headers(params.optString("bvid")).forEach(request::header);
+        } else {
+            // Keep the working account/login request profile independent of video playback changes.
+            request.header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36")
+                    .header("Referer", "https://www.bilibili.com/");
+        }
         if (!cookie.isEmpty()) request.header("Cookie", cookie);
         Call http = client.newCall(request.build());
         BilibiliRequest work = running.get();
@@ -100,11 +111,35 @@ public class FoliaBilibiliPlugin extends Plugin {
             }
             JSONObject body = new JSONObject(response.body() == null ? "{}" : response.body().string());
             int code = body.optInt("code", Integer.MIN_VALUE);
-            if (code != 0) throw new Failure(code == -101 ? 401 : code == -412 || code == -352 ? 403 : 502, String.valueOf(code));
+            if (code != 0 && !(publicWbiKey && code == -101)) throw new Failure(code == -101 ? 401 : code == -412 || code == -352 ? 403 : 502, String.valueOf(code));
+            if (path.equals("/x/player/pagelist") && body.optJSONArray("data") != null) {
+                return new JSONObject().put("pages", body.getJSONArray("data"));
+            }
             JSONObject data = body.optJSONObject("data");
             if (data == null) throw new Failure(502, "invalid-response");
             return data;
         }
+    }
+
+    private JSONObject videoPlayurl(JSObject input, String cookie) throws Exception {
+        if (wbiKey.isEmpty() || wbiKeyUntil <= System.currentTimeMillis()) {
+            JSONObject nav = get("/x/web-interface/nav", new JSONObject(), cookie, null, cookie.isEmpty());
+            JSONObject images = nav.getJSONObject("wbi_img");
+            wbiKey = BilibiliVideoRequest.mixinKey(images.getString("img_url"), images.getString("sub_url"));
+            wbiKeyUntil = System.currentTimeMillis() + 30000;
+        }
+        Map<String, String> values = new HashMap<>();
+        values.put("bvid", input.optString("bvid"));
+        values.put("cid", input.optString("cid"));
+        boolean progressive = "progressive".equals(input.optString("mode"));
+        values.put("fnval", progressive ? "1" : "16");
+        values.put("fnver", "0");
+        values.put("fourk", "0");
+        values.put("qn", "16");
+        values.put("force_host", "2");
+        if (progressive) values.put("platform", "html5");
+        return get("/x/player/wbi/playurl", new JSONObject(BilibiliVideoRequest.sign(values, wbiKey,
+                System.currentTimeMillis() / 1000)), cookie, null);
     }
 
     private JSONObject params(JSObject input, String... names) throws Exception {
@@ -227,11 +262,15 @@ public class FoliaBilibiliPlugin extends Plugin {
                     case "view":
                         data = get("/x/web-interface/view", params(input, "bvid", "aid"), handle.isEmpty() ? "" : cookieFor(handle), null);
                         break;
+                    case "parts":
+                        data = get("/x/player/pagelist", params(input, "bvid"), handle.isEmpty() ? "" : cookieFor(handle), null);
+                        break;
                     case "playurl":
-                        data = get("/x/player/playurl", params(input, "bvid", "cid", "fnval", "fnver", "fourk"), handle.isEmpty() ? "" : cookieFor(handle), null);
+                        data = videoPlayurl(input, handle.isEmpty() ? "" : cookieFor(handle));
                         break;
                     case "audioProbe":
-                        try { data = new JSONObject().put("url", new BilibiliAudioProbe(client).verify(input.optString("url"), work::attach)); }
+                        try { data = new JSONObject().put("url", new BilibiliAudioProbe(client).verify(input.optString("url"), input.optString("bvid"), work::attach))
+                                .put("headers", new JSONObject(BilibiliVideoRequest.headers(input.optString("bvid")))); }
                         catch (java.io.IOException error) {
                             String code = error.getMessage();
                             // Only fixed diagnostic codes cross the bridge, never a signed URL from an I/O exception.

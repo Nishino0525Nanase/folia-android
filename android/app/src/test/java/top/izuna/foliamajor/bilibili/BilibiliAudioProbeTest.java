@@ -28,7 +28,7 @@ public class BilibiliAudioProbeTest {
         return new BilibiliAudioProbe(new OkHttpClient.Builder().addInterceptor(chain -> {
             assertNull(chain.request().header("Cookie"));
             assertNull(chain.request().header("Authorization"));
-            assertEquals("bytes=0-31", chain.request().header("Range"));
+            assertEquals("bytes=0-", chain.request().header("Range"));
             assertEquals("https://www.bilibili.com/", chain.request().header("Referer"));
             return new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(status).message("Probe")
                     .body(ResponseBody.create(MediaType.get("audio/mp4"), body)).build();
@@ -38,6 +38,19 @@ public class BilibiliAudioProbeTest {
     @Test public void acceptsPartialMp4AndOmitsAccountHeaders() throws Exception {
         probe(206, new byte[] { 0, 0, 0, 24, 'f', 't', 'y', 'p', 'd', 'a', 's', 'h' })
                 .verify("https://cn-test.bilivideo.com/audio.m4s");
+    }
+
+    @Test public void mediaProbeUsesTheExactVideoApiHeaders() throws Exception {
+        String bvid = "BV1FT6dBtEff";
+        String url = "https://cn-test.bilivideo.com/video.mp4?sign=a%2Bb&deadline=2000000000";
+        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(chain -> {
+            BilibiliVideoRequest.headers(bvid).forEach((name, value) -> assertEquals(value, chain.request().header(name)));
+            assertEquals(url, chain.request().url().toString());
+            assertEquals("bytes=0-", chain.request().header("Range"));
+            return new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(206).message("Probe")
+                    .body(ResponseBody.create(MediaType.get("video/mp4"), new byte[] { 0, 0, 0, 24, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm' })).build();
+        }).build();
+        assertEquals(url, new BilibiliAudioProbe(client).verify(url, bvid, call -> {}));
     }
 
     @Test public void rejectsErrorStatusAndNonAudioBodies() {

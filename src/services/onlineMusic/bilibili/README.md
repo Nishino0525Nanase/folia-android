@@ -38,6 +38,22 @@ probe cancels the other. New playback requests carry an AbortSignal through Omni
 bridge; superseded or reset playback cancels both queued and running native HTTP work. HTTP 403/412
 media refusals retain their upstream status and no longer trigger the generic connectivity retry loop.
 
+Android 0.7.21.15 uses the video player's `/x/player/wbi/playurl` protocol. Native WBI signing reads
+the current public image keys (cached for 30 seconds); the original local account is used for both
+DASH and progressive requests. Favorite playback resolves the first CID through the smaller
+`/x/player/pagelist` response. Video API, probe and playback share the same public User-Agent and
+video-page Referer. Probes use the player's initial `bytes=0-` request and close after the MP4 header;
+only public headers cross back to the proxy. Login keeps its previous request profile.
+
+Audio candidates now interleave bitrates, preserve the returned signed scheme/query and ask the API
+for HTTPS routes. Each selection phase has an eight-second budget. If DASH is absent or its CDN
+routes fail, one additional request asks for the same video's low-resolution complete MP4. The
+existing audio element plays its sound, using the existing foreground service and media controls.
+This fallback transfers video bytes too; it is not as bandwidth-efficient as DASH audio. Multi-segment
+responses and FLV are not silently truncated or treated as complete MP4. API access denials stop
+before a format fallback. Session changes, cancellation, account rights and video-part identity remain
+in force. Logs record stream kind, BV/CID and hostname, never cookies or signed URL query strings.
+
 Web builds retain the Worker's sealed bearer and encrypted server-side cookies. An old web bearer
 in an Android installation requires a new local login; it is never sent to the platform. Local sign-out
 removes local access and invalidates pending client generations, without claiming platform revocation.
@@ -49,8 +65,8 @@ use the explicit `BV:first` identity and resolve their first part only at playba
 with a concrete part keeps the existing `BV:cid` identity.
 
 Web playback preparation returns a bounded ticket for one video part. Android obtains the same
-account's available DASH audio and passes its platform CDN URL to the existing local audio server
-with a Referer header; account cookies are not passed to the CDN. Direct BV/AV metadata is fetched
+account's available DASH audio or complete MP4 fallback and passes its platform CDN URL to the existing
+local audio server with the verified public request headers; account cookies are not passed to the CDN. Direct BV/AV metadata is fetched
 locally; short-link metadata resolution still uses the existing anonymous web adapter.
 Manual lyric matching and lyric-file imports use the shared online lyric state keyed to the original
 playback identity, without changing the video audio source. Keyword search is not supported.
@@ -61,10 +77,19 @@ The current account-host fixture reproduces the 0.7.21.11 rejection before the f
 cover Android routing, QR states, missing credentials, cancellation, refusal, old-bearer migration,
 status, logout, favorites pagination and audio host checks. The 0.7.21.13 checks additionally cover
 HTTP/nonstandard-port media, backup selection, failed probes, native headers and MP4 byte validation.
-The development network currently receives HTTP 412 for the video API, so end-to-end audio playback
-still needs the user's phone; passing the mocked CDN tests is not proof of live playback.
+Those earlier checks received HTTP 412 for the metadata API; passing mocked CDN tests alone was not
+proof of live playback. The newer video-protocol checks below succeeded independently of that endpoint.
 
 0.7.21.14 verification also covers a stalled primary with a fast backup, cancellation before a
 pending metadata request completes, redirect targets, credential omission and queued-call cancellation.
 The user confirmed that some tracks play on 0.7.21.13; per-track availability and sustained streaming
 on the user's network still require device verification after installing 0.7.21.14.
+
+0.7.21.15 validation: 136 focused TypeScript tests, 11 native Java tests and TypeScript checking passed.
+A real browser played an eight-second synthetic H.264/AAC MP4 through an AUDIO element and WebAudio,
+advanced its clock and sought to six seconds using an HTTP Range response. Anonymous live requests
+for BV1GJ411x7h7 and BV14z376fEfd returned three DASH audio representations each; the selected streams
+returned HTTP 206 and 65,536 valid MP4 bytes. BV14z376fEfd also returned a single progressive MP4 with
+HTTP 206 and a valid MP4 header. These are public test videos, not an identified reproduction of the
+user's failing videos. Authenticated playback and lock-screen continuity on the user's phone remain
+unverified; this release does not claim all CDN refusals are resolved.

@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Exercise Android account routing and delayed confirmations without exposing real account credentials.
 const mock = vi.hoisted(() => ({ request: vi.fn(), cancel: vi.fn().mockResolvedValue(undefined), image: vi.fn(), session: '', native: true, proxy: vi.fn() }));
-vi.mock('@capacitor/core', () => ({ registerPlugin: () => ({ request: mock.request, cancel: mock.cancel }) }));
+vi.mock('@capacitor/core', () => ({ registerPlugin: () => ({
+    request: async (options: { operation: string; params: Record<string, string> }) => {
+        const reply = await mock.request(options);
+        return options.operation === 'audioProbe' && reply?.ok
+            ? { ...reply, data: { headers: { 'User-Agent': 'fixture-browser', Referer: `https://www.bilibili.com/video/${options.params.bvid}/` }, ...reply.data } }
+            : reply;
+    }, cancel: mock.cancel,
+}) }));
 vi.mock('@/platform/runtime', () => ({ isCapacitorAndroid: () => mock.native }));
 vi.mock('qrcode', () => ({ default: { toDataURL: mock.image } }));
 vi.mock('@/i18n/config', () => ({ default: { t: (key: string) => key } }));
@@ -164,18 +171,19 @@ describe('Android authenticated reads', () => {
         mock.request.mockResolvedValueOnce({ ok: true, data: {} });
         mock.proxy.mockResolvedValueOnce('http://127.0.0.1:9999/remote-audio/test');
         expect(await getBilibiliAudioSource('BV1FT6dBtEff:first')).toMatchObject({ url: 'http://127.0.0.1:9999/remote-audio/test', quality: 'high' });
-        expect(mock.proxy).toHaveBeenCalledWith('https://cn-test.bilivideo.com/audio.m4s', { allowAnyHost: true, headers: { Referer: 'https://www.bilibili.com/' } });
-        expect(mock.request).toHaveBeenLastCalledWith({ operation: 'audioProbe', requestId: expect.any(String), params: { url: 'https://cn-test.bilivideo.com/audio.m4s' }, session: '' });
+        expect(mock.request).toHaveBeenNthCalledWith(1, { operation: 'parts', requestId: expect.any(String), params: { bvid: 'BV1FT6dBtEff' }, session: 'native:kept' });
+        expect(mock.proxy).toHaveBeenCalledWith('https://cn-test.bilivideo.com/audio.m4s', { allowAnyHost: true, headers: { 'User-Agent': 'fixture-browser', Referer: 'https://www.bilibili.com/video/BV1FT6dBtEff/' } });
+        expect(mock.request).toHaveBeenLastCalledWith({ operation: 'audioProbe', requestId: expect.any(String), params: { url: 'https://cn-test.bilivideo.com/audio.m4s', bvid: 'BV1FT6dBtEff' }, session: '' });
         expect(fetch).not.toHaveBeenCalled();
     });
 
     it.each(['http://cn-test.bilivideo.com/audio.m4s', 'https://xy-test.mcdn.bilivideo.cn:4483/audio.m4s'])(
-        'uses HTTPS on conventional hosts and preserves nonstandard HTTPS ports (%#)', async url => {
+        'preserves the returned signed scheme and nonstandard ports (%#)', async url => {
             mock.request.mockResolvedValueOnce({ ok: true, data: { dash: { audio: [{ mime_type: 'audio/mp4', base_url: url }] } } });
             mock.request.mockResolvedValueOnce({ ok: true, data: {} });
             mock.proxy.mockResolvedValueOnce('http://127.0.0.1:9999/remote-audio/test');
             expect(await getBilibiliAudioSource('BV1FT6dBtEff:77')).toMatchObject({ quality: 'high' });
-            expect(mock.proxy).toHaveBeenCalledWith(url.replace('http:', 'https:'), expect.any(Object));
+            expect(mock.proxy).toHaveBeenCalledWith(url, expect.any(Object));
         },
     );
 
@@ -189,8 +197,8 @@ describe('Android authenticated reads', () => {
         mock.proxy.mockResolvedValueOnce('http://127.0.0.1:9999/remote-audio/test');
         await getBilibiliAudioSource('BV1FT6dBtEff:77');
         expect(mock.request.mock.calls.slice(1)).toEqual([
-            [{ operation: 'audioProbe', requestId: expect.any(String), params: { url: backup }, session: '' }],
-            [{ operation: 'audioProbe', requestId: expect.any(String), params: { url: primary }, session: '' }],
+            [{ operation: 'audioProbe', requestId: expect.any(String), params: { url: backup, bvid: 'BV1FT6dBtEff' }, session: '' }],
+            [{ operation: 'audioProbe', requestId: expect.any(String), params: { url: primary, bvid: 'BV1FT6dBtEff' }, session: '' }],
         ]);
         expect(mock.proxy).toHaveBeenCalledWith(primary, expect.any(Object));
     });
@@ -202,13 +210,13 @@ describe('Android authenticated reads', () => {
         mock.request.mockResolvedValueOnce({ ok: true, data: {} });
         mock.proxy.mockResolvedValueOnce('http://127.0.0.1:9999/remote-audio/test');
         await getBilibiliAudioSource('BV1FT6dBtEff:77');
-        expect(mock.request).toHaveBeenLastCalledWith({ operation: 'audioProbe', requestId: expect.any(String), params: { url: backup }, session: '' });
+        expect(mock.request).toHaveBeenLastCalledWith({ operation: 'audioProbe', requestId: expect.any(String), params: { url: backup, bvid: 'BV1FT6dBtEff' }, session: '' });
     });
 
     it('does not pass a failed probe or an unproxied URL to the player', async () => {
         const url = 'https://cn-test.bilivideo.com/audio.m4s';
         const reply = { ok: true, data: { dash: { audio: [{ mimeType: 'audio/mp4', baseUrl: url }] } } };
-        mock.request.mockResolvedValueOnce(reply).mockResolvedValueOnce({ ok: false, status: 502, code: 'invalid-audio-content' });
+        mock.request.mockResolvedValueOnce(reply).mockResolvedValueOnce({ ok: false, status: 502, code: 'invalid-audio-content' }).mockResolvedValueOnce({ ok: true, data: {} });
         await expect(getBilibiliAudioSource('BV1FT6dBtEff:77')).rejects.toMatchObject({ cause: { code: 'invalid-audio-content' } });
         expect(mock.proxy).not.toHaveBeenCalled();
         mock.request.mockResolvedValueOnce(reply).mockResolvedValueOnce({ ok: true, data: {} });
@@ -225,7 +233,7 @@ describe('Android authenticated reads', () => {
 
 
 describe('Android playback cancellation and bounded route selection', () => {
-    it('cancels a pending view request and never continues to playurl after switching songs', async () => {
+    it('cancels a pending parts request and never continues to playurl after switching songs', async () => {
         const controller = new AbortController();
         let finish!: (value: unknown) => void;
         mock.request.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
@@ -255,5 +263,69 @@ describe('Android playback cancellation and bounded route selection', () => {
         expect(mock.proxy).toHaveBeenCalledWith(resolved, expect.any(Object));
         expect(mock.cancel).toHaveBeenCalledWith({ requestId: mock.request.mock.calls[1][0].requestId });
         expect(mock.request).toHaveBeenCalledTimes(3);
+    });
+});
+
+describe('Android background listening to the original video', () => {
+    const audio = 'https://audio.bilivideo.com/a.m4s';
+    const video = 'https://video.bilivideo.com/v.mp4?signature=a%2Bb';
+    const dash = { ok: true, data: { dash: { audio: [{ mimeType: 'audio/mp4', baseUrl: audio }] } } };
+    const mp4 = { ok: true, data: { format: 'mp4', durl: [{ url: video }] } };
+
+    it('falls back from a refused DASH route to the same authenticated video part', async () => {
+        mock.session = 'native:kept';
+        mock.request.mockResolvedValueOnce(dash)
+            .mockResolvedValueOnce({ ok: false, status: 502, code: 'audio-http-403' })
+            .mockResolvedValueOnce(mp4).mockResolvedValueOnce({ ok: true, data: {} });
+        mock.proxy.mockResolvedValueOnce('http://127.0.0.1:9999/remote-audio/video');
+        await expect(getBilibiliAudioSource('BV1FT6dBtEff:77')).resolves.toMatchObject({ url: 'http://127.0.0.1:9999/remote-audio/video' });
+        expect(mock.request.mock.calls.filter(([call]) => call.operation === 'playurl').map(([call]) => call)).toEqual([
+            { operation: 'playurl', session: 'native:kept', requestId: expect.any(String), params: { bvid: 'BV1FT6dBtEff', cid: '77' } },
+            { operation: 'playurl', session: 'native:kept', requestId: expect.any(String), params: { bvid: 'BV1FT6dBtEff', cid: '77', mode: 'progressive' } },
+        ]);
+        expect(mock.proxy).toHaveBeenCalledWith(video, { allowAnyHost: true, headers: {
+            'User-Agent': 'fixture-browser', Referer: 'https://www.bilibili.com/video/BV1FT6dBtEff/',
+        } });
+    });
+
+    it('plays a complete MP4 returned directly without making a second playurl request', async () => {
+        mock.request.mockResolvedValueOnce(mp4).mockResolvedValueOnce({ ok: true, data: {} });
+        mock.proxy.mockResolvedValueOnce('http://127.0.0.1:9999/remote-audio/video');
+        await getBilibiliAudioSource('BV1FT6dBtEff:77');
+        expect(mock.request).toHaveBeenCalledTimes(2);
+        expect(mock.proxy).toHaveBeenCalledWith(video, expect.any(Object));
+    });
+
+    it.each([401, 403, 412])('stops on a video API access denial (%s)', async status => {
+        mock.request.mockResolvedValueOnce({ ok: false, status, code: 'upstream-http' });
+        await expect(getBilibiliAudioSource('BV1FT6dBtEff:77')).rejects.toMatchObject({ httpStatus: status });
+        expect(mock.request).toHaveBeenCalledTimes(1);
+        expect(mock.proxy).not.toHaveBeenCalled();
+    });
+
+    it('does not truncate a multi-segment video to its first segment', async () => {
+        mock.request.mockResolvedValueOnce({ ok: true, data: { dash: { audio: [] } } })
+            .mockResolvedValueOnce({ ok: true, data: { format: 'mp4', durl: [{ url: video }, { url: video + '&part=2' }] } });
+        await expect(getBilibiliAudioSource('BV1FT6dBtEff:77')).rejects.toMatchObject({ cause: { code: 'no-audio' } });
+        expect(mock.proxy).not.toHaveBeenCalled();
+    });
+
+    it('cancels a pending fallback without starting another stream after switching songs', async () => {
+        const controller = new AbortController();
+        mock.request.mockResolvedValueOnce(dash)
+            .mockResolvedValueOnce({ ok: false, status: 502, code: 'audio-http-403' })
+            .mockImplementationOnce(() => { controller.abort(); return new Promise(() => {}); });
+        await expect(getBilibiliAudioSource('BV1FT6dBtEff:77', controller.signal)).rejects.toThrow();
+        expect(mock.request).toHaveBeenCalledTimes(3);
+        expect(mock.proxy).not.toHaveBeenCalled();
+    });
+
+    it('forwards verified public headers without forwarding an unexpected cookie', async () => {
+        mock.request.mockResolvedValueOnce(dash).mockResolvedValueOnce({ ok: true, data: { headers: {
+            'User-Agent': 'native-browser', Referer: 'https://www.bilibili.com/video/BV1FT6dBtEff/', Cookie: 'never-forward',
+        } } });
+        mock.proxy.mockResolvedValueOnce('http://127.0.0.1:9999/remote-audio/audio');
+        await getBilibiliAudioSource('BV1FT6dBtEff:77');
+        expect(mock.proxy.mock.calls[0][1].headers).toEqual({ 'User-Agent': 'native-browser', Referer: 'https://www.bilibili.com/video/BV1FT6dBtEff/' });
     });
 });

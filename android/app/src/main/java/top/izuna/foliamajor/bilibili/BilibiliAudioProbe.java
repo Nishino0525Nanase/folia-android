@@ -28,16 +28,17 @@ final class BilibiliAudioProbe {
         throw new IOException("invalid-audio-host");
     }
 
-    String verify(String value) throws IOException { return verify(value, call -> {}); }
+    String verify(String value) throws IOException { return verify(value, "", call -> {}); }
 
-    String verify(String value, Consumer<Call> track) throws IOException {
+    String verify(String value, String bvid, Consumer<Call> track) throws IOException {
         HttpUrl url = checkedUrl(value);
         long started = System.nanoTime();
         for (int redirects = 0; redirects <= 3; redirects++) {
-            Request request = new Request.Builder().url(url)
-                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36")
-                    .header("Referer", "https://www.bilibili.com/").header("Range", "bytes=0-31").build();
-            Call call = client.newCall(request);
+            Request.Builder request = new Request.Builder().url(url);
+            BilibiliVideoRequest.headers(bvid).forEach(request::header);
+            // Match a player's initial range request, then close after reading only the header.
+            request.header("Range", "bytes=0-");
+            Call call = client.newCall(request.build());
             long remaining = TimeUnit.SECONDS.toNanos(4) - (System.nanoTime() - started);
             if (remaining <= 0) throw new IOException("audio-unreachable");
             call.timeout().timeout(remaining, TimeUnit.NANOSECONDS);

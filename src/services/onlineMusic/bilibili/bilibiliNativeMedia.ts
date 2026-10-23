@@ -6,8 +6,7 @@ import { bilibiliInputPageUrl } from './bilibiliInput';
 import { nativeBilibili, BilibiliNativeError, record } from './bilibiliNative';
 import { parseBilibiliMediaId, readBilibiliResolvedVideo } from './bilibiliNormalize';
 import { getBilibiliSession, getBilibiliSessionGeneration } from './bilibiliSession';
-import { selectBilibiliAudio } from './bilibiliAudioSelection';
-import { bilibiliAudioCandidates } from './bilibiliAudioCandidates';
+import { selectNativeBilibiliVideo } from './bilibiliVideoPlayback';
 
 // Android playback uses the same local account and existing loopback audio server, without cloud credentials.
 export const nativeVideoParams = (input: string): Record<string, string> | null => {
@@ -49,21 +48,19 @@ export const getNativeBilibiliAudio = async (mediaId: string, signal?: AbortSign
     const account = session.startsWith('native:') ? session : '';
     let cid = identity.cid;
     if (identity.first) {
-        const { data } = await nativeBilibili('view', { bvid: identity.bvid }, account, signal);
+        const { data } = await nativeBilibili('parts', { bvid: identity.bvid }, account, signal);
         cid = record(Array.isArray(data.pages) ? data.pages[0] : null).cid;
     }
     if (!Number.isSafeInteger(cid) || !cid || cid < 0) throw new BilibiliNativeError(502, 'invalid-video-part');
-    const { data } = await nativeBilibili('playurl', { bvid: identity.bvid, cid: String(cid), fnval: '16', fnver: '0', fourk: '0' }, account, signal);
+    const { url, headers } = await selectNativeBilibiliVideo(identity.bvid, cid, account, signal);
     const now = Date.now();
-    const candidates = bilibiliAudioCandidates(record(data.dash).audio, now);
-    const url = await selectBilibiliAudio(candidates, signal);
     signal?.throwIfAborted();
     if (generation !== getBilibiliSessionGeneration()) throw new BilibiliNativeError(401, 'session-changed');
     const deadline = Number(url.searchParams.get('deadline')) * 1000;
     if (deadline && deadline <= now) throw new BilibiliNativeError(502, 'audio-expired');
     const expiresAt = Math.min(deadline || now + 60_000, now + 6 * 60 * 60_000);
     const proxied = await proxyNativeRemoteAudioUrl(url.href, {
-        allowAnyHost: true, headers: { Referer: 'https://www.bilibili.com/' },
+        allowAnyHost: true, headers,
     });
     signal?.throwIfAborted();
     if (!proxied.startsWith('http://127.0.0.1:')) throw new BilibiliNativeError(502, 'local-audio-unavailable');
