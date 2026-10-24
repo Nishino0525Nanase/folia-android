@@ -1,5 +1,5 @@
 import React from 'react';
-import type { LyricPreparationModel } from './useLyricPreparation';
+import type { LyricPreparationModel } from '../../core/collection/import/useLyricPreparation';
 
 // The same compact progress and controls are available in both collection layouts.
 export const LyricPreparationProgress: React.FC<{ model?: LyricPreparationModel }> = ({ model }) => {

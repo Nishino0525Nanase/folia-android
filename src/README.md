@@ -84,6 +84,7 @@ App.tsx
 - Navidrome：`navidromeService.ts`；它是独立 Subsonic 服务，不是 Omni provider。
 - 播放：`onlinePlayback.ts`、`playbackAdapters.ts`、`prefetchService.ts`、`nowPlayingProvider.ts`、`playerCapProvider.ts`。
 - 缓存/数据库：`db.ts`、`appDatabase.ts`、`repositories/*`、`coverCache.ts`、`audioCache.ts`、`binaryAssetStore.ts`。
+- 在线集合导入：无界面绑定在 `library/core/collection/import/`，导入按钮与歌词准备进度放在 `library/app/collectionImport/`，由各套界面复用。
 - 主题：`themeCache.ts`、`themePreferences.ts`、`themeSanitizer.ts`、`visualizerImageAsset.ts`、Monet image services。
 - 同步：`services/sync/*`；编排从 `syncCoordinator.ts` 开始，配置快照在 `settingsSnapshot.ts`。
 

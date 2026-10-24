@@ -5,7 +5,7 @@ import { formatQqLoginDiagnostics } from '@/services/onlineMusic/qq/qqLoginDiagn
 import { loginCaseOf, loginFailureFacts } from '@/services/onlineMusic/login/loginFailureCase';
 import { omni } from '@/services/onlineMusic/omni';
 import { qishuiProvider } from '@/services/onlineMusic/qishuiProvider';
-import { listOnlineMusicProviders } from '@/services/onlineMusic/providerRegistry';
+import { getOnlineMusicProvider, listOnlineMusicProviders } from '@/services/onlineMusic/providerRegistry';
 import type { LoginDiagnosticLine, LoginSelfCheckResult } from '@/types/onlineMusic';
 
 // test/unit/login/loginDiagnosticReport.test.ts
@@ -157,6 +157,8 @@ describe('QR login diagnostic report', () => {
                 // 汽水只有 provider 自己记的那几行（安卓没有主进程的请求记录可问），
                 // 所以下面只要求它们原样进报告，不套主进程那几条断言。
                 qishui: () => qishuiProvider.auth!.getLoginDiagnostics!(),
+                spotify: () => getOnlineMusicProvider('spotify')!.auth!.getLoginDiagnostics!(),
+                ytm: () => getOnlineMusicProvider('ytm')!.auth!.getLoginDiagnostics!(),
             };
             const declaring = listOnlineMusicProviders().filter(provider => provider.auth?.getLoginDiagnostics).map(provider => provider.id);
             expect(Object.keys(builders).sort()).toEqual(declaring.sort());

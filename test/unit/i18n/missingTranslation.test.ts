@@ -96,9 +96,9 @@ describe('player and playlist controls translations', () => {
         expect((zhCN.player as Record<string, string>)[key]).toBeTruthy();
     });
 
-    it('defines ui.generateAITheme as 生成AI主题 / Generate AI Theme', () => {
-        expect(en.ui.generateAITheme).toBe('Generate AI Theme');
-        expect(zhCN.ui.generateAITheme).toBe('生成AI主题');
+    it('names the cached-or-generated AI theme action as 获取 AI 主题 / Get AI theme', () => {
+        expect(en.ui.generateAITheme).toBe('Get AI theme');
+        expect(zhCN.ui.generateAITheme).toBe('获取 AI 主题');
     });
 });
 

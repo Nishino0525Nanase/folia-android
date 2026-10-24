@@ -12,7 +12,8 @@ vi.mock('@/services/onlineMusic/qq/qqTransport', () => ({
     requestQq: requestMock,
 }));
 
-vi.mock('@/services/onlineMusic/providerStorage', () => ({
+vi.mock('@/services/onlineMusic/providerStorage', async importOriginal => ({
+    ...await importOriginal<typeof import('@/services/onlineMusic/providerStorage')>(),
     writeProviderSessionValue: vi.fn(),
 }));
 

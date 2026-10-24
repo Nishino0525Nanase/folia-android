@@ -97,12 +97,15 @@ vi.mock('@/services/onlinePlayback', () => ({
     },
 }));
 vi.mock('@/utils/onlineLyricsState', () => ({
+    hasAuthoritativeOnlineLyricsSelection: () => false,
+    resolveOnlineLyricsPureMusic: () => false,
     loadOnlineLyricsState: async (song: { id: string }) => { env.note(`wait lyrics state ${song.id}`); return { lyricsSource: 'online' }; },
     resolveOnlineLyrics: (_state: unknown, lyrics: unknown) => lyrics,
 }));
 vi.mock('@/services/onlineMusic/omni', () => ({
     omni: {
         canPlaySong: () => env.canPlay,
+        getProviderCapabilities: () => ({ lyrics: true }),
         getProviderLabel: (id: string) => id,
         getLyrics: async (song: { id: string }) => { env.note(`wait lyrics ${song.id}`); return { lyrics: null, isPureMusic: true }; },
     },

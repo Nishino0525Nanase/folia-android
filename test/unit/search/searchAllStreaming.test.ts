@@ -15,6 +15,7 @@ vi.mock('@/services/onlineMusic/omni', () => ({
     omni: {
         getProviderSummaries: () => [{ providerId: 'netease' }, { providerId: 'qq' }],
         getProviderCapabilities: () => ({ search: true }),
+        getProviderLinkImportInfo: () => null,
         searchProviderSongs: searchMock,
     },
 }));

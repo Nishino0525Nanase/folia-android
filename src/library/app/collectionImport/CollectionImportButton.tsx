@@ -2,7 +2,7 @@ import { LyricPreparationProgress } from './LyricPreparationProgress';
 import React from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { CollectionImportAction } from './useCollectionImport';
+import type { CollectionImportAction } from '../../core/collection/import/useCollectionImport';
 
 // A touch-sized action that saves media references rather than promising an audio download.
 export const CollectionImportButton: React.FC<{ action: CollectionImportAction; className?: string }> = ({ action, className = '' }) => {

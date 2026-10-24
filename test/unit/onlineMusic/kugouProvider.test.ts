@@ -18,7 +18,8 @@ vi.mock('@/services/onlineMusic/kugou/kugouTransport', async importOriginal => (
 
 const sessionState = vi.hoisted(() => ({ userId: 'web-session-user' }));
 
-vi.mock('@/services/onlineMusic/providerStorage', () => ({
+vi.mock('@/services/onlineMusic/providerStorage', async importOriginal => ({
+    ...await importOriginal<typeof import('@/services/onlineMusic/providerStorage')>(),
     readProviderSessionValue: () => sessionState.userId,
     removeProviderSessionValue: vi.fn(),
 }));

@@ -9,7 +9,7 @@ import { useLyricSettingsStore } from '../../src/stores/useLyricSettingsStore';
 import { useOnlineProviderAccountStore } from '../../src/stores/useOnlineProviderAccountStore';
 import { usePreparedLyricsPlayback } from '../../src/components/app/playback/start/usePreparedLyricsPlayback';
 import { useLyricPreparation } from '../../src/library/core/collection/import/useLyricPreparation';
-import { LyricPreparationProgress } from '../../src/library/core/collection/import/LyricPreparationProgress';
+import { LyricPreparationProgress } from '../../src/library/app/collectionImport/LyricPreparationProgress';
 import type { ProbeDefinition } from './definition';
 
 // A real Omni import exercises text matching, persistence and playback display without speech inference.

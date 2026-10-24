@@ -87,7 +87,7 @@ import {
 } from '../../../core/shared/useLibraryBrowseSessionStore';
 import { useTrackSorting } from '../../../core/collection/useTrackSorting';
 import { useCollectionImport } from '../../../core/collection/import/useCollectionImport';
-import { CollectionImportButton } from '../../../core/collection/import/CollectionImportButton';
+import { CollectionImportButton } from '../../../app/collectionImport/CollectionImportButton';
 
 interface GridViewProps {
     title: string;

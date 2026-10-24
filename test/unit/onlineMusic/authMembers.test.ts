@@ -8,6 +8,9 @@ import { getOnlineMusicProvider, listOnlineMusicProviders } from '@/services/onl
 // A member added or removed on purpose changes its row here.
 
 const AUTH_MEMBERS: Record<string, string[]> = {
+    bilibili: [
+        'cancelLogin', 'checkLogin', 'createQr', 'describeLoginFailure', 'getLoginStatus', 'getLoginTexts', 'getLoginTtlMs', 'logout', 'showsKeptAccountAtStart', 'signInRanOut', 'startLogin',
+    ],
     netease: [
         'canRunLoginSelfCheck', 'checkLogin', 'createQr', 'describeLoginFailure', 'getLoginDiagnostics', 'getLoginStatus', 'getLoginTexts', 'localService',
         'logout', 'oldKeptAccount', 'runLoginSelfCheck', 'showsKeptAccountAtStart', 'signInRanOut', 'startLogin',

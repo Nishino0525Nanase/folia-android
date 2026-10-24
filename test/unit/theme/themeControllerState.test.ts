@@ -224,7 +224,7 @@ describe('themeControllerState', () => {
         expect(model.editableSource).toBe('custom');
     });
 
-    it('preserves visual tokens while using AI foreground in daylight default background mode', () => {
+    it('uses the current song AI tokens in daylight default background mode', () => {
         const previousTheme: Theme = {
             ...dualTheme.dark,
             wordColors: [{ word: 'keep-me', color: '#00ff00' }],
@@ -242,8 +242,8 @@ describe('themeControllerState', () => {
 
         expect(nextTheme.name).toBe('AI Light');
         expect(nextTheme.backgroundColor).toBe(daylightTheme.backgroundColor);
-        expect(nextTheme.wordColors).toEqual(previousTheme.wordColors);
-        expect(nextTheme.lyricsIcons).toEqual(previousTheme.lyricsIcons);
+        expect(nextTheme.wordColors).toEqual(dualTheme.light.wordColors);
+        expect(nextTheme.lyricsIcons).toEqual(dualTheme.light.lyricsIcons);
     });
 
     it('applies the default AI theme when AI background mode is requested without generated AI theme', () => {
@@ -265,11 +265,11 @@ describe('themeControllerState', () => {
 
         expect(nextTheme.name).toBe(FALLBACK_AI_DUAL_THEME.dark.name);
         expect(nextTheme.backgroundColor).toBe(FALLBACK_AI_DUAL_THEME.dark.backgroundColor);
-        expect(nextTheme.wordColors).toEqual(previousTheme.wordColors);
-        expect(nextTheme.lyricsIcons).toEqual(previousTheme.lyricsIcons);
+        expect(nextTheme.wordColors).toEqual(FALLBACK_AI_DUAL_THEME.dark.wordColors);
+        expect(nextTheme.lyricsIcons).toEqual(FALLBACK_AI_DUAL_THEME.dark.lyricsIcons);
     });
 
-    it('switches bg mode back to default while retaining AI foreground tokens', () => {
+    it('switches to default background with the selected AI foreground tokens', () => {
         const previousTheme: Theme = {
             ...dualTheme.dark,
             wordColors: [{ word: 'persist', color: '#123456' }],
@@ -287,11 +287,11 @@ describe('themeControllerState', () => {
 
         expect(nextTheme.name).toBe('AI Dark');
         expect(nextTheme.backgroundColor).toBe(defaultTheme.backgroundColor);
-        expect(nextTheme.wordColors).toEqual(previousTheme.wordColors);
-        expect(nextTheme.lyricsIcons).toEqual(previousTheme.lyricsIcons);
+        expect(nextTheme.wordColors).toEqual(dualTheme.dark.wordColors);
+        expect(nextTheme.lyricsIcons).toEqual(dualTheme.dark.lyricsIcons);
     });
 
-    it('applies AI background mode while keeping existing visual tokens', () => {
+    it('applies AI background mode with the selected song tokens', () => {
         const previousTheme: Theme = {
             ...defaultTheme,
             wordColors: [{ word: 'persist', color: '#654321' }],
@@ -309,8 +309,8 @@ describe('themeControllerState', () => {
 
         expect(nextTheme.name).toBe('AI Dark');
         expect(nextTheme.backgroundColor).toBe(dualTheme.dark.backgroundColor);
-        expect(nextTheme.wordColors).toEqual(previousTheme.wordColors);
-        expect(nextTheme.lyricsIcons).toEqual(previousTheme.lyricsIcons);
+        expect(nextTheme.wordColors).toEqual(dualTheme.dark.wordColors);
+        expect(nextTheme.lyricsIcons).toEqual(dualTheme.dark.lyricsIcons);
     });
 
     it('builds a built-in dual theme from warm cover colors', () => {

@@ -56,6 +56,8 @@ jobs:
         run: npm ci
 
       - name: Run typecheck
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: npm run typecheck
 
       - name: Run unit tests

@@ -35,6 +35,7 @@ describe('what each platform declares for the sign-in window', () => {
     it('its mark: one letter and one colour', () => {
         const marks = Object.fromEntries(listOnlineMusicProviders().map(provider => [provider.id, omni.getProviderMark(provider.id)]));
         expect(marks).toEqual({
+            bilibili: { letter: '哔', color: '#fb7299' },
             netease: { letter: '云', color: '#dc2626' },
             kugou: { letter: 'K', color: '#2563eb' },
             qq: { letter: 'Q', color: '#16a34a' },
@@ -54,6 +55,7 @@ describe('what each platform declares for the sign-in window', () => {
             return [provider.id, { title, note }];
         }));
         expect(texts).toEqual({
+            bilibili: { title: 'home.loginTitleBilibili', note: 'home.loginNoteBilibili' },
             netease: { title: 'home.loginTitle', note: 'home.loginNote' },
             kugou: { title: 'home.loginTitleKugou', note: 'home.loginNoteKugou' },
             qq: { title: 'home.loginTitleQq', note: 'home.loginNoteQq' },

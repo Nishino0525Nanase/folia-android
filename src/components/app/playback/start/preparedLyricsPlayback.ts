@@ -19,7 +19,7 @@ export const applyPreparedLyricsToPlayback = async (song: SongResult, setLyrics:
     const now = usePlaybackStore.getState();
     if (!active() || now.currentSong !== before.currentSong || now.lyrics !== before.lyrics || !hasRenderableLyrics(lyrics)) return;
     const updated = { ...now.currentSong, onlineLyricsState: saved ?? undefined, isPureMusic: false };
-    now.setCurrentSong(updated);
+    now.setCurrentSong(current => current === before.currentSong ? updated : current);
     setLyrics(lyrics);
     if (saved?.onlineOverrideLyrics?.mediaSubtitle || saved?.importedLyricsName === AUTOMATIC_SUBTITLES_NAME) {
         now.setLyricTimelineOffsetMs(readLyricOffset(song.id));

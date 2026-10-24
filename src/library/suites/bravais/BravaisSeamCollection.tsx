@@ -1,4 +1,4 @@
-import { LyricPreparationProgress } from '../../core/collection/import/LyricPreparationProgress';
+import { LyricPreparationProgress } from '../../app/collectionImport/LyricPreparationProgress';
 import React, { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
